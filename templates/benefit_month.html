@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>福利-分紅</title>
+
+</head>
+<body>
+    <h1 style="font-size: 15px;">福利中心-分紅資料</h1>
+    <div>
+        <p>用戶名: {{result.user}}</p>
+        <p>查詢日期: {{result.startTime}}到{{result.stopTime}},統計範圍: {{result.month_type}},
+        註冊天數範圍: {{result.start_bronday}}~{{result.stop_bronday}}</p>
+        <p>註冊天數: {{result.min_bronday}}</p>
+        <p>日均銷量天數: {{result.day_range}}</p>
+        <p>4.0 總投注額: {{result.bet}}/總有效投注額: {{result.effectiveBet}}/真人有效投注額: {{result.trueBet}}</p>
+        <p>4.0 中獎金額: {{result.win}}, 反點: {{result.ret}}, 活動禮金: {{result.activityGifts}}, 紅包: {{result.totalRedDiscount}}</p>
+        <p>真人 中獎金額: {{result.fh_win}}, 反點: {{result.fh_ret}}, 活動禮金: {{result.fh_activityGifts}}</p>
+        <p>總投注額: {{result.Allbet_month}}/總有效銷量: {{result.effectiveBet_month}}, 總獎金: {{result.user_award}}</p>
+        <p>分紅日均銷量: {{result.averge}}, 總輸額: {{result.winLost_month}}</p>
+        <p style = "font-size:30px ; color: red">{{result.msg}}</p>
+        <p>比例: {{result.per}}%,分紅派發: {{result.award}}</p>
+
+    </div>
+
+</body>
+
+</html> 

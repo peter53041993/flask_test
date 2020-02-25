@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>調整圖片大小</title>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.10.0.min.js"></script>
+    <script>
+        $(document).ready(function(){
+           $("#button").click(function(){
+               if($("#image_name").val()==""){
+                   alert("圖片名為空");
+               }else if($("#height").val()==""){
+                   alert("長為空");    
+               }else if($("#width").val()==""){
+                   alert("寬為空");    
+               }else{
+                    var data = {}
+                    data = $('#form1').serialize();//form表單裡的數據
+                    $.ajax({url:"/imageAdj",
+                    type:'POST', 
+                    data: data,
+                    dataType:"json",
+                    success:function(data){
+                    console.log(data);
+                    alert(data);
+                    }
+                })
+                    }
+                })
+            })
+    </script>
+</head>
+<body>
+    <h1>路徑: {{img_path}}(桌面)</h1>
+    <form id="form1" onclick="return false">
+        <p>輸入圖片名稱<input type="text" id="image_name" name="image_name"
+        size="10" placeholder="需加檔名"></p>
+        <p>輸入長<input type="text" id="height" name="height" size="5"
+        onkeyup="value=value.replace(/[^\d]/g,'')"></p>
+        <p>輸入寬<input type="text" id="width" name="width" size="5"
+        onkeyup="value=value.replace(/[^\d]/g,'')"></p>
+        <input type="submit" id="button" value="確認">
+    </form>
+</body>
+<!--script type="test.js"></!--script-->
+</html>

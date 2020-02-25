@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>福利-日工資</title>
+</head>
+<body>
+    <h1 style="font-size: 15px;">福利中心-日工資資料</h1>
+    <div>
+        
+        <p>用戶名: {{result.user}}</p>
+        <p>註冊天數: {{result.bron_day}}</p>
+        <p>查詢時間: {{result.time}}</p>
+        <p>總投注額: {{result.All_bet}}/有效投注額: {{result.effectiveBet}}/真人有效投注額: {{result.trueBet}}</p>
+        <p>4.0 中獎金額: {{result.win}}, 反點: {{result.ret}}, 活動禮金: {{result.activityGifts}}</p>
+        <p>真人 中獎金額: {{result.fh_win}}, 反點: {{result.fh_ret}}, 活動禮金: {{result.fh_activityGifts}}</p>
+        <p>總紅包: {{result.totalRedDiscount}}, 幸運/比特幣紅包: {{result.red_xybtc}}, 超級2000紅包: {{result.red_2000}}
+        骰寶大小紅包: {{result.red_sb}},剩餘紅包: {{result.red_remain}}
+        </p>
+        <p>日工資 總銷量: {{result.Allbet_day}}, 有效銷量: {{result.effectiveBet_day}}, 總獎金: {{result.user_award}}</p>
+        <p>輸額: {{result.winLost_day}},比例: {{result.per}}%,派發金額: {{result.award}}</p>
+        <p style = "font-size:30px ; color: red">{{result.msg}}</p>
+        <p style="font-size:30px; color: blue">公式: 總待盈虧有效銷量  - (幸運/比特紅包*0.2+超級2000*0.8)- 剩下紅包  + 
+        實際骰寶的大小單雙消費*0.2(福利中心有效需加上 骰寶大小單雙 20%)</p>
+
+        
+    </div>
+
+</body>
+</html> 
