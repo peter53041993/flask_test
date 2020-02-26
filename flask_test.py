@@ -360,7 +360,7 @@ def progress():#執行測試案例時, 目前 還位判斷 request街口狀態, 
     def generate():
         x = 0
         #global response_status
-        print(response_status)
+        #print(response_status)
         while x <= 100 :
             #print(response_status)
             yield "data:" + str(x) + "\n\n"#data內容, 換行
