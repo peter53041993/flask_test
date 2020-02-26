@@ -3,11 +3,9 @@
 
 
 from flask import Flask,render_template,request,jsonify,redirect,make_response,url_for,Response,abort
-from celery import Celery
 import datetime
 from dateutil.relativedelta import relativedelta
 import requests
-import pandas as pd
 import json
 import image_test
 import os
@@ -18,9 +16,10 @@ import threading
 import time
 import test_benefit
 import calendar
+import celery
 
 
-
+'''
 def make_celery(app):
     celery = Celery('flask_test', 
     broker=app.config['CELERY_BROKER_URL'],
@@ -35,9 +34,10 @@ def make_celery(app):
                 return TaskBase.__call__(self, *args, **kwargs)
     celery.Task = ContextTask
     return celery
+'''
 
 app = Flask(__name__)# name 為模塊名稱
-
+'''
 app.config.update(
     CELERY_BROKER_URL='redis://localhost:6379/0',
     CELERY_RESULT_BACKEND='redis://localhost:6379/1'
@@ -45,7 +45,7 @@ app.config.update(
 celery = make_celery(app)
 
 
-'''
+
 app = Flask(__name__)# name 為模塊名稱
 app.config["JSON_AS_ASCII"] = False# 解決 字體顯示 ASCII 問題
 app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'# # 配置消息代理的路徑
