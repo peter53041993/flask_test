@@ -19,42 +19,7 @@ import calendar
 import celery
 
 
-'''
-def make_celery(app):
-    celery = Celery('flask_test', 
-    broker=app.config['CELERY_BROKER_URL'],
-    backend=app.config['CELERY_RESULT_BACKEND']
-    )
-    celery.conf.update(app.config)
-    TaskBase = celery.Task
-    class ContextTask(TaskBase):
-        abstract = True
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return TaskBase.__call__(self, *args, **kwargs)
-    celery.Task = ContextTask
-    return celery
-'''
-
 app = Flask(__name__)# name 為模塊名稱
-'''
-app.config.update(
-    CELERY_BROKER_URL='redis://localhost:6379/0',
-    CELERY_RESULT_BACKEND='redis://localhost:6379/1'
-)
-celery = make_celery(app)
-
-
-
-app = Flask(__name__)# name 為模塊名稱
-app.config["JSON_AS_ASCII"] = False# 解決 字體顯示 ASCII 問題
-app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'# # 配置消息代理的路徑
-app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'# 要存儲 Celery 任務的狀態或運行結果時就必須要配置
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])# 初始化Celery
-celery.conf.update(app.config)# 將Flask中的配置直接傳遞給Celery
-'''
-
-
 
 def iapi_login(envir):#iapi 抓取沙巴token
     session = requests.Session()
@@ -462,13 +427,14 @@ def error():
 @app.errorhandler(404)
 def page_not_found(error):
     return render_template('404.html'),404
-
+'''
 @celery.task()
 def test_fun():
     for _ in range(10000):
         for j in range(50000):
             i = 1
     print('hello')
+'''
 @app.route('/test')
 def test():
     start = time.time()
