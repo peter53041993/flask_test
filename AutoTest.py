@@ -13,6 +13,7 @@ import os
 import pymysql as p
 import logging
 import threading
+import redis,re
 
 lottery_dict = {
 'cqssc':[u'重慶','99101'],'xjssc':[u'新彊時彩','99103'],'tjssc':[u'天津時彩','99104'],
@@ -50,6 +51,27 @@ def return_env(env):
     global env_
     env_ = []
     env_.append(env)
+
+def get_rediskey(envs):#env參數 決定是哪個環境
+    redis_dict = {'ip':['10.13.22.152','10.6.1.82']}#0:dev,1:188
+    global r
+    pool = redis.ConnectionPool(host = redis_dict['ip'][envs],port = 6379)
+    r = redis.Redis(connection_pool=pool)
+
+def get_token(envs,user):
+    get_rediskey(envs)
+    global redis_
+    redis_ = r_keys = (r.keys('USER_TOKEN_%s*'%re.findall(r'[0-9]+|[a-z]+',user)[0]))
+    for i in r_keys:
+        if user in str(i):
+            user_keys = (str(i).replace("'",'')[1:])
+
+    user_dict = (r.get(user_keys))
+    timestap = (str(user_dict).split('timeOut')[1].split('"token"')[0][2:-4])#
+    token_time = (time.localtime(int(timestap)))
+    print('token到期時間: %s-%s-%s %s:%s:%s'%(token_time.tm_year,token_time.tm_mon,token_time.tm_mday,
+    token_time.tm_hour,token_time.tm_min,token_time.tm_sec))
+
 
 class Joy188Test(unittest.TestCase):
         
@@ -816,6 +838,7 @@ class Joy188Test3(unittest.TestCase):
                 print(u"登入失敗")
                 break
             #user_list.setdefault(userid,token) 
+        get_token(envs,user_[0])
     @staticmethod
     @func_time
     def test_AppSubmit():
