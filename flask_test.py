@@ -17,6 +17,7 @@ import time
 import test_benefit
 import calendar
 import celery
+import test_lotteryRecord
 
 
 app = Flask(__name__)# name 為模塊名稱
@@ -282,25 +283,32 @@ def autoTest():
         username = request.form.get('username')
         test_case = request.form.getlist('test_Suite')#回傳 測試案例data內容
         env = request.form.get('env_type')
-        if env == 'dev02':
+        print(env)
+        if env in ['dev02','fh82dev02']:# 多判斷合營
             env_ = 0# env_ 查詢 頁面上  該環境 是否真的有  此用戶名 ,哪來查DB環境用
-        elif env == 'joy188':
+        elif env in ['joy188','maike2020']:
             env_ = 1
         
-        AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(env_),username)
+        AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(env_),username)#查詢用戶 userid,合營
         userid = AutoTest.userid
-        print(userid)
+        #joint_venture = AutoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
+        print(userid)#joint_venture)
         #print(len(userid))
         print(username)
 
-        for test in test_case:#a : PC測式, b: APP測式
+        for test in test_case:
             testcase.append(test)
         print(testcase)
-        #print(len(testcase))
+
+        #print(joint_venture[0])
+        '''
+        if env == 'fh82dev02' and joint_venture[0] != 1:# 代表 不是 合營url 的用戶
+            joint = 0
+        else:
+            joint = 1
+        '''
         if len(userid) > 0: # userid 值為空,　代表該ＤＢ　環境　沒有此用戶名　，　就不用做接下來的事
             AutoTest.suite_test(testcase,username,env)#呼叫autoTest檔 的測試方法
-            #response_status = make_response(redirect('/report')).status
-            #print(response_status)
             return_('done')
             #print(response_status)
             return redirect('report')
@@ -416,10 +424,26 @@ def benefit_month():
     return render_template('benefit_month.html',result=result)
 
 
+@app.route('/report_APP',methods=["GET","POST"])#APP戰報
+def report_APP():
+    global result
+    if request.method == 'POST':
+        envtype = request.form.get('env_type')
+        print(envtype)
+        if envtype == 'dev':
+            env = 0
+        else:# 188
+            env = 1
+        test_lotteryRecord.all_lottery(env)
+        result = test_lotteryRecord.result
+        
+        return redirect('report_AppData')
 
+    return render_template('report_APP.html')
 
-
-
+@app.route('/report_AppData',methods=["GET"])#APP戰報資料顯示
+def report_AppData():
+    return render_template('report_AppData.html',result=result)
 
 @app.route('/error')#錯誤處理
 def error():
