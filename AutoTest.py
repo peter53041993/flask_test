@@ -177,11 +177,13 @@ class Joy188Test(unittest.TestCase):
             sql = "select id from user_customer where account = '%s'"%account_
             cursor.execute(sql)
             rows = cursor.fetchall()
-            global userid
+            global userid#, joint_venture# joint_ventue 判斷合營  ,合營 等 上188 後 在加上
             userid = []
-            
+            joint_venture =[]
+
             for i in rows:
                 userid.append(i[0])
+                #joint_venture.append(i[1])
         conn.close()
 
     @staticmethod
@@ -431,7 +433,7 @@ class Joy188Test(unittest.TestCase):
         '''
         account_ = {user_[0]:'輸入的用戶名'}
 
-        if env_[0] in ['dev02','dev03']:
+        if env_[0] in ['dev02','dev03','fh82dev02']:# 多增加合營
             password = b'123qwe'
             post_url = "http://www.%s.com"%env_[0]
             envs = 0
@@ -441,7 +443,10 @@ class Joy188Test(unittest.TestCase):
             password = b'amberrd'
             post_url = "http://www2.%s.com"%env_[0]
             envs = 1
-
+        elif env_[0] == 'maike2020':
+            password = b'amberrd'
+            post_url = "http://www.%s.com"%env_[0]
+            envs = 1
         elif env_[0] == 'fh968':
             password = b'tsuta0425'
             post_url = "http://www.%s.com"%env_[0]
@@ -790,16 +795,25 @@ class Joy188Test3(unittest.TestCase):
         #判斷用戶是dev或188,  uuid和loginpasssource為固定值
         global envs,env# envs : DB環境 用, env 環境 url ,request url 用
             
-        if env_[0] == 'dev02':
+        if env_[0] in ['dev02','fh82dev02']:
             env = 'http://10.13.22.152:8199/'
             envs = 0
             uuid = "2D424FA3-D7D9-4BB2-BFDA-4561F921B1D5"
             loginpasssource = "fa0c0fd599eaa397bd0daba5f47e7151"
-        elif env_[0] == 'joy188':
+            if env_[0] == 'dev02':#畔對合營
+                jointVenture = 0
+            else:
+                jointVenture = 1
+        elif env_[0] in ['joy188','maike2020']:
             env = 'http://iphong.joy188.com/'
             envs = 1
             uuid = 'f009b92edc4333fd'
             loginpasssource = "3bf6add0828ee17c4603563954473c1e"
+            
+            if env_[0] == 'joy188':# 判斷是否為合營
+                jointVenture = 0
+            else:
+                jointVenture = 1
         else:
             pass
         #登入request的json
@@ -819,7 +833,8 @@ class Joy188Test3(unittest.TestCase):
                 "device": 2,
                 "app_id": 9,
                 "come_from": "3",
-                "appname": "1"
+                "appname": "1",
+                "jointVenture": jointVenture
             }
             }
             }
@@ -1074,13 +1089,20 @@ class Joy188Test2(unittest.TestCase):
                 user = user_[0]
                 password = 'amberrd'
                 env = 1#後面會用到 環境變數 Db查詢用
-            elif env_[0] in ['dev02','dev03']:
+            elif env_[0] in ['dev02','dev03','fh82dev02']:
                 post_url = 'http://www.%s.com'%env_[0]
                 em_url = 'http://em.%s.com'%env_[0]
                 cls.dr.get(post_url)
                 user = user_[0]
                 password = '123qwe'
                 env = 0
+            elif env_[0] == 'maike2020':
+                post_url = 'http://www.%s.com'%env_[0]
+                em_url = 'http://em.%s.com'%env_[0]
+                cls.dr.get(post_url)
+                user = user_[0]
+                password = 'amberrd'
+                env = 1
             print(u'登入環境: %s,登入帳號: %s'%(env_[0],user))
             cls.dr.find_element_by_id('J-user-name').send_keys(user)
             cls.dr.find_element_by_id('J-user-password').send_keys(password)
@@ -1371,7 +1393,20 @@ class Joy188Test2(unittest.TestCase):
             print("方案編號: %s"%order_code[-1])
         else:
             print('失敗')
-
+    @staticmethod
+    def assert_bouns():# 驗證頁面是否有獎金詳情
+        '''
+        try:
+            if '您选择的彩种目前属于休市期间' in Joy188Test2.XPATH("//h4[@class='pop-text']").text:# 休市彈窗
+                Joy188Test2.XPATH('/html/body/div[17]/div[1]/i').click()
+            if  Joy188Test2.XPATH("//p[@class='text-title']").text == '请选择一个奖金组，便于您投注时使用。' :#獎金詳情彈窗
+                Joy188Test2.XPATH("//input[@class='radio']").click()
+                Joy188Test2.LINK('确 认').click()
+                dr.refresh()
+        except NoSuchElementException:
+            dr.refresh()
+        '''
+        pass
     
 
     @staticmethod
@@ -1382,6 +1417,7 @@ class Joy188Test2(unittest.TestCase):
         sleep(1)
         dr.get(em_url+'/gameBet/cqssc')
         print(dr.title)
+        Joy188Test2.assert_bouns()
         
         '''
         Joy188Test2.game_ssh()#所以玩法投注
@@ -1398,6 +1434,8 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'hljssc'
         dr.get(em_url+'/gameBet/hljssc')
         print(dr.title)
+        sleep(2)
+        Joy188Test2.assert_bouns()
         
         '''
         Joy188Test2.game_ssh()
@@ -1411,6 +1449,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'xjssc'
         dr.get(em_url+'/gameBet/xjssc')
         print(dr.title)
+        Joy188Test2.assert_bouns()
         
         #Joy188Test2.game_ssh()
         Joy188Test2.mul_submit()#追號方法
@@ -1423,7 +1462,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'fhxjc'
         dr.get(em_url+'/gameBet/fhxjc')
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh()
 
         Joy188Test2.mul_submit()#追號方法            
@@ -1435,7 +1474,7 @@ class Joy188Test2(unittest.TestCase):
         lottery ='fhcqc'
         dr.get(em_url+'/gameBet/fhcqc')
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh()
         Joy188Test2.mul_submit()#追號方法 
 
@@ -1447,7 +1486,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'txffc'
         dr.get(em_url+'/gameBet/txffc')
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
         Joy188Test2.mul_submit()#追號方法 
 
@@ -1460,7 +1499,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'jlffc'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         Joy188Test2.game_ssh2('no')# 
         #Joy188Test2.mul_submit()#追號方法 
         #sleep(1000)
@@ -1472,7 +1511,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'hnffc'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         Joy188Test2.game_ssh('no')# 
         #Joy188Test2.mul_submit()#追號方法 
 
@@ -1484,7 +1523,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = '360ffc'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         Joy188Test2.game_ssh('no')# 
         #Joy188Test2.mul_submit()#追號方法 
 
@@ -1497,7 +1536,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'shssl'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
         Joy188Test2.mul_submit()#追號方法 
 
@@ -1508,7 +1547,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'sd115'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
         Joy188Test2.mul_submit()#追號方法 
 
@@ -1519,7 +1558,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'jx115'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
         Joy188Test2.mul_submit()#追號方法 
 
@@ -1530,7 +1569,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'gd115'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
         Joy188Test2.mul_submit()#追號方法 
 
@@ -1541,7 +1580,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'sl115'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
 
         Joy188Test2.XPATH("//a[@data-param='action=batchSetBall&row=0&bound=all&start=1']").click()#全玩法
@@ -1557,6 +1596,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'slmmc'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
         while True:
             try:
@@ -1582,7 +1622,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'fhjlssc'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
         Joy188Test2.mul_submit()#追號方法 
 
@@ -1595,7 +1635,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'v3d'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
         Joy188Test2.mul_submit()#追號方法 
 
@@ -1607,7 +1647,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'p5'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
         Joy188Test2.mul_submit()#追號方法 
 
@@ -1619,7 +1659,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'ssq'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
         Joy188Test2.mul_submit()#追號方法 
 
@@ -1631,7 +1671,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'fc3d'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
         Joy188Test2.mul_submit()#追號方法 
 
@@ -1643,7 +1683,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'llssc'
         dr.get(em_url+'/gameBet/llssc')
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
         Joy188Test2.mul_submit()#追號方法 
 
@@ -1654,7 +1694,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'btcffc'
         dr.get(em_url+'/gameBet/btcffc')
         print(dr.title)
-        
+        Joy188Test2.assert_bouns()
         #Joy188Test2.game_ssh('no')# 
         Joy188Test2.mul_submit()#追號方法
         Joy188Test2.submit()
@@ -1665,6 +1705,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'ahk3'
         dr.get(em_url+'/gameBet/ahk3')
         print(dr.title)
+        Joy188Test2.assert_bouns()
         '''
         k3_element = ['li.hezhi.normal','li.santonghaotongxuan.normal','li.santonghaodanxuan.normal',
         'li.sanbutonghao.normal','li.sanlianhaotongxuan.normal','li.ertonghaofuxuan.normal',
@@ -1682,6 +1723,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'jsk3'
         dr.get(em_url+'/gameBet/jsk3')
         print(dr.title)
+        Joy188Test2.assert_bouns()
         '''
         k3_element = ['li.hezhi.normal','li.santonghaotongxuan.normal','li.santonghaodanxuan.normal',
         'li.sanbutonghao.normal','li.sanlianhaotongxuan.normal','li.ertonghaofuxuan.normal',
@@ -1700,6 +1742,7 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'jsdice'
         dr.get(em_url+'/gameBet/jsdice')
         print(dr.title)
+        Joy188Test2.assert_bouns()
         global sb_element
         # 江蘇骰寶 列表, div 1~ 52
         num = 1
@@ -1721,7 +1764,7 @@ class Joy188Test2(unittest.TestCase):
         for lottery in ['jldice1','jldice2']:
             dr.get(em_url+'/gameBet/%s'%lottery)
             print(dr.title)
-
+            Joy188Test2.assert_bouns()
             for i in sb_element:
                 if Joy188Test2.ID('diceCup').is_displayed():#吉利骰寶 遇到中間開獎, 讓他休息,在繼續
                     sleep(15)
@@ -1743,6 +1786,7 @@ class Joy188Test2(unittest.TestCase):
         lottery= 'bjkl8'
         dr.get(em_url+'/gameBet/bjkl8')
         print(dr.title)
+        Joy188Test2.assert_bouns()
         '''
         bjk_element = ['dd.renxuan%s'%i for i in range(1,8)]#任選1 到 任選7
         Joy188Test2.id_element('randomone')
@@ -1763,6 +1807,7 @@ class Joy188Test2(unittest.TestCase):
         lottery= 'pk10'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
+        Joy188Test2.assert_bouns()
         for i in range(2):
             Joy188Test2.XPATH("//a[@data-param='action=batchSetBall&row=%s&bound=all&start=1']"%i).click()
         Joy188Test2.ID('J-add-order').click()#選好了
@@ -1776,6 +1821,7 @@ class Joy188Test2(unittest.TestCase):
         lottery= 'xyft'
         dr.get(em_url+'/gameBet/%s'%lottery)
         print(dr.title)
+        Joy188Test2.assert_bouns()
         for i in range(2):
             Joy188Test2.XPATH("//a[@data-param='action=batchSetBall&row=%s&bound=all&start=1']"%i).click()
         Joy188Test2.ID('J-add-order').click()#選好了
@@ -1935,7 +1981,7 @@ def suite_test(testcase,username,env):
     #threads =[]
     lottery_list = ['cqssc','hljssc','xjssc','fhcqc','fhxjc','btcffc','txffc','jlffc','bjkl8','jsdice','ahk3',
     'pk10','xyft','v3d','fc3d','p5','ssq','slmmc','sl115']
-    test_list = ['jlffc']
+    test_list = ['hljssc']
     return_user(username)# 回傳 頁面上 輸入的用戶名
     return_env(env)#回傳環境
 
@@ -1953,7 +1999,7 @@ def suite_test(testcase,username,env):
                 suite_list.append(Joy188Test3(i))
             elif i in ['test_safepersonal','test_applycenter','test_plan']:#瀏覽器案例
                 if i == 'test_plan':
-                    for lottery in lottery_list:
+                    for lottery in test_list:
                         suite_list.append(Joy188Test2('test_%s'%lottery))
                 else:
                     suite_list.append(Joy188Test2(i))
