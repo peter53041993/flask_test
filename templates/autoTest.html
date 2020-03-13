@@ -48,7 +48,7 @@
                     } 
                     })
                     }
-                /*
+                
                 event.preventDefault();
                 var source = new EventSource("/progress");
                 //var msg = 'start'
@@ -56,7 +56,7 @@
                 //console.log(data)
                 $('.progress-bar').css('width', event.data + '%').attr('aria-valuenow', event.data);
                 $('.progress-bar-label').text(event.data + '%');  
-                }  */
+                }  
                     //source.close()
                     }
                 
@@ -107,7 +107,9 @@
     <label>環境: </label>
     <select name='env_type' id='env_type'>
         <option value="dev02">dev02</option>
+        <option value="fh82dev02">fh82dev02</option>
         <option value="joy188" selected>joy188</option>
+        <option value="maike2020">maike2020</option>
     </select>
     <br></br>
     <input type='checkbox' id='PcChecked'>PC接口測試
