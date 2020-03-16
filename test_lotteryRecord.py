@@ -218,8 +218,9 @@ def all_lottery(envs,mulissue=3):#戰報顯示, envs環境 0:dev ,1:188, mulissu
         msg1 = 'dev戰報,抓取 %s期'%mulissue
         print('dev戰報,抓取 %s期'%mulissue)
     result['msg1'] = msg1
-    for lottery in enumerate(lottery_list,envs):
-        print(lottery[0]+1)
+    for lottery in enumerate(lottery_list):
+        #print(lottery)
+        #print(lottery[0]+1)
         msg2.append(lottery[0]+1)
         result['msg2'] = msg2
         if lottery[1] in 'btcctp':
