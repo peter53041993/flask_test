@@ -25,8 +25,9 @@
                 else if($('#username').val()=='') {
                     alert('請輸入用戶名')
                 }
-                else if(driver_check>3){
+                else if(driver_check>1){
                     alert('PC自動化案例暫停開放謝謝')
+                    location.reload();
                 }
                 else{
                     $.ajax({url:"/autoTest",
