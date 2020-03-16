@@ -1037,8 +1037,8 @@ class Joy188Test3(unittest.TestCase):
                 sleep(0.5)
                 count += 1
                 if count== 15:
-                    #print('轉帳狀態失敗')# 如果跑道9次  需確認
-                    pass
+                    print('轉帳狀態失敗')# 如果跑道9次  需確認
+                    #pass
             print('%s ,sn 單號: %s'%(third,thirdly_sn[-1]))
         Joy188Test3.test_AppBalance()
     @staticmethod
@@ -1069,8 +1069,8 @@ class Joy188Test3(unittest.TestCase):
                 sleep(1)
                 count += 1
                 if count== 15:
-                    #print('轉帳狀態失敗')# 如果跑道9次  需確認
-                    pass
+                    print('轉帳狀態失敗')# 如果跑道9次  需確認
+                    
             print('%s, sn 單號: %s'%(third,thirdly_sn[-1]))
         Joy188Test3.test_AppBalance()
     
