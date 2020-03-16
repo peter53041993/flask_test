@@ -221,11 +221,16 @@ def game_report_day(user,month,day,cookies,env):#盈虧報表數據,   日工資
                 totalRedDiscount = 0
                 print('紅包功能暫未開放')
         All_bet = round(All_bet - totalRedDiscount,4)#從總待盈虧抓出來的總銷量, 需再扣掉 紅包
-        
-        red_xybtc = round(red_dict[0][2]*0.0001,4)#幸運/比特幣 紅包值
-        red_2000 = round(red_dict[0][4]*0.0001,4)#超級2000 紅包
-        red_sb = round(red_dict[0][6]*0.0001,4)#骰寶大小單雙 紅包
-        red_remain = totalRedDiscount - (red_xybtc+red_2000+red_sb)#剩下的紅包值,  全部紅包 - (幸運/比特幣+2000+骰寶大小單雙)
+        try :
+            red_xybtc = round(red_dict[0][2]*0.0001,4)#幸運/比特幣 紅包值
+            red_2000 = round(red_dict[0][4]*0.0001,4)#超級2000 紅包
+            red_sb = round(red_dict[0][6]*0.0001,4)#骰寶大小單雙 紅包
+            red_remain = totalRedDiscount - (red_xybtc+red_2000+red_sb)#剩下的紅包值,  全部紅包 - (幸運/比特幣+2000+骰寶大小單雙)
+        except KeyError:
+            red_xybtc = 0
+            red_2000 = 0
+            red_sb = 0
+            red_remain = totalRedDiscount - (red_xybtc+red_2000+red_sb)
 
 
         red_total = (red_xybtc*0.2)+(red_2000*0.8) + red_remain # 這裡將 分別的紅包 + 剩下的紅包  ,再拿去給有效銷量減掉
