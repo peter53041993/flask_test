@@ -1113,7 +1113,10 @@ class Joy188Test3(unittest.TestCase):
                 print(u"登入失敗")
                 break
             #user_list.setdefault(userid,token) 
-        get_token(envs,user_[0])
+        if env_[0] == 'dev02':
+            get_token(envs,user_[0])
+        else:
+            print('07上無法連線188redis,查詢token失效請使用http://66dca985.ngrok.io/autoTest')
     @staticmethod
     @func_time
     def test_AppSubmit():
@@ -1297,8 +1300,8 @@ class Joy188Test3(unittest.TestCase):
                 sleep(0.5)
                 count += 1
                 if count== 15:
-                    #print('轉帳狀態失敗')# 如果跑道9次  需確認
-                    pass
+                    print('轉帳狀態失敗')# 如果跑道9次  需確認
+                    #pass
             print('%s ,sn 單號: %s'%(third,thirdly_sn[-1]))
         Joy188Test3.test_AppBalance()
     @staticmethod
@@ -1329,8 +1332,8 @@ class Joy188Test3(unittest.TestCase):
                 sleep(1)
                 count += 1
                 if count== 15:
-                    #print('轉帳狀態失敗')# 如果跑道9次  需確認
-                    pass
+                    print('轉帳狀態失敗')# 如果跑道9次  需確認
+                    
             print('%s, sn 單號: %s'%(third,thirdly_sn[-1]))
         Joy188Test3.test_AppBalance()
     
@@ -2274,7 +2277,7 @@ def suite_test(testcase,username,env,red):
         print(suite)
         
         
-        filename = "C:\\python3\\Scripts\\jupyter_test\\templates\\report.html"#now + u'自動化測試' + '.html'
+        filename = "/opt/QA/python3/jupyter_test/templates/report.html"
         global fp
         fp = open(filename, 'wb')
         global runner
