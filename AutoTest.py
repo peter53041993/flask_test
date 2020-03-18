@@ -1113,10 +1113,7 @@ class Joy188Test3(unittest.TestCase):
                 print(u"登入失敗")
                 break
             #user_list.setdefault(userid,token) 
-        if env_[0] == 'dev02':
-            get_token(envs,user_[0])
-        else:
-            print('07上無法連線188redis,查詢token失效請使用http://66dca985.ngrok.io/autoTest')
+        get_token(envs,user_[0])
     @staticmethod
     @func_time
     def test_AppSubmit():
