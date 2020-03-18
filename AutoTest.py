@@ -26,15 +26,17 @@ lottery_dict = {
 'jldice2':[u'吉利骰寶(至尊)','99603'],'fc3d':[u'3D','99108'],'p5':[u'排列5','99109'],
 'lhc':[u'六合彩','99701'],'btcctp':[u'快開','99901'],
 'bjkl8':[u'快樂8','99201'],'pk10':[u"pk10",'99202'],'v3d':[u'吉利3D','99801'],
-'xyft':[u'幸運飛艇','99203'],'fhxjc':[u'鳳凰新疆','99118'],'fhcqc':[u'鳳凰重慶','99117'],'ssq':[u'雙色球','99401']   
+'xyft':[u'幸運飛艇','99203'],'fhxjc':[u'鳳凰新疆','99118'],'fhcqc':[u'鳳凰重慶','99117'],'ssq':[u'雙色球','99401'],
+'n3d':[u'越南3d','99124'],'np3':[u'越南福利彩','99123']   
         }
 lottery_sh = ['cqssc','xjssc','tjssc','hljssc','llssc','jlffc','slmmc','txffc',
             'fhjlssc','btcffc','fhcqc','fhxjc']
-lottery_3d = ['v3d','fc3d']
+lottery_3d = ['v3d']
 lottery_115 = ['sd115','jx115','gd115','sl115']
 lottery_k3 = ['ahk3','jsk3']
 lottery_sb = ['jsdice',"jldice1",'jldice2']
 lottery_fun = ['pk10','xyft']
+lottery_noRed = ['fc3d','n3d','np3','p5']#沒有紅包
 
 def func_time(func):#案例時間
     def wrapper(*args):
@@ -43,14 +45,19 @@ def func_time(func):#案例時間
         end_ = time.time() - start_
         print("用時: {}秒".format(end_))
     return wrapper
-def return_user(username):
+def return_user(username):#頁面用戶選擇
     global user_
     user_ = []
     user_.append(username)
-def return_env(env):
+def return_env(env):#頁面環境選擇
     global env_
     env_ = []
     env_.append(env)
+def return_red(red):#頁面是否紅包投注
+    global red_type
+    red_type = []
+    red_type.append(red)
+
 
 def get_rediskey(envs):#env參數 決定是哪個環境
     redis_dict = {'ip':['10.13.22.152','10.6.1.82']}#0:dev,1:188
@@ -128,7 +135,32 @@ class Joy188Test(unittest.TestCase):
             conn.close()
         except:
             pass
-    
+    @staticmethod
+    def select_RedBal(conn,user):
+        with conn.cursor() as cursor:
+            sql = "SELECT bal FROM RED_ENVELOPE WHERE \
+            USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='%s')"%user
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+
+            global red_bal
+            red_bal = []
+            for i in rows:# i 生成tuple
+                red_bal.append(i[0])
+        conn.close()
+    @staticmethod
+    def select_RedID(conn,user):#紅包加壁  的訂單號查詢 ,用來審核用
+        with conn.cursor() as cursor:
+            sql = "SELECT ID FROM RED_ENVELOPE_LIST WHERE status=1 and \
+            USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='%s')"%user
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+
+            global red_id
+            red_id = []
+            for i in rows:# i 生成tuple
+                red_id.append(i[0])
+        conn.close()
     @staticmethod
     def select_betTypeCode(conn,lotteryid,game_type):#從game_type 去對應玩法的數字,給app投注使用
         with conn.cursor() as cursor:
@@ -199,7 +231,21 @@ class Joy188Test(unittest.TestCase):
                 user_url.append(i[0])
         conn.close()
     
-    
+    @staticmethod
+    def web_issuecode(lottery):#頁面產生  獎期用法,  取代DB連線問題
+        now_time = int(time.time())
+        header = {
+                'User-Agent': userAgent,
+                'Cookies': 'ANVOID='+cookies_[user]     
+                }
+        r = session.get(em_url+'/gameBet/%s/lastNumber?_=%s'%(lottery,now_time),headers=header)
+        global issuecode
+        try:
+            issuecode = r.json()['issueCode']
+        except:
+            pass
+        if lottery == 'lhc':
+            pass
     @staticmethod    
     def my_con(evn,third):#第三方  mysql連線
         third_dict = {'lc':['lcadmin',['cA28yF#K=yx*RPHC','XyH]#xk76xY6e+bV'],'ff_lc'],
@@ -367,7 +413,15 @@ class Joy188Test(unittest.TestCase):
             num = 1
             play_ = u'玩法名稱: %s.%s.%s'%(game_group['qianer'],game_set['zhixuan'],
                     game_method['zhixuanfushi'])
-
+        elif lottery in lottery_noRed:
+            if lottery in ['p5','np3']:
+                num = 9
+                play_ = u'玩法名稱: %s.%s.%s'%(game_group['p3sanxing'],game_set['zhixuan'],
+                    game_method['fushi'])
+            else:
+                num = 1
+                play_ = u'玩法名稱: %s.%s.%s'%(game_group['qianer'],game_set['zhixuan'],
+                        game_method['zhixuanfushi'])                    
         elif lottery in lottery_115:
             num = 2
             play_ = u'玩法名稱: %s.%s.%s'%(game_group['xuanqi'],game_set['renxuanqizhongwu'],
@@ -406,7 +460,165 @@ class Joy188Test(unittest.TestCase):
             num = 11
             #play_ = u'玩法名稱: 沖天炮
         return test_dicts[num][0],test_dicts[num][1]
+    @staticmethod
+    def req_post_submit(account,lottery,data_,moneyunit,awardmode):
+        awardmode_dict = {0:u"非一般模式",1:u"非高獎金模式",2:u"高獎金"}
+        money_dict = {1:u"元模式",0.1:u"分模式",0.01:u"角模式"}
+        while True:
+            header = {
+                'Cookie': "ANVOID=" + cookies_[account],
+                'User-Agent': userAgent
+            }
 
+
+            r = session.post(em_url+'/gameBet/'+lottery+'/submit', 
+            data = json.dumps(data_),headers=header)
+
+            global content_
+            try:
+            #print(r.json())
+                msg = (r.json()['msg'])
+                mode = money_dict[moneyunit]
+                mode1 = awardmode_dict[awardmode]
+                project_id = (r.json()['data']['projectId'])#訂單號
+                submit_amount = (r.json()['data']['totalprice'])#投注金額
+                #submit_mul = u"投注倍數: %s"%m#隨機倍數
+                lottery_name= u'投注彩種: %s'%lottery_dict[lottery][0]     
+            
+                if r.json()['isSuccess'] == 0:#
+                    #select_issue(get_conn(envs),lottery_dict[lottery][1])#呼叫目前正在販售的獎期
+                    content_ = (lottery_name+"\n"+ mul_+ "\n"+play_ +"\n"+ msg+"\n")
+                    #print(content_)
+                    
+                    if r.json()['msg'] == u'存在封锁变价':#有可能封鎖變價,先跳過   ()
+                        break
+                    elif r.json()['msg'] == u'您的投注内容 超出倍数限制，请调整！':
+                        print(u'倍數超出了唷,下次再來')
+                        break
+                    elif  r.json()['msg']==u'方案提交失败，请检查网络并重新提交！':
+                        print(r.json()['msg'])
+                        break
+                    else:# 系統內部錯誤
+                        print(r.json()['msg'])
+                        break
+                else:#投注成功
+                    if red_type[0]=='yes':
+                        content_ = (lottery_name+"\n"+u'投注單號: '+project_id+"\n"
+                                    +mul_+ "\n" 
+                                    +play_+"\n"+u"投注金額: "+ str(float(submit_amount*0.0001))+"\n"
+                                    +"紅包金額: 2"+mode+"/"+mode1+"\n"+msg+"\n")
+                    else:
+                        content_ = (lottery_name+"\n"+u'投注單號: '+project_id+"\n"
+                                    +mul_+ "\n" 
+                                    +play_+"\n"+u"投注金額: "+ str(float(submit_amount*0.0001))+"\n"
+                                    +mode+"/"+mode1+"\n"+msg+"\n")
+                    break
+            except ValueError:
+                content_ = ('%s 投注失敗'%lottery+"\n")
+                break
+        print(content_)
+    @staticmethod
+    #@jit_func_time
+    def test_PCLotterySubmit(moneyunit=1,plan=1):#彩種投注
+        u"投注測試"
+        
+        account = user_[0]
+        if red_type[0] == 'yes':
+            print('使用紅包投注')
+        else:
+            print('不使用紅包投注')
+        while True:
+            try:
+                for i in lottery_dict.keys():
+                #for i in lottery_noRed:
+                    statu = 1
+                    global mul_ #傳回 投注出去的組合訊息 req_post_submit 的 content裡
+                    global mul
+                    ball_type_post = Joy188Test.game_type(i)# 找尋彩種後, 找到Mapping後的 玩法後內容
+
+                    awardmode =1
+                    if i  == 'btcctp':
+                        statu = 0
+
+                        awardmode = 2
+                        moneyunit = 1
+                        mul = Joy188Test.random_mul(1)#不支援倍數,所以random參數為1
+                    elif i == 'bjkl8':
+                        mul = Joy188Test.random_mul(5)#北京快樂8
+                    elif i == 'p5':
+                        mul = Joy188Test.random_mul(5)
+
+                    elif i in ['btcffc','xyft']:
+                        awardmode = 2
+                    elif i in lottery_sb:#骰寶只支援  元模式
+                        moneyunit = 1
+                    
+                    
+                    mul_ = (u'選擇倍數: %s'%mul)
+                    amount = 2*mul*moneyunit
+
+                #從DB抓取最新獎期.[1]為 99101類型select_issueselect_issue
+
+                    if plan == 1   :# 一般投住
+
+                        #Joy188Test.select_issue(Joy188Test.get_conn(1),lottery_dict[i][1])
+                        #從DB抓取最新獎期.[1]為 99101類型
+                        #print(issueName,issue)
+                        Joy188Test.web_issuecode(i)
+                        plan_ = [{"number":'123',"issueCode":issuecode,"multiple":1}]
+                        print(u'一般投住')
+                        isTrace=0
+                        traceWinStop=0
+                        traceStopValue=-1
+                    else: #追號
+                        plan_ = Joy188Test.plan_num(envs,i,Joy188Test.random_mul(30))#隨機生成 50期內的比數
+                        print(u'追號, 期數:%s'%len(plan_))
+                        isTrace=1
+                        traceWinStop=1
+                        traceStopValue=1
+
+                    len_ = len(plan_)# 一般投注, 長度為1, 追號長度為
+                    #print(game_type)
+                
+                    post_data = {"gameType":i,"isTrace":isTrace,"traceWinStop":traceWinStop,
+                    "traceStopValue":traceWinStop,
+                    "balls":[{"id":1,"ball":ball_type_post[1],"type":ball_type_post[0],
+                    "moneyunit":moneyunit,"multiple":mul,"awardMode":awardmode,
+                    "num":1}],"orders": plan_ ,"amount" : len_*amount}#不使用紅包
+  
+                    post_data_lhc = {"balls":[{"id":1,"moneyunit":moneyunit,"multiple":1,"num":1,
+                    "type":ball_type_post[0],"amount":amount,"lotterys":"13",
+                    "ball":ball_type_post[1],"odds":"7.5"}],
+                    "isTrace":0,"orders":plan_,
+                    "amount":amount,"awardGroupId":202}
+
+                    post_data_sb ={"gameType":i,"isTrace":0,"multiple":1,"trace":1,
+                    "amount":amount,
+                    "balls":[{"ball":ball_type_post[1],
+                    "id":11,"moneyunit":moneyunit,"multiple":1,"amount":amount,"num":1,
+                    "type":ball_type_post[0]}],
+                    "orders":plan_}
+
+                    if i in 'lhc':
+                        Joy188Test.req_post_submit(account,'lhc',post_data_lhc,moneyunit,awardmode)
+                        
+                    elif i in lottery_sb:
+                        Joy188Test.req_post_submit(account,i,post_data_sb,moneyunit,awardmode) 
+                    else:
+                        if red_type[0] == 'yes':#紅包投注
+                            post_data['redDiscountAmount'] = 2 #增加紅包參數
+                            Joy188Test.req_post_submit(account,i,post_data,moneyunit,awardmode)
+                        else:
+                            Joy188Test.req_post_submit(account,i,post_data,moneyunit,awardmode)
+                Joy188Test.select_RedBal(Joy188Test.get_conn(1),user)
+                print('紅包餘額: %s'%(int(red_bal[0])/10000))
+                break
+            except KeyError as e:
+                print(u"輸入值有誤")
+                break           
+            except IndexError as e :
+                #print(e)
+                break
     @staticmethod
     @func_time
     def test_PcLogin(source='Pc'):
@@ -772,6 +984,54 @@ class Joy188Test(unittest.TestCase):
             else:
                 pass
         Joy188Test.test_PcThirdBalance()
+    @staticmethod
+    def admin_login():
+        global admin_cookie,admin_url,header
+        admin_cookie = {}
+        if env_[0] == 'dev02':
+            admin_url = 'http://admin.dev02.com'
+            password = '123qwe'
+        else:
+            admin_url = 'http://admin.joy188.com'
+            password = 'amberrd'
+        header = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36',
+                  'Content-Type': 'application/x-www-form-urlencoded'}
+        admin_data = {'username':'cancus','password':password,'bindpwd':123456}
+        r = session.post(admin_url+'/admin/login/login',data=admin_data,headers=header)
+        cookies = r.cookies.get_dict()#獲得登入的cookies 字典
+        admin_cookie['admin_cookie'] =  cookies['ANVOAID'] 
+    @staticmethod
+    def test_redEnvelope():#紅包加壁,審核用
+        user = user_[0]
+        print('用戶: %s'%user)
+        red_list = [] #放交易訂單號id
+        Joy188Test.select_RedBal(Joy188Test.get_conn(1),user)
+        print('紅包餘額: %s'%(int(red_bal[0])/10000))
+        
+        Joy188Test.admin_login()#登入後台
+        data = {"receives":user,"blockType":"2","lotteryType":"1","lotteryCodes":"",
+        "amount":"100","note":"test"}
+        header['Cookie'] = 'ANVOAID='+ admin_cookie['admin_cookie']#存放後台cookie
+        header['Content-Type'] ='application/json'
+        r = session.post(admin_url+'/redAdmin/redEnvelopeApply',#後台加紅包街口 
+        data = json.dumps(data),headers=header)
+        if r.json()['status'] ==0:
+            print('紅包加幣100')
+        else:
+            print ('失敗')
+        Joy188Test.select_RedID(Joy188Test.get_conn(1),user)#查詢教地訂單號,回傳審核data
+        #print(red_id)
+        red_list.append('%s'%red_id[0])
+        #print(red_list)
+        data = {"ids":red_list ,"status":2}
+        r = session.post(admin_url+'/redAdmin/redEnvelopeConfirm',#後台審核街口 
+        data = json.dumps(data),headers=header)
+        if r.json()['status'] ==0:
+            print('審核通過')
+        else:
+            print('審核失敗')
+        Joy188Test.select_RedBal(Joy188Test.get_conn(1),user)
+        print('紅包餘額: %s'%(int(red_bal[0])/10000))
    
 class Joy188Test3(unittest.TestCase):
     u'APP接口測試'
@@ -1975,7 +2235,7 @@ class Joy188Test2(unittest.TestCase):
     def tearDownClass(cls):
         cls.dr.quit()
 
-def suite_test(testcase,username,env):
+def suite_test(testcase,username,env,red):
     global msg
     #pc = []
     #app =[]
@@ -1987,7 +2247,7 @@ def suite_test(testcase,username,env):
     test_list = ['hljssc']
     return_user(username)# 回傳 頁面上 輸入的用戶名
     return_env(env)#回傳環境
-
+    return_red(red)
     try:
         suite = unittest.TestSuite()
         #suite_pc = unittest.TestSuite()
@@ -1996,7 +2256,8 @@ def suite_test(testcase,username,env):
         #print(len(testcase))
         for i in testcase:
             if i in ['test_PcLogin','test_PcLotterySubmit','test_PcThirdHome','test_PcFFHome',
-            'test_PcChart','test_PcThirdBalance','test_PcTransferin','test_PcTransferout']:#PC 案例
+            'test_PcChart','test_PcThirdBalance','test_PcTransferin','test_PcTransferout','test_PCLotterySubmit',
+            'test_redEnvelope']:#PC 案例
                 suite_list.append(Joy188Test(i))
             elif i in ['test_AppLogin','test_AppSubmit','test_AppOpenLink','test_AppBalance','test_ApptransferIn','test_ApptransferOut']:#APP案例
                 suite_list.append(Joy188Test3(i))

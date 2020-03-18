@@ -282,8 +282,9 @@ def autoTest():
         testcase = []
         username = request.form.get('username')
         test_case = request.form.getlist('test_Suite')#回傳 測試案例data內容
-        env = request.form.get('env_type')
-        print(env)
+        env = request.form.get('env_type')#環境選擇
+        red = request.form.get('red_type')#紅包選擇
+        print(env,red)
         if env in ['dev02','fh82dev02']:# 多判斷合營
             env_ = 0# env_ 查詢 頁面上  該環境 是否真的有  此用戶名 ,哪來查DB環境用
         elif env in ['joy188','maike2020']:
@@ -299,16 +300,8 @@ def autoTest():
         for test in test_case:
             testcase.append(test)
         print(testcase)
-
-        #print(joint_venture[0])
-        '''
-        if env == 'fh82dev02' and joint_venture[0] != 1:# 代表 不是 合營url 的用戶
-            joint = 0
-        else:
-            joint = 1
-        '''
         if len(userid) > 0: # userid 值為空,　代表該ＤＢ　環境　沒有此用戶名　，　就不用做接下來的事
-            AutoTest.suite_test(testcase,username,env)#呼叫autoTest檔 的測試方法
+            AutoTest.suite_test(testcase,username,env,red)#呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
             return_('done')
             #print(response_status)
             return redirect('report')
