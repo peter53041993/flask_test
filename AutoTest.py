@@ -2280,9 +2280,8 @@ def suite_test(testcase,username,env,red):
         
         suite.addTests(suite_list)
         print(suite)
-        filename_list = ["C:\\python3\\Scripts\\jupyter_test\\templates\\report.html",
-        "/opt/QA/python3/jupyter_test/templates/report.html"]#一個本基測試,另一個 07
-        filename = filename_list[0]
+    
+        filename = "C:\\python3\\Scripts\\jupyter_test\\templates\\report.html"#now + u'自動化測試' + '.html'
         global fp
         fp = open(filename, 'wb')
         global runner
