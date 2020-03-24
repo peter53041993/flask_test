@@ -285,7 +285,7 @@ def autoTest():
         env = request.form.get('env_type')#環境選擇
         red = request.form.get('red_type')#紅包選擇
         print(env,red)
-        if env in ['dev02','fh82dev02']:# 多判斷合營
+        if env in ['dev02','fh82dev02','88hlqpdev02','teny2020dev02']:# 多判斷合營,歡樂棋牌
             env_ = 0# env_ 查詢 頁面上  該環境 是否真的有  此用戶名 ,哪來查DB環境用
         elif env in ['joy188','maike2020']:
             env_ = 1
