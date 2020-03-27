@@ -650,7 +650,7 @@ class Joy188Test(unittest.TestCase):
             post_url = "http://www.%s.com"%env_[0]
             envs = 0
 
-        elif env_[0] == 'joy188':
+        elif env_[0] in ['joy188','joy188.teny2020','joy188.195353','joy188.88hlqp']:
 
             password = b'amberrd'
             post_url = "http://www2.%s.com"%env_[0]
@@ -1056,31 +1056,33 @@ class Joy188Test3(unittest.TestCase):
         }
         
         #判斷用戶是dev或188,  uuid和loginpasssource為固定值
-        global envs,env,domain_url# envs : DB環境 用, env 環境 url ,request url 用
+        global envs,env,domain_url# envs : DB環境 用, env 環境 url ,request url 用, domin_url APP開戶 參數用
             
         if env_[0] in ['dev02','fh82dev02','88hlqpdev02','teny2020dev02']:
             env = 'http://10.13.22.152:8199/'
             domain_url = 'http://www.%s.com'%env_[0]
             envs = 0
             uuid = "2D424FA3-D7D9-4BB2-BFDA-4561F921B1D5"
-            loginpasssource = "fa0c0fd599eaa397bd0daba5f47e7151"
+            loginpasssource = "fa0c0fd599eaa397bd0daba5f47e7151"#123qwe
             if env_[0] == 'dev02':#判斷合營,歡樂棋牌
                 jointVenture = 0
-            elif env_[0] == 'fh82dev02':
+            elif env_[0] in ['fh82dev02','teny2020dev02']:
                 jointVenture = 1
             else:
                 jointVenture = 2#歡樂棋牌
-        elif env_[0] in ['joy188','maike2020']:
+        elif env_[0] in ['joy188','joy188.teny2020','joy188.195353','joy188.88hlqp']:
             env = 'http://iphong.joy188.com/'
             domain_url = 'http://iphong.joy188.com/'
             envs = 1
             uuid = 'f009b92edc4333fd'
-            loginpasssource = "3bf6add0828ee17c4603563954473c1e"
+            loginpasssource = "3bf6add0828ee17c4603563954473c1e"#amberrd
             if env_[0] == 'joy188':# 判斷是否為一般用戶還是合營用戶
                 jointVenture = 0
-            else:
+            elif env_[0] in ['joy188.teny2020','joy188.195353']:#合營
                 jointVenture = 1
-        else:
+            else:
+                jointVenture = 2#歡樂棋牌
+        else:#不在頁面環境上
             pass
         #登入request的json
         for i in account_.keys():
@@ -1183,7 +1185,7 @@ class Joy188Test3(unittest.TestCase):
                         print(u'投注單號: %s'%order_code[-1])
                         print('------------------------------')
                     else:
-                        #print(r.json())
+                        print('%s投注失敗'%lottery_dict[i][0])
                         pass
         except requests.exceptions.ConnectionError:
             print('please wait')
