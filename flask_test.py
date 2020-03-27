@@ -287,7 +287,7 @@ def autoTest():
         print(env,red)
         if env in ['dev02','fh82dev02','88hlqpdev02','teny2020dev02']:# 多判斷合營,歡樂棋牌
             env_ = 0# env_ 查詢 頁面上  該環境 是否真的有  此用戶名 ,哪來查DB環境用
-        elif env in ['joy188','maike2020']:
+        elif env in ['joy188','joy188.teny2020','joy188.195353','joy188.88hlqp']:
             env_ = 1
         
         AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(env_),username)#查詢用戶 userid,合營
