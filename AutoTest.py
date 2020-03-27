@@ -1410,21 +1410,8 @@ class Joy188Test2(unittest.TestCase):
                 Joy188Test2.ID(element1).click() 
         except WebDriverException as e:
             pass
-        except NoSuchElementException as e:
-            pass
-    @staticmethod	
-    def class_element(element1):#抓取id元素,判斷提示窗
-        
-        try:
-            element = Joy188Test2.CSS("a.btn.closeTip")
-            if element.is_displayed():
-                Joy188Test2.LINK("关 闭").click()
-            else:
-                Joy188Test2.CLASS(element1).click() 
-        except WebDriverException as e:
-            print(e)
-        except NoSuchElementException as e:
-            print(e)
+
+
     @staticmethod	
     def css_element(element1):#抓取css元素,判斷提示窗
         try:
