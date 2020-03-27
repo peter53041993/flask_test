@@ -452,15 +452,7 @@ def test_fun():
             i = 1
     print('hello')
 '''
-@app.route('/test')
-def test():
-    start = time.time()
 
-    test_fun.apply_async()
-    end =time.time() - start
-    print('用時: %s秒'%end)
-
-    return render_template('test.html',end=end)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0",debug=True,port=4444,threaded=True)
