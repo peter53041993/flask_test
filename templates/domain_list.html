@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<!-- saved from url=(0033)http:// /domain_list -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      
+<style>
+#header {
+    background-color:black;
+    width: 1300px;
+    height: 50px;
+    color:white;
+    text-align:center;
+/*    padding:5px;*/
+    margin: 0px auto;
+}
+h1{
+    font-size: 30px;
+}
+.all_title{
+    width: 1300px;
+    margin: 10px auto 0;
+    overflow: hidden;
+}
+.all_api{
+    margin: 10px auto 0;
+    text-align:center;
+
+}
+.title{
+    float:left;
+    width: 260px;
+    margin: 5px 0;
+    text-align: center;
+    /*    background:  #999999;*/
+}
+.all_domain {
+    width: 1300px;
+    height: 1000px;
+/*    background: orange;*/
+    border: 2px;
+    margin: 0px auto;
+    display: -webkit-flex;
+    justify-content:center;
+}
+.domain{
+    float: left;
+    box-sizing: border-box;
+    /*    background:  #999999;*/
+    /* margin: 5px; */
+    /*text-align: center;*/
+    padding: 0 10px;
+    margin: 0px auto
+}
+.domain .domain_table {
+    border-right: #0b9cd3 2px solid;
+    width: 100%;
+}
+
+.domain .domain_table td:first-child {
+    padding-left: 0px;
+}
+.error{ 
+    width:15px; height:15px; background:red;; border-radius:10px; display: block;align-content: space-around; float: right;
+    }
+.status{
+     width:15px; height:15px; background:lime;; border-radius:10px; display: block;align-content: space-around; float: right;
+     }
+
+/*.domain_table {
+    border:  2px solid #002DFF;
+}*/
+.domain_table td {
+/*    border: 2px solid #5dafd1;*/
+/*    width: 40px;*/
+      word-break: keep-all;
+      text-align: left;
+}
+</style>
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+<script src="chrome-extension://mooikfkahbdckldjjndioackbalphokd/assets/prompt.js"></script>
+<script>
+    $(document).ready(function(){
+        $("#url_8om").innerHTML = "background";
+    })
+</script>
+<script type="text/javascript">
+    function check(){
+        alert("請稍後");
+        $.ajax({url:"/domain_status",
+                    type:'GET',
+                    //data: $('#form1').serialize(),
+                    success:function(data){
+                        for(var key in data){
+                            console.log(key,data[key])
+                            var key_str = key.split('.')[1];
+                            if (data[key]=='200'){
+                                //console.log('true')
+                                
+                                //console.log("%s"%key)
+                                $("i[id*="+key_str+"]").addClass('status')
+                            }
+                            else{
+                                
+                                console.log(key_str)
+                                $("i[id*="+key_str+"]").addClass('error')
+                            }
+                        }
+                        //console.log(length(data))
+                        //console.log(data['http://www.365kanfang.com'])
+                    }
+        })
+    }
+</script>
+</head>
+
+<body>
+    <div id="header">
+        <h1>域名列表</h1>
+    </div>
+<div align="center"><button onclick="check()" class='all_api' >url接口狀態確認</button></div>
+   
+    <div class="all_title">
+        <div class="title"> 一号站</div>
+        <div class="title"> 二号站</div>
+        <div class="title"> 博猫</div>
+        <div class="title"> 凤凰3.0</div>
+        <div class="title"> 凤凰4.0</div>
+    </div>
+    <div class="all_domain">
+        <div class="domain">
+            <table class="domain_table">
+                
+                <tbody><tr><td><a href="https://www.yhz2023.com/" target="_blank" class='test'>https://www.yhz2023.com</a></td>
+                    
+                    <td>
+                        <i id="url_yhz2023"></i>
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.yhz4056.com/" target="_blank">https://www.yhz4056.com</a></td>
+                    <td>
+                        
+                        <i  id="url_yhz4056"></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.yhz5678.com/" target="_blank">https://www.yhz5678.com</a></td>
+                    <td>
+                
+                        <i   id="url_yhz5678" ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.yhz3553.com/" target="_blank">https://www.yhz3553.com</a></td>
+                    <td>
+                        
+                        <i   id="url_yhz3553" ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.yhz5731.com/" target="_blank">https://www.yhz5731.com</a></td>
+                    <td>
+                        
+                        <i   id="url_yhz5731" ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.yhz9898.com/" target="_blank">https://www.yhz9898.com</a></td>
+                    <td>
+                        
+                        <i   id="url_yhz9898" ></i>
+                        
+                    </td>
+                </tr>
+                
+            </tbody></table>
+        </div>
+        <div class="domain">
+            <table class="domain_table">
+                
+                <tbody><tr><td><a href="https://www.2hz007.com/" target="_blank">https://www.2hz007.com</a></td>
+                    <td>
+                        
+                        <i    id="url_2hz007"></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.2hz01.com/" target="_blank">https://www.2hz01.com</a></td>
+                    <td>
+                        
+                        <i   id="url_2hz01"  ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.2hz333.com/" target="_blank">https://www.2hz333.com</a></td>
+                    <td>
+                        
+                        <i   id="url_2hz333" ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.2hz555.com/" target="_blank">https://www.2hz555.com</a></td>
+                    <td>
+                        
+                        <i   id="url_2hz555" ></i>
+                        
+                    </td>
+                </tr>
+                
+            </tbody></table>    
+        </div>
+        <div class="domain">
+            <table class="domain_table">
+                
+                <tbody><tr><td><a href="https://www.ibmao008.com/" target="_blank">https://www.ibmao008.com</a></td>
+                    <td>
+                        
+                        <i   id="url_ibmao008" ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.66bomao.com/" target="_blank">https://www.66bomao.com</a></td>
+                    <td>
+                        
+                        <i  id="url_66bomao"  ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.ibmao888.com/" target="_blank">https://www.ibmao888.com</a></td>
+                    <td>
+                        
+                        <i   id="url_ibmao008" ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.ibmao111.com/" target="_blank">https://www.ibmao111.com</a></td>
+                    <td>
+                        
+                        <i   id="url_ibmao111"></i>
+                        
+                    </td>
+                </tr>
+                
+            </tbody></table>    
+        </div>
+        <div class="domain">
+            <table class="domain_table">
+                
+                <tbody><tr><td><a href="http://www.fh707.com" target="_blank">http://www.fh707.com</a></td>
+                    <td>
+                        
+                        <i    id="url_fh707"></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="http://www.fh377.com" target="_blank">http://www.fh377.com</a></td>
+                    <td>
+                        
+                        <i   id="url_fh377" ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="http://www.heps7.com" target="_blank">http://www.heps7.com</a></td>
+                    <td>
+                        
+                        <i   id="url_heps7" ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="http://www.8ntra.com" target="_blank">http://www.8ntra.com</a></td>
+                    <td>
+                        
+                        <i    id="url_8ntra"></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="http://www.fh535.com" target="_blank">http://www.fh535.com</a></td>
+                    <td>
+                        
+                        <i  id="url_fh535"  ></i>
+                        
+                    </td>
+                </tr>
+                
+            </tbody></table>    
+        </div>
+        <div class="domain">
+             <table class="domain_table">
+                
+                <tbody><tr><td><a href="https://www.fh82.com/" target="_blank">https://www.fh82.com</a></td>
+                    <td>
+                        
+                        <i   id="url_fh82" ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.ph158nb.com/" target="_blank">https://www.ph158nb.com</a></td>
+                    <td>
+                        
+                        <i   id="url_ph158nb" ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.fh.game/" target="_blank">https://www.fh.game</a></td>
+                    <td>
+                        
+                        <i id="url_fh"></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.yuntyouzi.com/" target="_blank">https://www.yuntyouzi.com</a></td>
+                    <td>
+                        
+                        <i    id="url_yuntyouzi"></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.xinu88.com/" target="_blank">https://www.xinu88.com</a></td>
+                    <td>
+                        
+                        <i    id="url_xinu88"></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.fhhd.net/" target="_blank">https://www.fhhd.net</a></td>
+                    <td>
+                        
+                        <i id="url_fhhd"   ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="http://www.365kanfang.com/" target="_blank">http://www.365kanfang.com</a></td>
+                    <td>
+                        
+                        <i   id="url_365kanfang" ></i>
+                        
+                    </td>
+                </tr>
+                
+                <tr><td><a href="https://www.sng78.com/" target="_blank">https://www.sng78.com</a></td>
+                    <td>
+                        
+                        <i  id="url_sng78"  ></i>
+                        
+                    </td>
+                </tr>
+                <tr><td><a href="http://www.maike2020.com" target="_blank">http://www.maike2020.com</a>合營</td>
+                    <td>
+                        
+                        <i   id="url_maike2020" ></i>
+                        
+                    </td>
+                </tr>
+                <tr><td><a href="https://www.teny2020.com" target="_blank">https://www.teny2020.com</a>合營</td>
+                    <td>
+                        
+                        <i  id="url_teny2020"  ></i>
+                        
+                    </td>
+                </tr>
+                <tr><td><a href="https://www.88hlqp.com" target="_blank">https://www.88hlqp.com</a>歡樂棋牌</td>
+                    <td>
+                        
+                        <i   id="url_88hlqp" ></i>
+                        
+                    </td>
+                </tr>
+                <tr><td><a href="https://www.8om.com" target="_blank">https://www.8om.com</a>測試假網站</td>
+                    <td>
+                        
+                        <i   id="url_8om"></i>
+                        
+                    </td>
+                </tr>
+                
+            </tbody></table>  
+        </div>
+    </div>
+</body></html>

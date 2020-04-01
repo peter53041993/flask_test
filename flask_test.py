@@ -18,9 +18,16 @@ import test_benefit
 import calendar
 import celery
 import test_lotteryRecord
+import logging
+from flask import current_app
+from logging import FileHandler
+import urllib3
+from bs4 import BeautifulSoup
 
 
 app = Flask(__name__)# name 為模塊名稱
+logger = logging.getLogger('flask_test')
+url_dict = {}#存放url 和街口狀態 , 給domain_ 用
 
 def iapi_login(envir):#iapi 抓取沙巴token
     session = requests.Session()
@@ -276,7 +283,8 @@ def imageAdj():
 def autoTest():
     global response_status
     if request.method == "POST":
-        
+        logger.info('logged by app.module')
+        current_app.logger.info('logged by current_app.logger')
         #response_status ='start_progress'
         #return redirect("/progress")
         testcase = []
@@ -310,6 +318,7 @@ def autoTest():
             return_('done')
             #print(response_status)
             return '此環境沒有該用戶'
+
 
         #return redirect("/report")
     return render_template('autoTest.html')
@@ -438,6 +447,57 @@ def report_APP():
 def report_AppData():
     return render_template('report_AppData.html',result=result)
 
+@app.route('/domain_list',methods=["GET"])#域名列表測試,抓取 http://172.16.210.101/domain_list  提供的 網域
+def domain_list():
+    return render_template('domain_list.html')
+
+def session_get(url):
+    urllib3.disable_warnings()#解決 會跳出 request InsecureRequestWarning問題
+    header = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36'
+    }
+    global r,url_dict
+    try:
+        r = requests.get(url+'/',headers=header,verify=False,timeout=5)
+    except:
+        pass
+    url_dict[url] = r.status_code
+    #print(url_dict)
+@app.route('/domain_status',methods=["GET"])
+def domain_status():#查詢domain_list 所有網域的  url 接口狀態
+    global url_dict
+    urllib3.disable_warnings()#解決 會跳出 request InsecureRequestWarning問題
+    header = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36'
+    }
+    r = requests.get('http://66dca985.ngrok.io'+'/domain_list',headers=header)
+    #print(r.text)
+    soup = BeautifulSoup(r.text,'lxml')
+    url_dict ={}#存放url 和 皆口狀態
+    try:# 過濾 從頁面上抓取的url, 有些沒帶http
+        for i in soup.find_all('table',{'class':'domain_table'}):
+            for a in i.find_all('a'):
+                if 'http' not in a.text:
+                    url = 'http://'+a.text
+                    url_dict[url] = ''#先存訪到url_dict
+                else:# 這邊提供的  頁面 不用做額外處理, 就是 a.text
+                    url_dict[a.text]=''
+        threads = []
+        for url_key in url_dict:
+            threads.append(threading.Thread(target=session_get,args=(url_key,)))
+        for i in threads:
+            i.start()
+        for i in threads:
+            i.join()
+    except requests.Timeout as e:
+        pass
+    except urllib3.exceptions.NewConnectionError as e:
+        print(e)
+    print(url_dict)
+    return url_dict
+    #return render_template('domain_status.html',url_dict=url_dict)
+
+
 @app.route('/error')#錯誤處理
 def error():
     abort(404)
@@ -455,6 +515,10 @@ def test_fun():
 
 
 if __name__ == "__main__":
+    '''
+    handler = logging.FileHandler('flask.log')
+    app.logger.addHandler(handler)
+    '''
     app.run(host="0.0.0.0",debug=True,port=4444,threaded=True)
     #app.config.from_object(DevConfig)
 
