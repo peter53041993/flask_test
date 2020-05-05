@@ -6,10 +6,16 @@ import datetime
 from time import sleep
 from selenium import webdriver
 from faker import Factory
+from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import WebDriverException
-from selenium.common.exceptions import  ElementClickInterceptedException 
+from selenium.common.exceptions import  ElementClickInterceptedException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 import os
+os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'# 避免抓出oracle中文 為問號
 import pymysql as p
 import logging
 import threading
@@ -94,10 +100,17 @@ class Joy188Test(unittest.TestCase):
         return rx
     @staticmethod
     def get_conn(env):#連結數據庫 env 0: dev02 , 1:188
-        oracle_ = {'password':['LF64qad32gfecxPOJ603','JKoijh785gfrqaX67854'],
-        'ip':['10.13.22.161','10.6.1.41'],'name':['firefog','game']}
-        conn = cx_Oracle.connect('firefog',oracle_['password'][env],oracle_['ip'][env]+
-        ':1521/'+oracle_['name'][env])
+        if env == 2:
+            username = 'rdquery'
+            service_name = 'gamenxsXDB'
+        else:
+            username = 'firefog'
+            service_name = ''
+        oracle_ = {'password':['LF64qad32gfecxPOJ603','JKoijh785gfrqaX67854','eMxX8B#wktFZ8V'],
+        'ip':['10.13.22.161','10.6.1.41','10.6.1.31'],
+        'sid':['firefog','game','']}
+        conn = cx_Oracle.connect(username,oracle_['password'][env],oracle_['ip'][env]+':1521/'+
+        oracle_['sid'][env]+service_name)
         return conn
     
     @staticmethod
@@ -216,6 +229,146 @@ class Joy188Test(unittest.TestCase):
             for i in rows:
                 userid.append(i[0])
                 #joint_venture.append(i[1])
+        conn.close()
+    @staticmethod
+    def select_gameResult(conn,result):#查詢用戶訂單號, 回傳訂單各個資訊
+        with conn.cursor() as cursor:
+            sql = "select a.order_time,a.status,a.totamount,f.lottery_name,\
+            c.group_code_title,c.set_code_title,c.method_code_title,\
+            b.bet_detail,e.award_name,b.award_mode,b.ret_award,b.multiple,b.money_mode,b.evaluate_win\
+            ,a.lotteryid,b.bet_type_code,c.theory_bonus,a.award_group_id\
+            from(((\
+            (game_order a inner join game_slip b on\
+            a.id = b.orderid and a.userid=b.userid and a.lotteryid=b.lotteryid) inner join \
+            game_bettype_status c on \
+            a.lotteryid = c.lotteryid and b.bet_type_code=c.bet_type_code) inner join\
+            game_award_user_group d on\
+            a.lotteryid = d.lotteryid and a.userid=d.userid) inner join \
+            game_award_group e on \
+            a.award_group_id = e.id and a.lotteryid =e.lotteryid) \
+            inner join game_series f on  a.lotteryid = f.lotteryid where a.order_code = '%s' and d.bet_type=1"%result
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global game_detail
+            game_detail = {}
+            detail_list = []#存放各細節
+            #game_detail[result] = detail_list# 讓訂單為key,　value 為一個list 存放各訂單細節   
+            for tuple_ in rows:
+                for i in tuple_:
+                #print(i)
+                    detail_list.append(i)
+            game_detail[result] = detail_list
+        conn.close()
+    @staticmethod
+    def select_gameorder(conn,play_type):# 輸入玩法,找尋訂單   
+        with conn.cursor() as cursor:
+            sql = "select f.lottery_name,a.order_time,a.order_code,\
+            c.group_code_title,c.set_code_title,c.method_code_title,a.status,g.account,b.bet_detail,h.number_record\
+            from((((((\
+            game_order a inner join  game_slip b on \
+            a.id = b.orderid and a.userid=b.userid and a.lotteryid=b.lotteryid) inner join game_bettype_status c on \
+            a.lotteryid = c.lotteryid and b.bet_type_code=c.bet_type_code) \
+            inner join game_award_user_group d on \
+            a.lotteryid = d.lotteryid and a.userid=d.userid) \
+            inner join game_award_group e on \
+            a.award_group_id = e.id and a.lotteryid =e.lotteryid) \
+            inner join game_series f on a.lotteryid = f.lotteryid) inner join user_customer g on\
+            a.userid = g.id and d.userid = g.id) inner join game_issue h on\
+            a.lotteryid = h.lotteryid and a.issue_code = h.issue_code\
+            where a.order_time >sysdate - interval '1' month and \
+            c.group_code_title||c.set_code_title||c.method_code_title like '%s' and d.bet_type=1  and a.status !=1 \
+            order by a.order_time desc"%play_type
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global game_order,len_order
+            game_order = {}
+            len_order = len(rows)# 需傳回去長度
+            #print(rows,len(rows))#rows 為一個 list 包 tuple
+            order_list =[]# 存放指定玩法 產生 的多少訂單
+            for index,tuple_ in enumerate(rows):#取出 list長度 的各訂單 tuple
+                order_list.append(list(tuple_))# 把tuple 轉乘list  ,然後放入  order_list
+                game_order[index] = order_list[index]# 字典 index 為 key ,  order_list 為value
+            #print(game_order)
+        conn.close()
+    @staticmethod
+    def select_activeAPP(conn,user):# 查詢APP 是否為有效用戶表
+        with conn.cursor() as cursor:
+            sql = "select *  from USER_CENTER_THIRDLY_ACTIVE where \
+            create_date >=  trunc(sysdate,'mm') and user_id in \
+            ( select id from user_customer where account = '%s')"%(user)
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global active_app
+            active_app = []
+            for tuple_ in rows:
+                for i in tuple_:
+                #print(i)
+                    active_app.append(i)
+            #print(active_app,len(active_app))
+        conn.close()
+    @staticmethod
+    def select_AppBet(conn,user):#查詢APP 代理中心 銷量
+        with conn.cursor() as cursor:
+            global app_bet
+            app_bet = {}
+            for third in ['ALL','LC','KY','CITY','GNS','FHLL','BBIN','IM','SB','AG']:
+                if third == 'ALL':
+                    sql = "select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
+                    from V_THIRDLY_AGENT_CENTER where account = '%s' \
+                    and create_date > trunc(sysdate,'mm')"%user
+                else:
+                    sql = "select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
+                    from V_THIRDLY_AGENT_CENTER where account = '%s' \
+                    and create_date > trunc(sysdate,'mm') and plat='%s'"%(user,third)
+                cursor.execute(sql)
+                rows = cursor.fetchall()
+                new_ = []#存放新的列表內容
+                for tuple_ in rows:
+                    for i in tuple_:
+                        if i == None: #就是 0
+                            i = 0
+                        new_.append(i)
+                    app_bet[third] = new_
+                    
+            print(app_bet)
+        conn.close()
+            
+    @staticmethod
+    def select_activeCard(conn,user,envs):#查詢綁卡是否有重複綁
+        with conn.cursor() as cursor:
+            if envs ==2: # 生產另外一張表
+                sql = "SELECT bank_number, count(id) FROM rd_view_user_bank \
+                WHERE bank_number in (SELECT bank_number FROM rd_view_user_bank WHERE account = '%s' \
+                ) group BY bank_number"%user
+            else:
+                sql = "SELECT BANK_NUMBER,count(user_id) FROM USER_BANK \
+                WHERE BANK_NUMBER in \
+                (SELECT BANK_NUMBER FROM USER_BANK WHERE USER_ID= \
+                (SELECT ID FROM USER_CUSTOMER WHERE ACCOUNT='%s')) \
+                group by bank_number"%user
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global card_num #綁卡的數量 
+            card_num = {}
+            for index,tuple_ in enumerate(rows):
+                card_num[index] = list(tuple_)
+            #print(card_num)
+        conn.close()
+    
+    @staticmethod
+    def select_activeFund(conn,user):#查詢當月充值金額
+        with conn.cursor() as cursor:
+            sql = "select sum(real_charge_amt) from fund_charge where status=2 and apply_time > trunc(sysdate,'mm') \
+            and user_id in ( select id from user_customer where account = '%s')"%user 
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global user_fund
+            user_fund = []#當月充值金額
+            print(rows)
+            for tuple_ in rows:
+                for i in tuple_:
+                #print(i)
+                    user_fund.append(i)
         conn.close()
 
     @staticmethod
@@ -386,7 +539,7 @@ class Joy188Test(unittest.TestCase):
 
         #play_ = ''#除了 不是 lottery_sh 裡的彩種
 
-        lottery_ball = Joy188Test.ball_type(group_)# 組出什麼玩法 的 投注內容
+        lottery_ball = Joy188Test.ball_type(group_)# 組出什麼玩法 的 投注內容 ,目前只有給時彩系列用
 
 
         test_dicts = {   
@@ -630,20 +783,14 @@ class Joy188Test(unittest.TestCase):
         global userAgent
         global envs#回傳redis 或 sql 環境變數   ,dev :0, 188:1
         global cookies_
-        global msg
         global third_list
+        global content
         third_list = ['gns','shaba','im','ky','lc','city']
-        cookies_ = {}   
-
-        
-
-            
+        cookies_ = {}     
         user = user_[0]
-        '''
-        account_ = {'kerr000':u'總代','kerr001':u'一代','kerr43453':u'玩家',
-        'kerrthird001':'二代',user_[0]:'測試用戶名'}#總代,一代,玩家登入測試
-        '''
+        content["PC登入案例"] = ""#回傳測試資訊
         account_ = {user_[0]:'輸入的用戶名'}
+        em_url =  'http://em.%s.com'%env_[0] 
 
         if env_[0] in ['dev02','dev03','fh82dev02','88hlqpdev02','teny2020dev02']:# 多增加合營
             password = b'123qwe'
@@ -662,11 +809,14 @@ class Joy188Test(unittest.TestCase):
         elif env_[0] == 'fh968':
             password = b'tsuta0425'
             post_url = "http://www.%s.com"%env_[0]
-        '''
-        else:
-            print("輸入url有誤")
-        '''
-        em_url =  'http://em.%s.com'%env_[0] 
+        
+        elif env_[0] == 'joy188.fh888':
+            password = b'amberrd'
+            post_url = "http://www2.%s.bet"%env_[0]
+            em_url = 'http://em.%s.bet'%env_[0] 
+            envs = 1
+        
+
 
         param = b'f4a30481422765de945833d10352ea18'
 
@@ -785,6 +935,8 @@ class Joy188Test(unittest.TestCase):
     @func_time
     def test_PcThirdHome():#登入第三方頁面,創立帳號
         u"第三方頁面測試"
+        global content
+        content["第三方頁面測試"] = ""
         threads = []
         third_url = ['gns','ag','sport','shaba','lc','im','ky','fhx','bc','fhll','bc']
 
@@ -986,9 +1138,9 @@ class Joy188Test(unittest.TestCase):
         Joy188Test.test_PcThirdBalance()
     @staticmethod
     def admin_login():
-        global admin_cookie,admin_url,header
+        global admin_cookie,admin_url,header,cookies
         admin_cookie = {}
-        if env_[0] in ['dev02','fh82dev02','88hlqpdev02','teny2020dev02']:
+        if env_[0] in ['dev02','fh82dev02','88hlqpdev02','teny2020dev02',0]:
             admin_url = 'http://admin.dev02.com'
             password = '123qwe'
         else:
@@ -997,9 +1149,13 @@ class Joy188Test(unittest.TestCase):
         header = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36',
                   'Content-Type': 'application/x-www-form-urlencoded'}
         admin_data = {'username':'cancus','password':password,'bindpwd':123456}
+        session = requests.Session()
         r = session.post(admin_url+'/admin/login/login',data=admin_data,headers=header)
         cookies = r.cookies.get_dict()#獲得登入的cookies 字典
         admin_cookie['admin_cookie'] =  cookies['ANVOAID'] 
+        print(admin_cookie)
+        print('登入後台 , 環境: %s'%admin_url)
+        print(r.text)
     @staticmethod
     def test_redEnvelope():#紅包加壁,審核用
         user = user_[0]
@@ -1360,14 +1516,14 @@ class Joy188Test2(unittest.TestCase):
         try:
             cls.dr = webdriver.Chrome()
             dr = cls.dr
-            if env_[0] == 'joy188':
-                post_url ='http://www2.joy188.com'
-                em_url = 'http://em.joy188.com' 
+            if env_[0] in ['joy188','joy188.teny2020','joy188.195353','joy188.88hlqp']:
+                post_url ='http://www2.%s.com'%env_[0]
+                em_url = 'http://em.%s.com'%env_[0]
                 cls.dr.get(post_url)
                 user = user_[0]
                 password = 'amberrd'
                 env = 1#後面會用到 環境變數 Db查詢用
-            elif env_[0] in ['dev02','dev03','fh82dev02']:
+            elif env_[0] in ['dev02','dev03','fh82dev02','teny2020dev02']:
                 post_url = 'http://www.%s.com'%env_[0]
                 em_url = 'http://em.%s.com'%env_[0]
                 cls.dr.get(post_url)
@@ -1381,7 +1537,15 @@ class Joy188Test2(unittest.TestCase):
                 user = user_[0]
                 password = 'amberrd'
                 env = 1
+            elif env_[0] == 'joy188.fh888':
+                post_url = 'http://www2.%s.bet'%env_[0]
+                em_url = 'http://em.%s.bet'%env_[0]
+                cls.dr.get(post_url)
+                user = user_[0]
+                password = 'amberrd' 
+
             print(u'登入環境: %s,登入帳號: %s'%(env_[0],user))
+            #sleep(100)
             cls.dr.find_element_by_id('J-user-name').send_keys(user)
             cls.dr.find_element_by_id('J-user-password').send_keys(password)
             cls.dr.find_element_by_id('J-form-submit').click()
@@ -1660,19 +1824,22 @@ class Joy188Test2(unittest.TestCase):
             print('失敗')
     @staticmethod
     def assert_bouns():# 驗證頁面是否有獎金詳情
-        '''
+        
         try:
+            '''
             if '您选择的彩种目前属于休市期间' in Joy188Test2.XPATH("//h4[@class='pop-text']").text:# 休市彈窗
                 Joy188Test2.XPATH('/html/body/div[17]/div[1]/i').click()
+            '''
+            element = WebDriverWait(dr, 5).until(           
+            EC.presence_of_element_located((By.XPATH, "//p[@class='text-title']")))
             if  Joy188Test2.XPATH("//p[@class='text-title']").text == '请选择一个奖金组，便于您投注时使用。' :#獎金詳情彈窗
                 Joy188Test2.XPATH("//input[@class='radio']").click()
                 Joy188Test2.LINK('确 认').click()
                 dr.refresh()
         except NoSuchElementException:
             dr.refresh()
-        '''
-        pass
-    
+        except TimeoutException:
+            pass
 
     @staticmethod
     def test_cqssc():
@@ -2238,7 +2405,8 @@ class Joy188Test2(unittest.TestCase):
         cls.dr.quit()
 
 def suite_test(testcase,username,env,red):
-    global msg
+    global content
+    content = {}
     #pc = []
     #app =[]
     #driver =[]
@@ -2246,7 +2414,7 @@ def suite_test(testcase,username,env,red):
     #threads =[]
     lottery_list = ['cqssc','hljssc','xjssc','fhcqc','fhxjc','btcffc','txffc','jlffc','bjkl8','jsdice','ahk3',
     'pk10','xyft','v3d','fc3d','p5','ssq','slmmc','sl115']
-    test_list = ['hljssc']
+    test_list = ['xjssc']
     return_user(username)# 回傳 頁面上 輸入的用戶名
     return_env(env)#回傳環境
     return_red(red)
@@ -2276,6 +2444,7 @@ def suite_test(testcase,username,env,red):
         
         
         suite.addTests(suite_list)
+        #print(content)
         print(suite)
     
         filename = "C:\\python3\\Scripts\\jupyter_test\\templates\\report.html"#now + u'自動化測試' + '.html'
@@ -2288,28 +2457,9 @@ def suite_test(testcase,username,env,red):
                 description='環境: %s,帳號: %s'%(env_[0],user_[0]),
                 )
         print('start')
+        #print(runner)
         runner.run(suite)
-        '''
-        if any(pc) and any(app): #兩個列表都有值時,就可以用thread 併發
-            suite_pc.addTests(pc)
-            t = threading.Thread(target=runner.run,args=(suite_pc,))
-            suite_app.addTests(app)
-            t1 = threading.Thread(target=runner.run,args=(suite_app,))
-            threads.append(t)
-            threads.append(t1)
-            for i in threads:
-                i.start()
-                sleep(2)
-            for i in threads:
-                i.join()
-        elif any(pc):
-            suite_pc.addTests(pc)
-            runner.run(suite_pc)
-        elif any(app):
-            suite_app.addTests(app)
-            runner.run(suite_app)
-        '''
-
+        #print(content)
         print('end')
         fp.close()
     except TypeError:
