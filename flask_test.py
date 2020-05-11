@@ -307,7 +307,7 @@ def autoTest():
         print(testcase)
         if len(userid) > 0: # userid 值為空,　代表該ＤＢ　環境　沒有此用戶名　，　就不用做接下來的事
             AutoTest.suite_test(testcase,username,env,red)#呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
-            content = AutoTest.content#測試案例 開始訊息
+            #content = AutoTest.content#測試案例 開始訊息
             #print(content)
             #return msg
             return redirect('report')
@@ -497,36 +497,89 @@ def domain_status():#查詢domain_list 所有網域的  url 接口狀態
 def stock_search():
     stock_detail= {}
 
-    if request.method =="POST":
-        stock_num = request.form.get('stock_search')
-        print(stock_num)#股票號碼
-        stock.stock_select(stock.kerr_conn(),int(stock_num))# 有股號後, 從mysql 抓出更多資訊
-        stock_detail = twstock.realtime.get(stock_num)#股票價位
-        print(stock.stock_detail2)# mysql抓出來的 資訊
-        stock_prize = (stock_detail['realtime']['latest_trade_price'])#股票 最新一筆成交價
-        print(stock_prize,type(stock_prize))# 為一個 str ,需把 小數點  . 三和四 去除掉
-        stock_prize = stock_prize[0:-2]# 後面兩個00不用,   到小數電第四位即可
-        print(stock_prize)
-        
-        stock.stock_update(stock.kerr_conn(),float(stock_prize),int(stock_num))# 將股價 Update進去 Mysql
+    try:
+        if request.method =="POST":
+            stock_num = request.form.get('stock_search')
+            print(stock_num)#股票號碼
+            stock.stock_select(stock.kerr_conn(),int(stock_num))# 有股號後, 從mysql 抓出更多資訊
+            stock_detail = twstock.realtime.get(stock_num)#股票價位
+            print(stock_detail)
+            if len(stock.stock_detail2) == 0:# 代表空的,正常是頁面輸入錯誤,或真的沒有 
+                return "沒有該股票號碼: %s"%stock_num
+            else:
+                print(stock.stock_detail2)# mysql抓出來的 資訊
+                stock_prize = (stock_detail['realtime']['latest_trade_price'])#股票 最新一筆成交價
+                print(stock_prize,type(stock_prize))# 為一個 str ,需把 小數點  . 三和四 去除掉
+                if stock_prize == '-':# 抓出來 是  "-"  就先不理會,給一個值0
+                    stock_prize = 0
+                else:
+                    stock_prize = stock_prize[0:-2]# 後面兩個00不用,   到小數電第四位即可
+                #stock_prize = stock_prize[0:-2]# 後面兩個00不用,   到小數電第四位即可
+                print(stock_prize)
+                
+                stock.stock_update(stock.kerr_conn(),float(stock_prize),int(stock_num))# 將股價 Update進去 Mysql
 
-        data ={"股票名稱":stock_detail['info']['name'],"目前股價":stock_prize,
-        "開盤":stock_detail['realtime']['open'],
-        "高點":stock_detail['realtime']['high'],"低點":stock_detail['realtime']['low'],
-        "查詢時間":stock_detail['info']['time']}
+                data ={"股票名稱":stock_detail['info']['name'],"目前股價":stock_prize,
+                "開盤":stock_detail['realtime']['open'],
+                "高點":stock_detail['realtime']['high'],"低點":stock_detail['realtime']['low'],
+                "查詢時間":stock_detail['info']['time']}
 
-        frame = pd.DataFrame(data,index=[0])
-        print(frame)
-        #print(frame.to_html())
-        return frame.to_html()
-    return render_template('stock.html')
+                frame = pd.DataFrame(data,index=[0])
+                print(frame)
+                #print(frame.to_html())
+                return frame.to_html()
+        return render_template('stock.html')
+    except requests.exceptions.Timeout as e:  
+        print(e)
 
 @app.route('/stock_search2',methods=["POST"])
 def stock_search2():
-    stock_num = request.form.get('Revenue')
-    print(stock_num)
-    stock.stock_select2(stock.kerr_conn())
-    return 'pass'
+    stock_type = request.form.get('Revenue')
+    print(stock_type)
+    stock.stock_select2(stock.kerr_conn())# select 出來
+    stock_detail3 = stock.stock_detail3
+    stock_num,stock_name,stock_prize,stock_curMonRev,stock_lastMonRev,stock_lastYearMonRev,stock_lastMonRate,stock_lastYearMonRate,stock_curYearRev,stock_lastYearRev,stock_lastYearRate,stock_memo = [],[],[],[],[],[],[],[],[],[],[],[]
+
+    for num in stock_detail3.keys():
+        stock_num.append(stock_detail3[num][1])
+        stock_name.append(stock_detail3[num][2])
+        try:
+            if stock_detail3[num][3] == 0:# 股價是0,代表還沒有Update 股價過
+            
+                stock_detail = twstock.realtime.get(str(stock_detail3[num][1]))
+                print(stock_detail)
+                prize = (stock_detail['realtime']['latest_trade_price'])#股票 最新一筆成交價
+                if prize == '-':# 抓出來 是  "-"  就先不理會,給一個值0
+                    prize = 0
+                else:
+                    prize = prize[0:-2]# 後面兩個00不用,   到小數電第四位即可
+                print(prize,type(prize))
+                stock_prize.append(prize)
+                stock.stock_update(stock.kerr_conn(),float(prize),int(stock_detail3[num][1]))# 將股價 Update進去 Mysql          
+            else:
+                stock_prize.append(stock_detail3[num][3])
+        except requests.exceptions.ConnectionError:
+            print('連線失敗')
+            stock_prize.append(stock_detail3[num][3])
+        stock_curMonRev.append(stock_detail3[num][4])
+        stock_lastMonRev.append(stock_detail3[num][5])
+        stock_lastYearMonRev.append(stock_detail3[num][6])
+        stock_lastMonRate.append(stock_detail3[num][7])
+        stock_lastYearMonRate.append(stock_detail3[num][8])
+        stock_curYearRev.append(stock_detail3[num][9])
+        stock_lastYearRev.append(stock_detail3[num][10])
+        stock_lastYearRate.append(stock_detail3[num][11])
+        stock_memo.append(stock_detail3[num][12])
+    
+    #print(stock_num,stock_name,stock_prize,stock_curMonRev,stock_lastMonRev,stock_lastYearMonRev,stock_lastMonRate,stock_lastYearMonRate,stock_curYearRev,stock_lastYearRev,stock_lastYearRate,stock_memo)
+    print(stock_prize)
+    
+    data = {'股票號碼': stock_num,"股票名稱":stock_name,"股價": stock_prize,"當月營收":stock_curMonRev,"上月營收增減":stock_lastMonRate,
+            '去年同月營收增減':stock_lastYearMonRate,'今年營收':stock_curYearRev,'去年營收':stock_lastYearRev,'去年營收增減':stock_lastYearRate,'股票備注':stock_memo}
+    frame = pd.DataFrame(data)
+    print(frame)
+    #print(frame.to_html())
+    return frame.to_html()
 
 def game_map():#玩法 和 說明 mapping
     global game_explan,game_playtype # 說明, 玩法
