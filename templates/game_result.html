@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<head>
+    <title>遊戲單號查詢</title>
+<style>
+#game_code{
+border-radius: 22px;
+/*background: linear-gradient(-90deg, #c06bff 0%, #9e38dede 100%);*/
+}
+#game_type{
+border-radius: 22px;
+/*background: linear-gradient(-90deg, #fdde00 0%, #f9d10d 100%);*/
+}
+.dataframe{
+    width: 50%;
+    font-size: 11pt;
+    border: 2px solid #b613de;
+}
+.dataframe tr:hover{
+    background: #c0c0c0;
+    cursor: pointer;
+}
+body > table > thead {
+    color: #efb000;
+}
+li{list-style: none;}
+
+</style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <script type="text/javascript">
+        var game_detail="";
+        function check(){
+            if ($('.dataframe').length>0){
+                $("table").html("");//已經有了先清空
+            }
+            if($("#game_code").val() =="" && $("#game_type").val()=="" ){//判斷倆著皆不能輸入
+                alert("請選擇單一輸入框");
+                location.reload()
+            }
+            else if ($("#game_code").val() !="" && $("#game_type").val()!="" ){//判斷倆著皆輸入
+                alert("只能擇一輸入框");
+                location.reload()
+            }
+            else {
+            $.ajax({
+                url:"/game_result",
+                type:"POST",
+                //dataType: "json",
+                headers:{
+                        Accept:"application/json; charset=utf-8"
+                    },
+                data:$("#form1").serialize(),
+                success:function(data){
+                    game_detail = data;
+                    console.log(typeof(data))
+                    if (data=='此環境沒有此訂單號'){
+                        alert(data);
+                        location.reload()
+                    }
+                    else {
+                        $('#game_detail').after(data)
+                        
+                    }
+                    //console.log(data);
+                    //$('#game_detail').text(data)
+        
+                }
+            })
+            }
+        }
+    </script>
+</head>
+<body>
+    <form id='form1' method='POST'>
+        <label>環境: </label>
+        <select name='env_type' id='env_type'>
+            <option value="dev02">dev02</option>
+            <option value="joy188">joy188</option>
+        </select>
+        <br>
+        請輸入遊戲單號<input type="text" id="game_code" name="game_code"
+            size="20">
+        </br>    
+        請輸入遊戲玩法<input type="text" id="game_type" name="game_type"
+            size="20" placeholder="請輸入簡體" >
+        <p><input type="button" onclick="check()" value="查詢" title="最近一個月內"></p>
+    </form>
+    <div id='game_detail'>
+    </div> 
+</body>
+</html>
