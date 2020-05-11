@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<head>
+    <title>股票查詢</title>
+<style>
+#stock_search{ 
+border-radius: 22px;    
+}
+.dataframe{
+width: 50%;
+font-size: 11pt;
+border: 2px solid #b613de;}
+.dataframe tr:hover{
+background: silver;
+cursor: pointer;}
+.dataframe th:nth-child(1){
+color: #7115ea;
+}
+body > table > thead {
+    color: #efb000;
+}
+body > table{
+    text-align: center;
+    font-weight: bold;
+}
+body > table > thead > tr > th{
+    text-align: center;
+}
+</style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+    <script type="text/javascript">
+        var stock_detail;
+        function check(){
+            if ($('.dataframe').length>0){
+                $("table").html("");//已經有了先清空
+            }
+            if ($("#stock_search").val()==""){
+                alert("請輸入號碼");
+                location.reload()
+            }
+            else{
+                $.ajax({
+                    url:"/stock_search",
+                    type:"POST",
+                    headers:{
+                            Accept:"application/json; charset=utf-8"
+                        },
+                    data:$("#form1").serialize(),
+                    success:function(data){
+                    if (data.indexOf('號碼')>0){
+                        alert(data);
+                        location.reload()
+                    }
+                    else{
+                    stock_detail = data;
+                    console.log(data);
+                    $('#stock_detail').after(data)}
+        
+                    }   
+                })
+            }
+     
+        }
+    </script>
+    <script type="text/javascript">
+        function check2(){
+            if ($('.dataframe').length>0){
+                $("table").html("");//已經有了先清空
+            }
+            alert("請稍後");
+            $.ajax({
+                url:"/stock_search2",
+                type:"POST",
+                headers:{
+                Accept:"application/json; charset=utf-8"},
+                data:$("#form2").serialize(),
+                success:function(data){
+                stock_detail = data;
+                console.log(data);
+                $('#stock_detail').after(data)
+                }
+            })
+        }
+    </script>
+</head>
+<body>
+    <form id='form1' method='POST'>  
+        <p>請輸入號碼<input type="text" id="stock_search" name="stock_search" maxlength="4" οnkeyup="value=value.replace(/[^\d]/g,'')" 
+            size="15" /><input type="button" onclick="check()" value="確認"></p>
+    </form>
+    <form id='form2' methods='POST'>
+        <input type ="checkbox" name="Revenue" id="LAST_MONRATE" value="LAST_MONRATE">"上月營收"增加100趴以上(前10個)
+        <input type ="checkbox" name="Revenue" id="LAST_YEARMONRATE" value="LAST_YEARMONRATE">"去年同月"營收增加100趴以上(前10個)
+        <br></br>
+        <input type="button" onclick="check2()" value="確認">
+    </form>
+    <div id='stock_detail'></div>
+    
+
+</body>
+</html>
