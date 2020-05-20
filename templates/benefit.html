@@ -1,12 +1,16 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>福利中心</title>
-    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
-    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-    <script type="text/javascript" src="http://code.jquery.com/jquery-1.10.0.min.js"></script>
+
+    {% extends "base.html" %}
+    {% block title %}福利中心{% endblock %}
+    {%block head %}
+    {{ super() }}
+    <style type="text/css">
+        li{list-style: none;}
+        #day_username,#month_username{border-radius: 22px;}
+    </style>
+    {% endblock %}
+
+
+    {% block script %}
     <script>
         function addOption(selectbox, text, value) {//初始頁面後, 月份/日期 option ,value,text 直接 顯示
             var option = document.createElement("option");
@@ -90,14 +94,9 @@
         var ben_today = document.getElementById('day_day').getElementsByTagName('option')[today_day].selected= true//日工資 日期預設
         }
     </script>
-
-    
-</head>
-<style>
-    li{list-style: none;}
-</style>
-<body>
-    <h1 style="font-size: 15px;">生產 - 福利中心查詢</h1>
+{% endblock %}
+{% block main %}
+    <h1 style="font-size: 15px;">福利中心查詢</h1>
 <form id="form1" method="POST">
     <li>
         <label>福利中心選項: </label>
@@ -152,7 +151,6 @@
         <span class="progress-bar-label">0%</span>
     </div>
 </div>
-</body>
-</html>
+{% endblock %}
 
 

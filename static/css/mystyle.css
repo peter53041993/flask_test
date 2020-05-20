@@ -1,0 +1,8 @@
+
+
+.dataframe{font-size:11pt;border:2px solid #b613de;}
+.dataframe tr:hover{background:silver;cursor:pointer;}
+.dataframe th:nth-child(1){color:#7115ea;}
+body > table > thead{color:#efb000;}
+body > table{text-align:center;font-weight:bold;}
+body > table > thead > tr > th{text-align:center;}

@@ -1,37 +1,15 @@
-<!DOCTYPE html>
-<head>
-    <title>有效用戶查詢</title>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
-    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-    
-<style>
-#user{
-border-radius: 22px;
-/*background: linear-gradient(-90deg, #c06bff 0%, #9e38dede 100%);*/}
-.dataframe{
-width: 50%;
-font-size: 11pt;
-border: 2px solid #b613de;}
-.dataframe tr:hover{
-background: silver;
-cursor: pointer;}
-.dataframe th:nth-child(1){
-color: #7115ea;
-}
-body > table > thead {
-    color: #efb000;
-}
-body > table{
-    text-align: center;
-    font-weight: bold;
-}
-body > table > thead > tr > th{
-    text-align: center;
-}
-
-
+{% extends "base.html" %}
+{% block title %}有效用戶/第三方銷量{% endblock %}
+{%block head %}
+{{ super() }}
+<style type="text/css">
+    #user{border-radius: 22px;}
 </style>
+{% endblock %}
+
+
+{% block script %}
     <script type="text/javascript">
         var game_detail="";
         function check(){
@@ -102,8 +80,8 @@ body > table > thead > tr > th{
             }
         
     </script>
-</head>
-<body>
+{% endblock %}
+{% block main %}
     <form id='form1' method='POST'>
         <label>環境: </label>
         <select name='env_type' id='env_type'>
@@ -116,9 +94,8 @@ body > table > thead > tr > th{
             size="16">
         </br> 
         <p><input type="button" onclick="check()" value="有效用戶查詢"></p>
-        <p><input type="button" onclick="check2()" value="非彩票銷量計算"></p>
+        <p><input type="button" onclick="check2()" value="第三方銷量計算"></p>
     </form>
     <div id='user_detail'>
     </div> 
-</body>
-</html>
+{% endblock %}

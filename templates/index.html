@@ -1,9 +1,14 @@
-<!DOCTYPE html>
+{% extends "base.html" %}
+{% block title %}首頁{% endblock %}
+
+<!--DOCTYPE html>
 <html>
 <head>
     <title></title>
+    <script src="{{ url_for('static',filename='js/test.js') }}"></script>
 </head>
 <body>
+    
     <h1>TEST</h1>
     <li>
         <td><input type ="button" value="沙巴體育比分" onclick=location.href='/sb'></td>
@@ -24,13 +29,14 @@
         <td><input type ="button" value="各域名列表" onclick=location.href='/domain_list'></td>
     </li>
     <li>
-        <td><input type ="button" value="股票查詢" onclick=location.href='/stock_search'></td>
+        <td><input type ="button" value="查詢股票" onclick=location.href='/stock_search'></td>
     </li>
     <li>
-        <td><input type ="button" value="驗證玩法" onclick=location.href='/game_result'></td>
+        <td><input type ="button" value="查詢玩法/遊戲單號" onclick=location.href='/game_result'></td>
+        <td><input type ="button" value="查詢第三方有效用戶" onclick=location.href='/user_active'></td>
     </li>
     <li>
-        <td><input type ="button" value="驗證第三方有校用戶" onclick=location.href='/user_active'></td>
+        <td><input type ="button" value="查詢註冊碼/註冊連結" onclick=location.href='/url_token'></td>
     </li>
 </body>
-</html> 
+</html--> 

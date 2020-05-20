@@ -1,32 +1,13 @@
-<!DOCTYPE html>
-<head>
-    <title>遊戲單號查詢</title>
-<style>
-#game_code{
-border-radius: 22px;
-/*background: linear-gradient(-90deg, #c06bff 0%, #9e38dede 100%);*/
-}
-#game_type{
-border-radius: 22px;
-/*background: linear-gradient(-90deg, #fdde00 0%, #f9d10d 100%);*/
-}
-.dataframe{
-    width: 50%;
-    font-size: 11pt;
-    border: 2px solid #b613de;
-}
-.dataframe tr:hover{
-    background: #c0c0c0;
-    cursor: pointer;
-}
-body > table > thead {
-    color: #efb000;
-}
-li{list-style: none;}
-
+{% extends "base.html" %}
+{% block title %}自動化測試{% endblock %}
+{%block head %}
+{{ super() }}
+<style type="text/css">
+    #game_code,#game_type{border-radius: 22px;}
+    li{list-style: none;}
 </style>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
-    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+{% endblock %}
+{% block script %}
     <script type="text/javascript">
         var game_detail="";
         function check(){
@@ -69,8 +50,8 @@ li{list-style: none;}
             }
         }
     </script>
-</head>
-<body>
+{% endblock %}
+{% block main %}
     <form id='form1' method='POST'>
         <label>環境: </label>
         <select name='env_type' id='env_type'>
@@ -87,5 +68,4 @@ li{list-style: none;}
     </form>
     <div id='game_detail'>
     </div> 
-</body>
-</html>
+{% endblock %}

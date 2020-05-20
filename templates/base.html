@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/popper.js/1.15.0/umd/popper.min.js"></script>
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <!-- 可供更改的部分 -->
+    {% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mystyle.css') }}">
+    <title>{% block title %}{% endblock %}</title>
+    {% block script %}{% endblock %}
+    <script src="{{ url_for('static',filename='js/test.js') }}"></script>
+{% endblock %}</head>
+<body>
+    <!-- 希望能固定出現在每個網頁的 nav -->
+    <nav>
+    </nav>
+  
+  <main>
+    <!-- 可供更改的部分 -->
+    {% block main %}{% endblock %}
+  </main>
+  
+  <!-- 希望能固定出現在每個網頁的 footer -->
+  <footer>
+  </footer>
+  
+  </body>
+  </html> 

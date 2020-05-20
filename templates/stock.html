@@ -1,31 +1,12 @@
-<!DOCTYPE html>
-<head>
-    <title>股票查詢</title>
-<style>
-#stock_search{ 
-border-radius: 22px;    
-}
-.dataframe{
-width: 50%;
-font-size: 11pt;
-border: 2px solid #b613de;}
-.dataframe tr:hover{
-background: silver;
-cursor: pointer;}
-.dataframe th:nth-child(1){
-color: #7115ea;
-}
-body > table > thead {
-    color: #efb000;
-}
-body > table{
-    text-align: center;
-    font-weight: bold;
-}
-body > table > thead > tr > th{
-    text-align: center;
-}
-</style>
+{% extends "base.html" %}
+    {% block title %}股票查詢{% endblock %}
+    {%block head %}
+    {{ super() }}
+    <style type="text/css">
+    #stock_search{border-radius: 22px;}
+    </style>
+{% endblock %}
+{% block script %}
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
     <script type="text/javascript">
         var stock_detail;
@@ -76,25 +57,24 @@ body > table > thead > tr > th{
                 success:function(data){
                 stock_detail = data;
                 console.log(data);
-                $('#stock_detail').after(data)
+                //$('#form2').children(':checkbox').prop('checked',$(this).is(':checked')?true:false);
+                $('#stock_detail').after(data);
                 }
             })
         }
     </script>
-</head>
-<body>
+{% endblock %}
+{% block main %}
     <form id='form1' method='POST'>  
         <p>請輸入號碼<input type="text" id="stock_search" name="stock_search" maxlength="4" οnkeyup="value=value.replace(/[^\d]/g,'')" 
             size="15" /><input type="button" onclick="check()" value="確認"></p>
     </form>
     <form id='form2' methods='POST'>
-        <input type ="checkbox" name="Revenue" id="LAST_MONRATE" value="LAST_MONRATE">"上月營收"增加100趴以上(前10個)
-        <input type ="checkbox" name="Revenue" id="LAST_YEARMONRATE" value="LAST_YEARMONRATE">"去年同月"營收增加100趴以上(前10個)
+        <input type ="checkbox" name="Revenue" id="LAST_MONRATE" value="LAST_MONRATE">"上月營收"增加100趴以上
+        <input type ="checkbox" name="Revenue" id="LAST_YEARMONRATE" value="LAST_YEARMONRATE">"去年同月"營收增加100趴以上
         <br></br>
+        (前10個)
         <input type="button" onclick="check2()" value="確認">
     </form>
     <div id='stock_detail'></div>
-    
-
-</body>
-</html>
+{% endblock %}

@@ -1,14 +1,8 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>APP戰報</title>
-</head>
-<body>
-    <h1 style="font-size: 15px;">APP戰報測試</h1>
+{% extends "base.html" %}
+{% block title %}APP戰報{% endblock %}
 
-    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
-    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+
+{% block script %}
     <script type="text/javascript">
          function check(){
             $.ajax({url:"/report_APP",
@@ -31,7 +25,9 @@
                 } 
                     }
     </script>
-    
+{% endblock %}
+{% block main %}
+<h1 style="font-size: 15px;">APP戰報測試</h1>    
 <form id='form1' method='POST'>
     <label>環境: </label>
     <select name='env_type' id='env_type'>
@@ -47,5 +43,4 @@
         <span class="progress-bar-label">0%</span>
     </div>
 </div>
-</body>
-</html> 
+{% endblock %}

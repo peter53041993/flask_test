@@ -1,0 +1,123 @@
+
+{% extends "base.html" %}
+    {% block title %}註冊碼/註冊連結{% endblock %}
+    {%block head %}
+    {{ super() }}
+    <style type="text/css">
+    #token,#id,#domain{border-radius: 22px;}
+    </style>
+{% endblock %}  
+{% block script %}
+    <script type="text/javascript">
+        function check(){
+            if ($('.dataframe').length>0){
+                $("table").html("");//已經有了先清空
+            }
+            if($("#id").val() =="" && $("#token").val()=="" ){//判斷倆著皆不能輸入
+                alert("請選擇單一輸入框");
+                location.reload()
+            }
+            else if ($("#id").val() !="" && $("#token").val()!="" ){//判斷倆著皆輸入
+                alert("只能擇一輸入框");
+                location.reload()
+            }
+            else {
+            $.ajax({
+                url:"/url_token",
+                type:"POST",
+                //dataType: "json",
+                headers:{
+                        Accept:"application/json; charset=utf-8"
+                    },
+                data:$("#form1").serialize(),
+                success:function(data){
+                    game_detail = data;
+                    console.log(typeof(data))
+                    if (data=='沒有該註冊碼'){
+                        alert(data);
+                        location.reload()  
+                    }
+                    else{
+                    console.log(data);
+                    $("#user_detail").after(data)}
+        
+                }
+            })
+            }   
+            }
+    </script>
+    <script type="text/javascript">
+        function check2(){
+            if ($('.dataframe').length>0){
+                $("table").html("");//已經有了先清空
+            }
+            if($("#domain").val() ==""){//判斷倆著皆不能輸入
+                alert("請輸入網域名稱");
+                location.reload()
+            }
+            else{
+                $.ajax({
+                url:"/url_token",
+                type:"POST",
+                //dataType: "json",
+                headers:{
+                        Accept:"application/json; charset=utf-8"
+                    },
+                data:$("#form2").serialize(),
+                success:function(data){
+                    game_detail = data;
+                    console.log(typeof(data))
+                    if (data=='沒有該連結'){
+                        alert(data);
+                        location.reload()  
+                    }
+                    else{
+                    console.log(data);
+                    $("#user_detail").after(data)}
+        
+                }
+                    })    
+            }
+
+        }
+    </script>
+{% endblock %}
+{% block main %}
+
+    <form id='form1' method='POST'>
+        <label>環境: </label>
+        <select name='env_type' id='env_type'>
+            <option value="0">dev02</option>
+            <option value="1">joy188</option>
+            <option value="2">ph158</option>
+        </select>
+        <label> 用戶身分: </label>
+        <select name='joint_type' id='joint_type'>
+            <option value="0">一般</option>
+            <option value="1">合營</option>
+            <option value="2">歡樂棋排</option>
+        </select>
+        <br>
+        請輸入註冊碼<input type="text" id="token" name="token"
+            size="8"  maxlength="4">
+        </br> 
+        <p>
+        請輸入開戶連結ID<input type="text" id="id" name="id"
+        size="8"  maxlength="8">
+        </p>
+        <p><input type="button" onclick="check()" value="用戶連結查詢"></p>
+    </form>
+    <form id='form2' method='POST'>
+        <label>環境: </label>
+        <select name='env_type' id='env_type'>
+            <option value="0">dev02</option>
+            <option value="1">joy188</option>
+            <option value="2">ph158</option>
+        </select>
+        請輸入網域名稱<input type="text" id="domain" name="domain"
+        size="30" title='格式: www.xxx.com' placeholder="不帶http">
+        <p><input type="button" onclick="check2()" value="註冊連結查詢"></p>
+    </form>
+    <div id='user_detail'>
+    </div> 
+{% endblock %}
