@@ -6,6 +6,15 @@
         #username,#env_type{border-radius: 22px;background-color: #ddd;}
         input[type="checkbox"]{zoom:150%;cursor:pointer;vertical-align:sub;}
         li{list-style: none;}
+        #form1 > label:nth-child(7),#form1 > label:nth-child(10),#form1 > label:nth-child(13) {
+        font-size: 120%;
+        display: inline-block;
+        margin-bottom: .5rem;
+        color: #420fde;}
+        .PC_submit {
+        font-family: monospace;
+        color: #fd0e25;
+        font-size: x-large; }
     </style>
     {% endblock %}
     {% block script %}
@@ -124,7 +133,9 @@
 
     </select>
     <br></br>
-    <input type='checkbox' id='PcChecked'>PC接口測試
+    <input type='checkbox' id='PcChecked'>
+    <label for="PcChecked">PC接口測試</label>
+    
     <div id ='Pc_login'>
     <input type ="checkbox" name="test_Suite" id="test_PcLogin"value="test_PcLogin" >登入測試
     <input type ="checkbox" name="test_Suite"id="test_PcThirdHome"value="test_PcThirdHome">第三方頁面測試
@@ -134,15 +145,31 @@
     <input type ="checkbox" name="test_Suite" id="test_PcTransferin"value="test_PcTransferin">第三方轉入測試
     <input type ="checkbox" name="test_Suite" id="test_PcTransferout"value="test_PcTransferout">第三方轉出測試
     <input type ="checkbox" name="test_Suite" id="test_PcredEnvelope"value="test_redEnvelope">紅包加幣
-    <p><input type ="checkbox" name="test_Suite" id="test_PCLotterySubmit"value="test_PCLotterySubmit">PC投注測試</p>
-    <label>紅包投注: </label>
+    <p><input type ="checkbox" name="test_Suite" id="test_PCLotterySubmit"value="test_PCLotterySubmit">PC投注測試
+    <label class='PC_submit'>紅包投注</label>
     <select name='red_type' id='red_type'>
         <option value="no">否</option>
         <option value="yes">是</option>
     </select>
+    <label class='PC_submit'>獎金玩法</label>
+    <select name='awardmode' id='awardmode'>
+        <option value='0'>預設</option>
+        <option value='1'>一般</option>
+        <option value='2'>高獎金</option>
+    </select>
+    <label class='PC_submit'>元角分</label>
+    <select name='moneymode' id='moneymode'>
+        <option value='1'>元</option>
+        <option value='2'>角</option>
+        <option value='0'>分</option>
+    </select>
+
+    </p>
     </div>
-    <br></br>
-    <input type='checkbox' id='AppChecked'>APP接口測試
+
+    <input type='checkbox' id='AppChecked'>
+    <label for="AppChecked">APP接口測試</label>
+    
     <div id='App_login'>
     <input type ="checkbox" name="test_Suite" id="test_AppLogin" value="test_AppLogin">登入測試
     <input type ="checkbox" name="test_Suite" id="test_AppSubmit" value="test_AppSubmit">投注測試
@@ -150,11 +177,12 @@
     <input type ="checkbox" name="test_Suite" id="test_AppBalance" value="test_AppBalance">4.0/第三方餘額測試
     <input type ="checkbox" name="test_Suite" id="test_ApptransferIn" value="test_ApptransferIn">第三方轉入測試
     <input type ="checkbox" name="test_Suite" id="test_ApptransferOut" value="test_ApptransferOut">第三方轉出測試
-
     </div>
     
-    <br></br>
-    <input type='checkbox' id='DriverChecked'>PC自動化測試
+    
+    <input type='checkbox' id='DriverChecked'>
+    <label for="DriverChecked">PC自動化測試</label>
+
     <div id='Pc_driver' >
     <input type ="checkbox" name="test_Suite" id= "safepersonal" value="test_safepersonal">修改登入密碼測試
     <input type ="checkbox" name="test_Suite" id="applycenter" value="test_applycenter">

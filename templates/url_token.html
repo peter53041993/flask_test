@@ -4,7 +4,8 @@
     {%block head %}
     {{ super() }}
     <style type="text/css">
-    #token,#id,#domain{border-radius: 22px;}
+    #token,#id,#user,#domain{border-radius: 22px;}
+    p{margin-top: 1%;}
     </style>
 {% endblock %}  
 {% block script %}
@@ -13,7 +14,7 @@
             if ($('.dataframe').length>0){
                 $("table").html("");//已經有了先清空
             }
-            if($("#id").val() =="" && $("#token").val()=="" ){//判斷倆著皆不能輸入
+            if($("#id").val() =="" && $("#token").val()=="" &&$('#user').val()==""){//判斷三著皆不能輸入
                 alert("請選擇單一輸入框");
                 location.reload()
             }
@@ -36,6 +37,10 @@
                     if (data=='沒有該註冊碼'){
                         alert(data);
                         location.reload()  
+                    }
+                    else if (data=='DATA有錯誤'){
+                        alert(data);
+                        location.reload();
                     }
                     else{
                     console.log(data);
@@ -69,7 +74,11 @@
                     console.log(typeof(data))
                     if (data=='沒有該連結'){
                         alert(data);
-                        location.reload()  
+                        location.reload(); 
+                    }
+                    else if (data=='DATA有錯誤'){
+                        alert(data);
+                        location.reload();
                     }
                     else{
                     console.log(data);
@@ -103,7 +112,10 @@
         </br> 
         <p>
         請輸入開戶連結ID<input type="text" id="id" name="id"
-        size="8"  maxlength="8">
+        size="8"  maxlength="8"></p>
+        <p>
+        請輸入用戶名<input type="text" id="user" name="user"
+        size="16"  maxlength="16"placeholder='查詢用戶從哪開出'>
         </p>
         <p><input type="button" onclick="check()" value="用戶連結查詢"></p>
     </form>
