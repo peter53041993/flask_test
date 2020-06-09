@@ -29,6 +29,7 @@ document.writeln("        <div class=\'dropdown-menu\'>");
 document.writeln("          <a class=\'dropdown-item\' href=\'game_result\'>玩法/遊戲單號</a>");
 document.writeln("          <a class=\'dropdown-item\' href=\'user_active\'>有效用戶/第三方銷量</a>");
 document.writeln("          <a class=\'dropdown-item\' href=\'url_token\'>註冊碼/註冊連結</a>");
+document.writeln("          <a class=\'dropdown-item\' href=\'sun_user\'>太陽成用戶</a>");
 document.writeln("        </div>");
 document.writeln("    </div>");
 document.writeln("    <div class=\'btn-group\'>");
