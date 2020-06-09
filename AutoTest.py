@@ -63,6 +63,14 @@ def return_red(red):#頁面是否紅包投注
     global red_type
     red_type = []
     red_type.append(red)
+def return_awardmode(awardmode):#頁面 選擇獎金模式 
+    global awardmode_type
+    awardmode_type = []
+    awardmode_type.append(awardmode)
+def return_money(money):#頁面選擇 金額模式
+    global money_type 
+    money_type = []
+    money_type.append(money)
 
 
 def get_rediskey(envs):#env參數 決定是哪個環境
@@ -84,6 +92,21 @@ def get_token(envs,user):
     token_time = (time.localtime(int(timestap)))
     print('token到期時間: %s-%s-%s %s:%s:%s'%(token_time.tm_year,token_time.tm_mon,token_time.tm_mday,
     token_time.tm_hour,token_time.tm_min,token_time.tm_sec))
+
+def game_map(lotteryid,game_playtype):#玩法 和 說明 mapping ,game_playtype 為玩法
+    global game_explan # 說明
+    if lotteryid == 99901: #快開
+        game_explan = '獎金計算: 投注金額*(投注內容+理論獎金*反點)'
+    else:
+        if '五星' in game_playtype:
+            if game_playtype in ['复式','单式']:
+                game_explan = '五個號碼順續需全相同'
+            elif '组选120' in game_playtype:
+                game_explan = '五個號碼相同,順續無需相同(開獎號無重覆號碼)'
+
+        else:
+            game_explan = 'test'
+
 
 
 class Joy188Test(unittest.TestCase):
@@ -160,6 +183,25 @@ class Joy188Test(unittest.TestCase):
             red_bal = []
             for i in rows:# i 生成tuple
                 red_bal.append(i[0])
+        conn.close()
+    @staticmethod
+    def select_sunuser(conn,user,type_):
+        with conn.cursor() as cursor:
+            if type_ == 1: # 1 查詢轉移的用戶
+                sql = "select account,cellphone,transfer_status,transfer_date from sun_game_user where  transfer_status = 1 \
+                order by transfer_date desc"
+            else:
+                sql = "select * from sun_game_user where account = '%s'"%user
+            print(sql)
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            #print(rows)
+
+            global sun_user
+            sun_user = {}
+            for num,tuple_ in enumerate(rows):# i 生成tuple
+                sun_user[num] = list(tuple_)
+            #print(sun_user)
         conn.close()
     @staticmethod
     def select_RedID(conn,user):#紅包加壁  的訂單號查詢 ,用來審核用
@@ -307,19 +349,23 @@ class Joy188Test(unittest.TestCase):
             #print(active_app,len(active_app))
         conn.close()
     @staticmethod
-    def select_AppBet(conn,user):#查詢APP 代理中心 銷量
+    def select_AppBet(conn,user,envs):#查詢APP 代理中心 銷量
         with conn.cursor() as cursor:
             global app_bet
             app_bet = {}
-            for third in ['ALL','LC','KY','CITY','GNS','FHLL','BBIN','IM','SB','AG']:
+            if envs == 2:#生產
+                sql_name = 'V_THIRDLY_AGENT_CENTER'
+            else:
+                sql_name= 'THIRDLY_AGENT_CENTER'# 後續優化的view
+            for third in ['ALL','LC','KY','CITY','GNS','FHLL','BBIN','IM','SB','AG','PT']:
                 if third == 'ALL':
-                    sql = "select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
-                    from V_THIRDLY_AGENT_CENTER where account = '%s' \
-                    and create_date > trunc(sysdate,'mm')"%user
+                    sql = "select sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(cost)- sum(prize)用戶總盈虧 \
+                    from %s where account = '%s' \
+                    and create_date > trunc(sysdate,'mm')"%(sql_name,user)
                 else:
-                    sql = "select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
-                    from V_THIRDLY_AGENT_CENTER where account = '%s' \
-                    and create_date > trunc(sysdate,'mm') and plat='%s'"%(user,third)
+                    sql = "select sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(cost)- sum(prize)用戶總盈虧 \
+                    from %s where account = '%s' \
+                    and create_date > trunc(sysdate,'mm') and plat='%s'"%(sql_name,user,third)
                 cursor.execute(sql)
                 rows = cursor.fetchall()
                 new_ = []#存放新的列表內容
@@ -372,17 +418,63 @@ class Joy188Test(unittest.TestCase):
         conn.close()
 
     @staticmethod
-    def select_userUrl(conn,userid):
+    def select_userUrl(conn,user,type=1):#用戶的 連結 ,type= 1 找用戶本身開戶連結, 0 找用戶的從哪個連結開出
+        global user_url
         with conn.cursor() as cursor:
-            sql = "select url from user_url where url like '%"+ '%s'%(userid) +"%'"
+            if type == 1:# 這邊user參數 為 userid
+                user_url = []
+                sql = "select url from user_url where url like '%"+ '%s'%(user) +"%' and days=-1"
+            elif type==2:# user 為用戶名,這個表如果沒有, 有可能是 上級開戶連結 刪除,導致空 ,再去做else 那段
+                user_url = {}
+                sql = "select user_customer.account,user_url.url, user_customer.user_chain,user_customer.device,user_url.days \
+                from user_customer inner join  user_url on user_customer.url_id = user_url.id \
+                where user_customer.account = '%s'"%user
+            else:# 最後才去用 user_customer. referer 去找, 這邊APP 開戶出來的會是null 
+                user_url = {}
+                sql = "select account,referer,user_chain,device from user_customer where account = '%s'"%user
             cursor.execute(sql)
             rows = cursor.fetchall()
-            global user_url
-            user_url = []
-            
-            for i in rows:
-                user_url.append(i[0])
+            print(sql)
+            if isinstance(user_url,list) is True:# 為list 
+                for i in rows:
+                    user_url.append(i[0])
+            else:# user_url 為dict
+                for num,user in enumerate(rows):
+                    user_url[num] = list(user)
         conn.close()
+    @staticmethod
+    def select_urltoken(conn,token,joint_venture):# 輸入 token 查詢 連結
+        with conn.cursor() as cursor:
+            if len(token) == 4:# 代表是用 註冊碼  ,4位
+                sql = "select a.account,b.url from user_customer a inner join user_url b  on a.id= b.creator  where b.url \
+                like  '%%token=%s%%' and a.joint_venture = %s"%(token,joint_venture)
+            else:# 使用id 去找 url
+                sql = "select a.account,b.url from user_customer a inner join user_url b  on a.id= b.creator  where b.url \
+                like  '%%id=%s%%' and a.joint_venture = %s"%(token,joint_venture)
+            print(sql)
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global token_url
+            token_url = {}
+            for num,user in enumerate(rows):
+                token_url[num]= list(user)
+        conn.close()
+    @staticmethod 
+    def select_domainUrl(conn,domain):#查詢 全局管理 後台設置的domain ,連結設置 (因為生產 沒權限,看不到)
+        with conn.cursor() as cursor:
+            sql = "select a.domain,a.agent,b.url,a.register_display,a.app_download_display,a.domain_type,a.status from  \
+            GLOBAL_DOMAIN_LIST a inner join user_url b \
+            on a.register_url_id = b.id  where a.domain like '%%%s%%'"%domain
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global domain_url
+            domain_url = {}
+            for num,url in enumerate(rows):
+                domain_url[num]= list(url)
+            #print(domain_url)
+        conn.close()
+
+
     
     @staticmethod
     def web_issuecode(lottery):#頁面產生  獎期用法,  取代DB連線問題
@@ -616,7 +708,7 @@ class Joy188Test(unittest.TestCase):
     @staticmethod
     def req_post_submit(account,lottery,data_,moneyunit,awardmode):
         awardmode_dict = {0:u"非一般模式",1:u"非高獎金模式",2:u"高獎金"}
-        money_dict = {1:u"元模式",0.1:u"分模式",0.01:u"角模式"}
+        money_dict = {1:u"元模式",0.1:u"角模式",0.01:u"分模式"}
         while True:
             header = {
                 'Cookie': "ANVOID=" + cookies_[account],
@@ -631,8 +723,15 @@ class Joy188Test(unittest.TestCase):
             try:
             #print(r.json())
                 msg = (r.json()['msg'])
-                mode = money_dict[moneyunit]
-                mode1 = awardmode_dict[awardmode]
+                if lottery in ['btcctp']:
+                    mode = '只有元模式'
+                else:
+                    mode = money_dict[moneyunit]
+                
+                if lottery in ['jsdice','jldice1','jldice2','lhc']:# 骰寶,六合彩 沒有awardmode 欄位
+                    mode1 = '沒有awardmode參數'
+                else:
+                    mode1 = awardmode_dict[awardmode]
                 project_id = (r.json()['data']['projectId'])#訂單號
                 submit_amount = (r.json()['data']['totalprice'])#投注金額
                 #submit_mul = u"投注倍數: %s"%m#隨機倍數
@@ -655,7 +754,7 @@ class Joy188Test(unittest.TestCase):
                         print(r.json()['msg'])
                         break
                 else:#投注成功
-                    if red_type[0]=='yes':
+                    if red_type[0]=='yes':# 有紅包 與否
                         content_ = (lottery_name+"\n"+u'投注單號: '+project_id+"\n"
                                     +mul_+ "\n" 
                                     +play_+"\n"+u"投注金額: "+ str(float(submit_amount*0.0001))+"\n"
@@ -686,23 +785,35 @@ class Joy188Test(unittest.TestCase):
                 #for i in lottery_noRed:
                     statu = 1
                     global mul_ #傳回 投注出去的組合訊息 req_post_submit 的 content裡
-                    global mul
+                    global mul# 倍數
                     ball_type_post = Joy188Test.game_type(i)# 找尋彩種後, 找到Mapping後的 玩法後內容
+                    
+                    if awardmode_type[0] == '0':# 頁面獎金玩法使用 預設
+                        awardmode =1
+                        if i in ['btcctp','xyft','btcffc']:
+                            awardmode = 2
+                        else:
+                            pass
+                    elif awardmode_type[0] == '1':#頁面使用一般
+                        awardmode = 1
+                    elif awardmode_type[0] == '2':#高獎金
+                        awardmode =2
+                    print('awardmode: %s'%awardmode)
 
-                    awardmode =1
+                    if money_type[0] == '1':#使用元模式
+                        moneyunit = 1
+                    elif money_type[0] == '2':#使用角模式
+                        moneyunit = 0.1
+                    else:
+                        moneyunit = 0.01# 分模式
                     if i  == 'btcctp':
                         statu = 0
-
-                        awardmode = 2
-                        moneyunit = 1
+                        #moneyunit = 1
                         mul = Joy188Test.random_mul(1)#不支援倍數,所以random參數為1
                     elif i == 'bjkl8':
                         mul = Joy188Test.random_mul(5)#北京快樂8
                     elif i == 'p5':
                         mul = Joy188Test.random_mul(5)
-
-                    elif i in ['btcffc','xyft']:
-                        awardmode = 2
                     elif i in lottery_sb:#骰寶只支援  元模式
                         moneyunit = 1
                     
@@ -1137,8 +1248,9 @@ class Joy188Test(unittest.TestCase):
                 pass
         Joy188Test.test_PcThirdBalance()
     @staticmethod
-    def admin_login():
+    def admin_login(type_):# type_ 判斷是否需要登陸 , 0 不登
         global admin_cookie,admin_url,header,cookies
+
         admin_cookie = {}
         if env_[0] in ['dev02','fh82dev02','88hlqpdev02','teny2020dev02',0]:
             admin_url = 'http://admin.dev02.com'
@@ -1150,12 +1262,15 @@ class Joy188Test(unittest.TestCase):
                   'Content-Type': 'application/x-www-form-urlencoded'}
         admin_data = {'username':'cancus','password':password,'bindpwd':123456}
         session = requests.Session()
-        r = session.post(admin_url+'/admin/login/login',data=admin_data,headers=header)
-        cookies = r.cookies.get_dict()#獲得登入的cookies 字典
-        admin_cookie['admin_cookie'] =  cookies['ANVOAID'] 
-        print(admin_cookie)
-        print('登入後台 , 環境: %s'%admin_url)
-        print(r.text)
+        if type_ == 0:# 不登後台
+            pass
+        else:
+            r = session.post(admin_url+'/admin/login/login',data=admin_data,headers=header)
+            cookies = r.cookies.get_dict()#獲得登入的cookies 字典
+            admin_cookie['admin_cookie'] =  cookies['ANVOAID'] 
+            print(admin_cookie)
+            print('登入後台 , 環境: %s'%admin_url)
+            print(r.text)
     @staticmethod
     def test_redEnvelope():#紅包加壁,審核用
         user = user_[0]
@@ -2404,7 +2519,7 @@ class Joy188Test2(unittest.TestCase):
     def tearDownClass(cls):
         cls.dr.quit()
 
-def suite_test(testcase,username,env,red):
+def suite_test(testcase,username,env,red,awardmode,money):
     global content
     content = {}
     #pc = []
@@ -2417,7 +2532,9 @@ def suite_test(testcase,username,env,red):
     test_list = ['xjssc']
     return_user(username)# 回傳 頁面上 輸入的用戶名
     return_env(env)#回傳環境
-    return_red(red)
+    return_red(red)#紅包與否
+    return_awardmode(awardmode)# 獎金玩法
+    return_money(money)# 元角分
     try:
         suite = unittest.TestSuite()
         #suite_pc = unittest.TestSuite()
