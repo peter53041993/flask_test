@@ -3,19 +3,33 @@
     {%block head %}
     {{ super() }}
     <style type="text/css">
-    #stock_search{border-radius: 22px;}
+    #stock_search,#stock_search2{border-radius: 22px;}
     </style>
 {% endblock %}
 {% block script %}
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+  
+    <!--script>
+        $(document).ready(function(){
+           
+        document.getElementById("img").innerHTML="<img src='{{url_for('static', filename='image/1234.jpg')}}'>"
+
+        })
+    </script-->
     <script type="text/javascript">
         var stock_detail;
         function check(){
+            var stock_num = $('#stock_search').val();
+        
+            console.log(stock_num)
             if ($('.dataframe').length>0){
                 $("table").html("");//已經有了先清空
             }
-            if ($("#stock_search").val()==""){
-                alert("請輸入號碼");
+            if ($('#img').html()!=''){// 不等於空 ,代表有圖,需先清除
+                $('#img').html('');
+            }
+            if ($("#stock_search").val()=="" && $('#stock_search2').val()==""){
+                alert("號碼名稱皆為空");
                 location.reload()
             }
             else{
@@ -27,15 +41,24 @@
                         },
                     data:$("#form1").serialize(),
                     success:function(data){
-                    if (data.indexOf('號碼')>0){
+                    stock_detail = data;
+                    if (data.indexOf('沒有該股票')>=0){//沒有該股票
                         alert(data);
                         location.reload()
                     }
                     else{
-                    stock_detail = data;
-                    console.log(data);
-                    $('#stock_detail').after(data)}
-        
+                    
+                    //console.log(data);
+                    $('#stock_detail').after(data);
+                    var img = "<img src='{{url_for('static', filename='image/'+'test'+'.jpg')}}'>";
+                    if (stock_num ==''){// 有可能頁面輸入的是名稱 , 會為空,照片名為是以股號為名稱
+                        stock_num = document.querySelector("body > main > table > tbody > tr > td:nth-child(3)").textContent;
+                    }
+                    img =img.replace('test',stock_num)
+                    document.getElementById("img").innerHTML=img;
+                    $('#stock_search').val('');
+                    $('#stock_search2').val('');
+                    }               
                     }   
                 })
             }
@@ -66,15 +89,22 @@
 {% endblock %}
 {% block main %}
     <form id='form1' method='POST'>  
-        <p>請輸入號碼<input type="text" id="stock_search" name="stock_search" maxlength="4" οnkeyup="value=value.replace(/[^\d]/g,'')" 
-            size="15" /><input type="button" onclick="check()" value="確認"></p>
+        請輸入號碼<input type="text" id="stock_search" name="stock_search" maxlength="4" οnkeyup="value=value.replace(/[^\d]/g,'')" 
+        size="15" />
+        <p>請輸入名稱<input type="text" id="stock_search2" name="stock_search2" maxlength="4" size="15"/></p>
+        <p><input type="button" onclick="check()" value="確認"></p>
     </form>
     <form id='form2' methods='POST'>
-        <input type ="checkbox" name="Revenue" id="LAST_MONRATE" value="LAST_MONRATE">"上月營收"增加100趴以上
-        <input type ="checkbox" name="Revenue" id="LAST_YEARMONRATE" value="LAST_YEARMONRATE">"去年同月"營收增加100趴以上
-        <br></br>
-        (前10個)
-        <input type="button" onclick="check2()" value="確認">
+        <input type ="checkbox" name="Revenue" id="STOCK_LAST_MONRATE" value="STOCK_LAST_MONRATE">
+        <label for="STOCK_LAST_MONRATE">"上月營收"增加100趴以上</label>
+        <input type ="checkbox" name="Revenue" id="STOCK_LAST_YEARMONRATE" value="STOCK_LAST_YEARMONRATE">
+        <label for="STOCK_LAST_YEARMONRATE">"去年同月"營收增加100趴以上</label>
+        <input type ="checkbox" name="Revenue" id="STOCK_YEARRATE" value="STOCK_YEARRATE">
+        <label for="STOCK_YEARRATE">"整年營收"增加100趴以上</label>
+        <p><input type="button" onclick="check2()" value="確認">前10個</p>
     </form>
     <div id='stock_detail'></div>
+    <div id='img'>
+        <!--img src="{{url_for('static', filename='image/1234.jpg')}}"/-->
+    </div>
 {% endblock %}

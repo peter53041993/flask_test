@@ -5,6 +5,7 @@
 <style type="text/css">
     #game_code,#game_type{border-radius: 22px;}
     li{list-style: none;}
+    p{margin-top: 1%;}
 </style>
 {% endblock %}
 {% block script %}
@@ -23,7 +24,7 @@
                 location.reload()
             }
             else {
-            $.ajax({
+            $.ajax({ 
                 url:"/game_result",
                 type:"POST",
                 //dataType: "json",
@@ -31,24 +32,26 @@
                         Accept:"application/json; charset=utf-8"
                     },
                 data:$("#form1").serialize(),
+                
                 success:function(data){
+                    //console.log(XMLHttpRequest)
                     game_detail = data;
-                    console.log(typeof(data))
+                    //console.log(typeof(data))
+                    console.log(data);
                     if (data=='此環境沒有此訂單號'){
                         alert(data);
-                        location.reload()
+                        location.reload();
+                    }
+                    else if(data.indexOf('cookie')>3){
+                        alert(data);
+                        location.reload();
                     }
                     else {
                         $('#game_detail').after(data)
-                        
                     }
-                    //console.log(data);
-                    //$('#game_detail').text(data)
-        
-                }
-            })
-            }
-        }
+                    }
+                    })
+                }}
     </script>
 {% endblock %}
 {% block main %}
