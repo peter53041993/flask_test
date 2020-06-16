@@ -63,8 +63,13 @@ def return_user(username):  # 頁面用戶選擇
 
 
 def return_env(env):  # 頁面環境選擇
-    global env_
-    env_ = env
+    global envConfig
+    envConfig = env
+
+
+def return_env_app(env):  # 頁面環境選擇
+    global envAppConfig
+    envAppConfig = env
 
 
 def return_red(red):  # 頁面是否紅包投注
@@ -800,6 +805,7 @@ class Joy188Test(unittest.TestCase):
     @staticmethod
     @func_time
     def test_PcLogin(source='Pc'):
+        print("Enter test_PcLogin")
         u"登入測試"
         global user  # 傳給後面 PC 街口案例  request參數
         global password  # 傳入 werbdriver登入的密碼
@@ -815,48 +821,29 @@ class Joy188Test(unittest.TestCase):
         user = user_
         content["PC登入案例"] = ""  # 回傳測試資訊
         account_ = {user_: '輸入的用戶名'}
-        em_url = 'http://em.%s.com' % env_
-
-        if env_ in ['dev02', 'dev03', 'fh82dev02', '88hlqpdev02', 'teny2020dev02']:  # 多增加合營
-            password = b'123qwe'
-            post_url = "http://www.%s.com" % env_
-            envs = 0
-
-        elif env_ in ['joy188', 'joy188.teny2020', 'joy188.195353', 'joy188.88hlqp']:
-
-            password = b'amberrd'
-            post_url = "http://www2.%s.com" % env_
-            envs = 1
-        elif env_ == 'maike2020':
-            password = b'amberrd'
-            post_url = "http://www.%s.com" % env_
-            envs = 1
-        elif env_ == 'fh968':
-            password = b'tsuta0425'
-            post_url = "http://www.%s.com" % env_
-
-        elif env_ == 'joy188.fh888':
-            password = b'amberrd'
-            post_url = "http://www2.%s.bet" % env_
-            em_url = 'http://em.%s.bet' % env_
-            envs = 1
+        em_url = envConfig.getEmUrl()
+        password = str.encode(envConfig.getPassword())
+        envs = envConfig.getEnvID()
+        post_url = envConfig.getPostUrl()
 
         param = b'f4a30481422765de945833d10352ea18'
 
         # 判斷從PC ,ios ,還世 andriod
         # global userAgent
         if source == 'Pc':
-            userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36"
+            userAgent = Config.UserAgent.PC.value
 
         elif source == 'Android':
-            userAgent = 'Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.110 Mobile Safari/537.36'
+            userAgent = Config.UserAgent.ANDROID.value
 
         elif source == 'Ios':
-            userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1'
+            userAgent = Config.UserAgent.IOS.value
 
         header = {
             'User-Agent': userAgent
         }
+        print("userAgent : "+userAgent)
+        print("post_url : "+post_url)
         global session
         while True:
             try:
@@ -867,9 +854,7 @@ class Joy188Test(unittest.TestCase):
                         "param": param
                     }
                     session = requests.Session()
-                    r = session.post(post_url + '/login/login', data=postData, headers=header,
-                                     )
-
+                    r = session.post(post_url + '/login/login', data=postData, headers=header)
                     cookies = r.cookies.get_dict()  # 獲得登入的cookies 字典
                     cookies_.setdefault(i, cookies['ANVOID'])
                     t = time.strftime('%Y%m%d %H:%M:%S')
@@ -881,11 +866,11 @@ class Joy188Test(unittest.TestCase):
                     # return url
                 break
             except requests.exceptions.ConnectionError:
-                print('please wait!')
+                raise Exception("ConnectionError Exception")
                 break
 
             except IOError:
-                print('please wait!!!')
+                raise Exception('IOError Exception')
                 break
 
     @staticmethod
@@ -1166,16 +1151,11 @@ class Joy188Test(unittest.TestCase):
     def admin_login():
         global admin_cookie, admin_url, header, cookies
         admin_cookie = {}
-        if env_ in ['dev02', 'fh82dev02', '88hlqpdev02', 'teny2020dev02', 0]:
-            admin_url = 'http://admin.dev02.com'
-            password = '123qwe'
-        else:
-            admin_url = 'http://admin.joy188.com'
-            password = 'amberrd'
         header = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36',
+            'User-Agent': Config.UserAgent.PC.value,
             'Content-Type': 'application/x-www-form-urlencoded'}
-        admin_data = {'username': 'cancus', 'password': password, 'bindpwd': 123456}
+        admin_data = envConfig.getAdminData()
+        admin_url = envConfig.getAdminUrl()
         session = requests.Session()
         r = session.post(admin_url + '/admin/login/login', data=admin_data, headers=header)
         cookies = r.cookies.get_dict()  # 獲得登入的cookies 字典
@@ -1229,7 +1209,7 @@ class Joy188Test3(unittest.TestCase):
     def test_AppLogin():
         u"APP登入測試"
         global userAgent
-        userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36'
+        userAgent = Config.UserAgent.PC.value
         account_ = {user_: '輸入的用戶名'}
         global token_, userid_
         token_ = {}
@@ -1243,35 +1223,15 @@ class Joy188Test3(unittest.TestCase):
         # 判斷用戶是dev或188,  uuid和loginpasssource為固定值
         global envs, env, domain_url  # envs : DB環境 用, env 環境 url ,request url 用, domin_url APP開戶 參數用
 
-        if env_ in ['dev02', 'fh82dev02', '88hlqpdev02', 'teny2020dev02']:
-            env = 'http://10.13.22.152:8199/'
-            domain_url = 'http://www.%s.com' % env_
-            envs = 0
-            uuid = "2D424FA3-D7D9-4BB2-BFDA-4561F921B1D5"
-            loginpasssource = "fa0c0fd599eaa397bd0daba5f47e7151"  # 123qwe
-            if env_ == 'dev02':  # 判斷合營,歡樂棋牌
-                jointVenture = 0
-            elif env_ in ['fh82dev02', 'teny2020dev02']:
-                jointVenture = 1
-            else:
-                jointVenture = 2  # 歡樂棋牌
-        elif env_ in ['joy188', 'joy188.teny2020', 'joy188.195353', 'joy188.88hlqp']:
-            env = 'http://iphong.joy188.com/'
-            domain_url = 'http://iphong.joy188.com/'
-            envs = 1
-            uuid = 'f009b92edc4333fd'
-            loginpasssource = "3bf6add0828ee17c4603563954473c1e"  # amberrd
-            if env_ == 'joy188':  # 判斷是否為一般用戶還是合營用戶
-                jointVenture = 0
-            elif env_ in ['joy188.teny2020', 'joy188.195353']:  # 合營
-                jointVenture = 1
-            else:
-                jointVenture = 2  # 歡樂棋牌
-        else:  # 不在頁面環境上
-            pass
+        env = envAppConfig.getIapi()
+        domain_url = envAppConfig.getDomain()
+        envs = envAppConfig.getEnvID()
+        uuid = envAppConfig.getUuid()
+        loginpasssource = envAppConfig.getLoginPassSource()
+        jointVenture = envAppConfig.getJointVenture()
+
         # 登入request的json
         for i in account_.keys():
-
             login_data = {
                 "head": {
                     "sessionId": ''
@@ -1291,6 +1251,8 @@ class Joy188Test3(unittest.TestCase):
                     }
                 }
             }
+            print("Joy188Test3 Start")
+            print(login_data)
             try:
                 r = requests.post(env + 'front/login', data=json.dumps(login_data), headers=header)
                 # print(r.json())
@@ -1885,9 +1847,9 @@ class Joy188Test3(unittest.TestCase):
                                "pid": int(pid), "qq": '',
                                "ip": "192.168.2.18", "app_id": "10", "come_from": "4", "appname": "1"},
                      "pager": {"startNo": "", "endNo": ""}}}
-        if env_ in ['dev02', 'joy188']:  # 一般 4.0  data 不用帶 joint_venture
+        if envConfig in ['dev02', 'joy188']:  # 一般 4.0  data 不用帶 joint_venture
             pass
-        elif env_ in ['fh82dev02', 'teny2020dev02', 'joy188.teny2020', 'joy188.195353']:  # 合營版
+        elif envConfig in ['fh82dev02', 'teny2020dev02', 'joy188.teny2020', 'joy188.195353']:  # 合營版
             data_['body']['param']['jointVenture'] = 1
         else:  # 歡樂棋牌
             data_['body']['param']['jointVenture'] = 2
@@ -2030,35 +1992,17 @@ class Joy188Test2(unittest.TestCase):
             else:
                 cls.dr = webdriver.Chrome(Config.chromeDriver_Path, chrome_options=Config.chrome_options)
             dr = cls.dr
-            if env_ in ['joy188', 'joy188.teny2020', 'joy188.195353', 'joy188.88hlqp']:
-                post_url = 'http://www2.%s.com' % env_
-                em_url = 'http://em.%s.com' % env_
-                cls.dr.get(post_url)
-                user = user_
-                password = 'amberrd'
-                env = 1  # 後面會用到 環境變數 Db查詢用
-            elif env_ in ['dev02', 'dev03', 'fh82dev02', 'teny2020dev02']:
-                post_url = 'http://www.%s.com' % env_
-                em_url = 'http://em.%s.com' % env_
-                cls.dr.get(post_url)
-                user = user_
-                password = '123qwe'
-                env = 0
-            elif env_ == 'maike2020':
-                post_url = 'http://www.%s.com' % env_
-                em_url = 'http://em.%s.com' % env_
-                cls.dr.get(post_url)
-                user = user_
-                password = 'amberrd'
-                env = 1
-            elif env_ == 'joy188.fh888':
-                post_url = 'http://www2.%s.bet' % env_
-                em_url = 'http://em.%s.bet' % env_
-                cls.dr.get(post_url)
-                user = user_
-                password = 'amberrd'
 
-            print(u'登入環境: %s,登入帳號: %s' % (env_, user))
+            user = user_
+            password = envConfig.getPassword()
+            print(password)
+            post_url = envConfig.getPostUrl()
+            em_url = envConfig.getEmUrl()
+            env = envConfig.getEnvID()
+
+            cls.dr.get(post_url)
+
+            print(u'登入環境: %s,登入帳號: %s' % (envConfig, user))
             # sleep(100)
             cls.dr.find_element_by_id('J-user-name').send_keys(user)
             cls.dr.find_element_by_id('J-user-password').send_keys(password)
@@ -2068,8 +2012,9 @@ class Joy188Test2(unittest.TestCase):
                 print('%s 登入成功' % user)
             else:
                 print('%s登入失敗' % user)
-        except NoSuchElementException as e:
-            print(e)
+        except Exception as e:
+            from Utils.TestTool import traceLog
+            traceLog(e)
 
     @staticmethod
     def ID(element):
@@ -2313,6 +2258,8 @@ class Joy188Test2(unittest.TestCase):
 
     @staticmethod
     def mul_submit():  # 追號
+        if dr.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').is_selected():
+            dr.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').click() #取消紅包追號
         Joy188Test2.id_element('randomone')  # 先隨機一住
         Joy188Test2.id_element('J-trace-switch')  # 追號
 
@@ -2949,6 +2896,8 @@ class Joy188Test2(unittest.TestCase):
 
 def suite_test(testcase, username, env, red):
     global content
+    env_config_ = Config.EnvConfig(env)
+    env_app_config_ = Config.EnvConfigApp(env)
     content = {}
     # pc = []
     # app =[]
@@ -2959,7 +2908,8 @@ def suite_test(testcase, username, env, red):
                     'pk10', 'xyft', 'v3d', 'fc3d', 'p5', 'ssq', 'slmmc', 'sl115']
     test_list = ['xjssc']
     return_user(username)  # 回傳 頁面上 輸入的用戶名
-    return_env(env)  # 回傳環境
+    return_env(env_config_)  # 初始化環境參數
+    return_env_app(env_app_config_)  # 初始化App環境參數
     return_red(red)
     try:
         suite = unittest.TestSuite()
@@ -2998,7 +2948,7 @@ def suite_test(testcase, username, env, red):
         runner = HTMLTestRunner.HTMLTestRunner(
             stream=fp,
             title=u'測試報告',
-            description='環境: %s,帳號: %s' % (env_, user_),
+            description='環境: %s,帳號: %s' % (envConfig, user_),
         )
         print('start')
         # print(runner)
