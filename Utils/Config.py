@@ -28,12 +28,16 @@ class EnvConfig:
     env_domain = None
 
     def __init__(self, domain):
-        self.env_domain = domain
+        try:
+            if domain in self.devDomains + self.joySunDomains + self.joyDomains + self.hyDomains + self.productDomains:
+                self.env_domain = domain
+        except ValueError:
+            raise Exception('無對應網域 請至 Config.EnvConfig 添加')
 
-    def getDomain(self):
+    def get_domain(self):
         return self.env_domain
 
-    def getPostUrl(self):
+    def get_post_url(self):
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains + self.hyDomains + self.productDomains:
@@ -45,7 +49,7 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
-    def getEmUrl(self):
+    def get_em_url(self):
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.joySunDomains:
@@ -55,7 +59,7 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
-    def getPassword(self):
+    def get_password(self):
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains:
@@ -67,7 +71,7 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
-    def getEnvID(self):
+    def get_env_id(self):
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains:
@@ -77,7 +81,7 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
-    def getAdminUrl(self):
+    def get_admin_url(self):
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains:
@@ -87,7 +91,7 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
-    def getAdminData(self):
+    def get_admin_data(self):
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains:
@@ -102,7 +106,7 @@ class EnvConfigApp(EnvConfig):
     def __init__(self, domain):
         super().__init__(domain)
 
-    def getIapi(self):
+    def get_iapi(self):
         print(self.env_domain)
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
@@ -113,7 +117,7 @@ class EnvConfigApp(EnvConfig):
         else:
             raise Exception('無對應網域參數，請至Config envConfigApp()新增')
 
-    def getUuid(self):
+    def get_uuid(self):
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains:
@@ -123,7 +127,7 @@ class EnvConfigApp(EnvConfig):
         else:
             raise Exception('無對應網域參數，請至Config envConfigApp()新增')
 
-    def getLoginPassSource(self):
+    def get_login_pass_source(self):
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains:
@@ -133,10 +137,10 @@ class EnvConfigApp(EnvConfig):
         else:
             raise Exception('無對應網域參數，請至Config envConfigApp()新增')
 
-    def getJointVenture(self):
+    def get_joint_venture(self):
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
-        elif self.env_domain == 'dev02' or 'joy188':
+        elif self.env_domain in ['dev02', 'joy188']:
             return 0
         elif self.env_domain in ['fh82dev02', 'teny2020dev02', 'joy188.teny2020', 'joy188.195353']:
             return 1

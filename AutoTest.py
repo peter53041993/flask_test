@@ -821,10 +821,10 @@ class Joy188Test(unittest.TestCase):
         user = user_
         content["PC登入案例"] = ""  # 回傳測試資訊
         account_ = {user_: '輸入的用戶名'}
-        em_url = envConfig.getEmUrl()
-        password = str.encode(envConfig.getPassword())
-        envs = envConfig.getEnvID()
-        post_url = envConfig.getPostUrl()
+        em_url = envConfig.get_em_url()
+        password = str.encode(envConfig.get_password())
+        envs = envConfig.get_env_id()
+        post_url = envConfig.get_post_url()
 
         param = b'f4a30481422765de945833d10352ea18'
 
@@ -842,8 +842,8 @@ class Joy188Test(unittest.TestCase):
         header = {
             'User-Agent': userAgent
         }
-        print("userAgent : "+userAgent)
-        print("post_url : "+post_url)
+        print("userAgent : " + userAgent)
+        print("post_url : " + post_url)
         global session
         while True:
             try:
@@ -1154,8 +1154,8 @@ class Joy188Test(unittest.TestCase):
         header = {
             'User-Agent': Config.UserAgent.PC.value,
             'Content-Type': 'application/x-www-form-urlencoded'}
-        admin_data = envConfig.getAdminData()
-        admin_url = envConfig.getAdminUrl()
+        admin_data = envConfig.get_admin_data()
+        admin_url = envConfig.get_admin_url()
         session = requests.Session()
         r = session.post(admin_url + '/admin/login/login', data=admin_data, headers=header)
         cookies = r.cookies.get_dict()  # 獲得登入的cookies 字典
@@ -1223,12 +1223,12 @@ class Joy188Test3(unittest.TestCase):
         # 判斷用戶是dev或188,  uuid和loginpasssource為固定值
         global envs, env, domain_url  # envs : DB環境 用, env 環境 url ,request url 用, domin_url APP開戶 參數用
 
-        env = envAppConfig.getIapi()
-        domain_url = envAppConfig.getDomain()
-        envs = envAppConfig.getEnvID()
-        uuid = envAppConfig.getUuid()
-        loginpasssource = envAppConfig.getLoginPassSource()
-        jointVenture = envAppConfig.getJointVenture()
+        env = envAppConfig.get_iapi()
+        domain_url = envAppConfig.get_domain()
+        envs = envAppConfig.get_env_id()
+        uuid = envAppConfig.get_uuid()
+        loginpasssource = envAppConfig.get_login_pass_source()
+        jointVenture = envAppConfig.get_joint_venture()
 
         # 登入request的json
         for i in account_.keys():
@@ -1994,11 +1994,11 @@ class Joy188Test2(unittest.TestCase):
             dr = cls.dr
 
             user = user_
-            password = envConfig.getPassword()
+            password = envConfig.get_password()
             print(password)
-            post_url = envConfig.getPostUrl()
-            em_url = envConfig.getEmUrl()
-            env = envConfig.getEnvID()
+            post_url = envConfig.get_post_url()
+            em_url = envConfig.get_em_url()
+            env = envConfig.get_env_id()
 
             cls.dr.get(post_url)
 
@@ -2220,7 +2220,6 @@ class Joy188Test2(unittest.TestCase):
             if game == 'special':  # 要到趣味玩法頁簽, 沒提供 css_element 的定位方法, 使用xpath
                 Joy188Test2.xpath_element('//li[@game-mode="special"]')
             else:
-
                 Joy188Test2.css_element('li.%s' % game)
             sleep(2)
             Joy188Test2.id_element('randomone')  # 進入tab,複式玩法為預設,值接先隨機一住
@@ -2259,7 +2258,7 @@ class Joy188Test2(unittest.TestCase):
     @staticmethod
     def mul_submit():  # 追號
         if dr.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').is_selected():
-            dr.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').click() #取消紅包追號
+            dr.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').click()  # 取消紅包追號
         Joy188Test2.id_element('randomone')  # 先隨機一住
         Joy188Test2.id_element('J-trace-switch')  # 追號
 
@@ -2299,7 +2298,6 @@ class Joy188Test2(unittest.TestCase):
 
     @staticmethod
     def assert_bouns():  # 驗證頁面是否有獎金詳情
-
         try:
             '''
             if '您选择的彩种目前属于休市期间' in Joy188Test2.XPATH("//h4[@class='pop-text']").text:# 休市彈窗
@@ -2932,7 +2930,6 @@ def suite_test(testcase, username, env, red):
                         suite_list.append(Joy188Test2('test_%s' % lottery))
                 else:
                     suite_list.append(Joy188Test2(i))
-
             else:  # NONE
                 pass
         # print(suite_list)

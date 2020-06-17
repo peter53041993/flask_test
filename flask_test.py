@@ -28,6 +28,7 @@ import twstock, stock
 import pandas as pd
 import numpy as np
 import re
+from Utils import Config
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
@@ -36,36 +37,30 @@ url_dict = {}  # 存放url 和街口狀態 , 給domain_ 用
 
 def iapi_login(envir):  # iapi 抓取沙巴token
     session = requests.Session()
-    global header
-    global env
-    header = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36',
+    global headerSb
+    global envSb
+    envSb = Config.EnvConfigApp(envir)
+    headerSb = {
+        'User-Agent': Config.UserAgent.PC.value,
         'Content-Type': 'application/json'
     }
 
     if envir == 'dev02':
-        env = 'http://10.13.22.152:8199/'
-        env_num = 0
         user = 'hsieh100'
-        uuid = "2D424FA3-D7D9-4BB2-BFDA-4561F921B1D5"
-        loginpasssource = "fa0c0fd599eaa397bd0daba5f47e7151"
     elif envir == '188':
-        env = 'http://iphong.joy188.com/'
-        env_num = 1
         user = 'kerr001'
-        uuid = 'f009b92edc4333fd'
-        loginpasssource = "3bf6add0828ee17c4603563954473c1e"
     else:
-        pass
+        raise Exception('envir 參數錯誤')
+
     login_data = {
         "head": {
             "sessionId": ''},
         "body": {
             "param": {
-                "username": user + "|" + uuid,
-                "loginpassSource": loginpasssource,
+                "username": user + "|" + envSb.get_uuid(),
+                "loginpassSource": envSb.get_login_pass_source(),
                 "appCode": 1,
-                "uuid": uuid,
+                "uuid": envSb.get_uuid(),
                 "loginIp": 2130706433,
                 "device": 2,
                 "app_id": 9,
@@ -74,7 +69,7 @@ def iapi_login(envir):  # iapi 抓取沙巴token
             }
         }
     }
-    r = session.post(env + '/front/login', data=json.dumps(login_data), headers=header)
+    r = session.post(envSb.get_iapi() + '/front/login', data=json.dumps(login_data), headers=headerSb)
     # print(r.text)
     global token
     token = r.json()['body']['result']['token']
@@ -88,7 +83,7 @@ def sb_game():  # iapi沙巴頁面
                                                              "loginIp": "10.13.20.57", "types": "1,0,t", "app_id": 9,
                                                              "come_from": "3", "appname": "1"}}}
 
-    r = session.post(env + '/sb/mobile', data=json.dumps(data), headers=header)
+    r = session.post(envSb.get_iapi() + '/sb/mobile', data=json.dumps(data), headers=headerSb)
     # print(r.text)
     global sb_url
     sb_url = r.json()['body']['result']['loginUrl']
@@ -100,11 +95,11 @@ def get_sb():  # 沙巴體育
     iapi_login('dev02')
     sb_game()
     # 抓取沙巴,token成功的方式, 先get 在post
-    r = session.get(sb_url + '/', headers=header)
+    r = session.get(sb_url + '/', headers=headerSb)
     cookies = r.cookies.get_dict()
-    r = session.post(sb_url + '/', headers=header)
+    r = session.post(sb_url + '/', headers=headerSb)
 
-    header['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
+    headerSb['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
     session = requests.Session()
 
     data = {
@@ -115,7 +110,7 @@ def get_sb():  # 沙巴體育
     }
     url = 'http://smartsbtest.thirdlytest.st402019.com'
     # /Odds/ShowAllOdds ,   /Odds/GetMarket
-    r = session.post(url + '/Odds/ShowAllOdds', headers=header, data=data, cookies=cookies)
+    r = session.post(url + '/Odds/ShowAllOdds', headers=headerSb, data=data, cookies=cookies)
 
     global sb_list
     sb_list = []
@@ -143,7 +138,7 @@ def get_sb():  # 沙巴體育
     for i in sb_list:  # list取出各個字點
         # print(i['MatchId'])#抓出mathch id ,去對應 賠率
         data['Matchid'] = i['MatchId']
-        r = session.post(url + '/Odds/GetMarket', headers=header, data=data, cookies=cookies)
+        r = session.post(url + '/Odds/GetMarket', headers=headerSb, data=data, cookies=cookies)
         # print(r.text)
         game_Odd = (r.json()['Data']['NewOdds'])
         # print(game_Odd)
@@ -169,10 +164,8 @@ def date_time():  # 給查詢 獎期to_date時間用, 今天時間
 
 
 def test_sport(type_keys='全部'):  # 企鵝網
-    userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36"
-
     header = {
-        'User-Agent': userAgent
+        'User-Agent': Config.UserAgent.PC.value
     }
     type_ = {'全部': 0, "英超": 1}
     date_time()
@@ -305,17 +298,12 @@ def autoTest():
             testcase = []
             username = request.form.get('username')
             test_case = request.form.getlist('test_Suite')  # 回傳 測試案例data內容
-            env = request.form.get('env_type')  # 環境選擇
+            envConfig = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
             red = request.form.get('red_type')  # 紅包選擇
-            print(env, red)
-            if env in ['dev02', 'fh82dev02', '88hlqpdev02', 'teny2020dev02']:  # 多判斷合營,歡樂棋牌
-                env_ = 0  # env_ 查詢 頁面上  該環境 是否真的有  此用戶名 ,哪來查DB環境用
-            elif env in ['joy188', 'joy188.teny2020', 'joy188.195353', 'joy188.88hlqp', 'joy188.fh888']:
-                env_ = 1
-            else:
-                print(env)
+            print(envConfig, red)
 
-            AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(env_), username)  # 查詢用戶 userid,合營
+            AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(envConfig.get_env_id()),
+                                              username)  # 查詢用戶 userid,合營
             userid = AutoTest.userid
             # joint_venture = AutoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
             print(userid)  # joint_venture)
@@ -325,14 +313,15 @@ def autoTest():
                 testcase.append(test)
             print(testcase)
             if len(userid) > 0:  # userid 值為空,　代表該ＤＢ　環境　沒有此用戶名　，　就不用做接下來的事
-                AutoTest.suite_test(testcase, username, env, red)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
+                AutoTest.suite_test(testcase, username, envConfig.get_domain(),
+                                    red)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
                 # content = AutoTest.content#測試案例 開始訊息
                 # print(content)
                 # return msg
                 return redirect('report')
             else:
                 # print(response_status)
-                return '此環境沒有該用戶'
+                raise Exception('此環境沒有該用戶')
         # return redirect("/report")
     except Exception as e:
         from Utils.TestTool import traceLog
