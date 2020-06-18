@@ -28,7 +28,7 @@ import twstock, stock
 import pandas as pd
 import numpy as np
 import re
-from Utils import Config
+from utils import Config
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
@@ -324,7 +324,7 @@ def autoTest():
                 raise Exception('此環境沒有該用戶')
         # return redirect("/report")
     except Exception as e:
-        from Utils.TestTool import traceLog
+        from utils.TestTool import traceLog
         traceLog(e)
         abort(500)
     return render_template('autoTest.html')

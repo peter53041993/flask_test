@@ -1,11 +1,9 @@
 from PageObjects import BasePage
-from Utils.TestTool import traceLog
+from utils.TestTool import traceLog
 
 page = BasePage.LoginPage("dev02")
-try:
-    page.login("twen101", "123qwe")
-    page = page.to_game_page()
-    page.bet_all()
-except Exception as e:
-    traceLog(e)
-page.get_driver().close()
+page.login("twen101", "123qwe")
+while True:
+    for game in BasePage.GameNames:
+        page.jump_to(game).bet_all()
+# page.get_driver().close()
