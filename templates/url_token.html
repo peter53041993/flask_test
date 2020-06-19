@@ -42,6 +42,10 @@
                         alert(data);
                         location.reload();
                     }
+                    else if (data.indexOf('環境沒有該用戶')>=0){
+                        alert(data);
+                        location.reload();
+                    }
                     else{
                     console.log(data);
                     $("#user_detail").after(data)}
@@ -79,6 +83,9 @@
                     else if (data=='DATA有錯誤'){
                         alert(data);
                         location.reload();
+                    }
+                    else if (data.indexOf('環境沒有此domain')>0){
+                        alert(data);
                     }
                     else{
                     console.log(data);
