@@ -1,67 +1,42 @@
-import HTMLTestRunner, unittest, requests, hashlib, time, random, cx_Oracle, json
-from bs4 import BeautifulSoup
-import unittest
 import datetime
-from time import sleep
-from selenium import webdriver
-from faker import Factory
-from selenium.common.exceptions import TimeoutException
-from selenium.common.exceptions import NoSuchElementException
-from selenium.common.exceptions import WebDriverException
-from selenium.common.exceptions import ElementClickInterceptedException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
 import os
-import pymysql as p
-import logging
 import threading
-import redis, re
+import unittest
+from time import sleep
 
+import pymysql
+import re
+import redis
+from bs4 import BeautifulSoup
+from faker import Factory
+from selenium import webdriver
+from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import WebDriverException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
+import HTMLTestRunner
+import cx_Oracle
+import hashlib
+import json
+import random
+import requests
+import time
 from utils import Config
+from utils.Config import LotteryData
+from utils.Config import func_time
 from utils.Logger import create_logger
 from utils.TestTool import trace_log
 
 os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'  # 避免抓出oracle中文 為問號
 
-lottery_dict = {
-    'cqssc': [u'重慶', '99101'], 'xjssc': [u'新彊時彩', '99103'], 'tjssc': [u'天津時彩', '99104'],
-    'hljssc': [u'黑龍江', '99105'], 'llssc': [u'樂利時彩', '99106'], 'shssl': [u'上海時彩', '99107'],
-    'jlffc': [u'吉利分彩', '99111'], 'slmmc': [u'順利秒彩', '99112'], 'txffc': [u'騰訊分彩', '99114'],
-    'btcffc': [u'比特幣分彩', '99115'], 'fhjlssc': [u'吉利時彩', '99116'],
-    'sd115': [u'山東11選5', '99301'], 'jx115': [u"江西11選5", '99302'],
-    'gd115': [u'廣東11選5', '99303'], 'sl115': [u'順利11選5', '99306'], 'jsk3': [u'江蘇快3', '99501'],
-    'ahk3': [u'安徽快3', '99502'], 'jsdice': [u'江蘇骰寶', '99601'], 'jldice1': [u'吉利骰寶(娛樂)', '99602'],
-    'jldice2': [u'吉利骰寶(至尊)', '99603'], 'fc3d': [u'3D', '99108'], 'p5': [u'排列5', '99109'],
-    'lhc': [u'六合彩', '99701'], 'btcctp': [u'快開', '99901'],
-    'bjkl8': [u'快樂8', '99201'], 'pk10': [u"pk10", '99202'], 'v3d': [u'吉利3D', '99801'],
-    'xyft': [u'幸運飛艇', '99203'], 'fhxjc': [u'鳳凰新疆', '99118'], 'fhcqc': [u'鳳凰重慶', '99117'], 'ssq': [u'雙色球', '99401'],
-    'n3d': [u'越南3d', '99124'], 'np3': [u'越南福利彩', '99123']
-}
-lottery_sh = ['cqssc', 'xjssc', 'tjssc', 'hljssc', 'llssc', 'jlffc', 'slmmc', 'txffc',
-              'fhjlssc', 'btcffc', 'fhcqc', 'fhxjc']
-lottery_3d = ['v3d']
-lottery_115 = ['sd115', 'jx115', 'gd115', 'sl115']
-lottery_k3 = ['ahk3', 'jsk3']
-lottery_sb = ['jsdice', "jldice1", 'jldice2']
-lottery_fun = ['pk10', 'xyft']
-lottery_noRed = ['fc3d', 'n3d', 'np3', 'p5']  # 沒有紅包
-
-
-def func_time(func):  # 案例時間
-    def wrapper(*args):
-        start_ = time.time()
-        func(*args)
-        end_ = time.time() - start_
-        print("用時: {}秒".format(end_))
-
-    return wrapper
-
 
 def return_user(username):  # 頁面用戶選擇
-    global user_
-    user_ = username
+    global user_g
+    user_g = username
 
 
 def return_env(env):  # 頁面環境選擇
@@ -113,32 +88,6 @@ class ApiTestPC(unittest.TestCase):
             sr = hashlib.md5(sr.encode()).hexdigest()
         rx = hashlib.md5(sr.encode() + param).hexdigest()
         return rx
-
-    @staticmethod
-    def get_conn(env):  # 連結數據庫 env 0: dev02 , 1:188
-        if env == 2:
-            username = 'rdquery'
-            service_name = 'gamenxsXDB'
-        else:
-            username = 'firefog'
-            service_name = ''
-        oracle_ = {'password': ['LF64qad32gfecxPOJ603', 'JKoijh785gfrqaX67854', 'eMxX8B#wktFZ8V'],
-                   'ip': ['10.13.22.161', '10.6.1.41', '10.6.1.31'],
-                   'sid': ['firefog', 'game', '']}
-        conn = cx_Oracle.connect(username, oracle_['password'][env], oracle_['ip'][env] + ':1521/' +
-                                 oracle_['sid'][env] + service_name)
-        return conn
-
-    @staticmethod
-    def date_time():  # 給查詢 獎期to_date時間用, 今天時間
-        global today_time
-
-        now = datetime.datetime.now()
-        year = now.year
-        month = now.month
-        day = now.day
-        format_day = '{:02d}'.format(day)
-        today_time = '%s-%s-%s' % (year, month, format_day)
 
     @staticmethod
     def select_issue(conn, lotteryid):  # 查詢正在銷售的 期號
@@ -209,55 +158,6 @@ class ApiTestPC(unittest.TestCase):
             for i in rows:  # i 生成tuple
                 bet_type.append(i[0])
         conn.close()
-
-    @staticmethod
-    def select_orderCode(conn, orderid):  # 從iapi投注的orderid對應出 order_code 方案編號
-        with conn.cursor() as cursor:
-            sql = "select order_code from game_order where id in (select orderid from game_slip where orderid = '%s')" % orderid
-
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-
-            global order_code
-            order_code = []
-            for i in rows:  # i 生成tuple
-                order_code.append(i[0])
-        conn.close()
-
-    @staticmethod
-    def select_PcOredrCode(conn, user, lottery):  # webdriver頁面投注產生定單
-        ApiTestPC.date_time()  # 先產生今天日期
-        with conn.cursor() as cursor:
-            sql = "select order_code from game_order where userid in \
-            (select id from user_customer where account = '%s' \
-            and order_time > to_date('%s','YYYY-MM-DD')and lotteryid = %s)" % (
-                user, today_time, lottery_dict[lottery][1])
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-
-            global order_code
-            order_code = []
-            for i in rows:  # i 生成tuple
-                order_code.append(i[0])
-        conn.close()
-
-    @staticmethod
-    def select_user_id(conn, account_):
-        with conn.cursor() as cursor:
-            sql = "select id from user_customer where account = '{}'".format(account_)
-            print('SQL : {}'.format(sql))
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global userid  # , joint_venture# joint_ventue 判斷合營  ,合營 等 上188 後 在加上
-            userid = []
-            joint_venture = []
-
-            for i in rows:
-                print('i : {}'.format(i))
-                userid.append(i[0])
-                # joint_venture.append(i[1])
-        conn.close()
-        return userid
 
     @staticmethod
     def select_gameResult(conn, result):  # 查詢用戶訂單號, 回傳訂單各個資訊
@@ -404,19 +304,6 @@ class ApiTestPC(unittest.TestCase):
         conn.close()
 
     @staticmethod
-    def select_userUrl(conn, userid):
-        with conn.cursor() as cursor:
-            sql = "select url from user_url where url like '%" + '%s' % (userid) + "%'"
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global user_url
-            user_url = []
-
-            for i in rows:
-                user_url.append(i[0])
-        conn.close()
-
-    @staticmethod
     def web_issuecode(lottery):  # 頁面產生  獎期用法,  取代DB連線問題
         now_time = int(time.time())
         header = {
@@ -431,39 +318,6 @@ class ApiTestPC(unittest.TestCase):
             pass
         if lottery == 'lhc':
             pass
-
-    @staticmethod
-    def my_con(evn, third):  # 第三方  mysql連線
-        third_dict = {'lc': ['lcadmin', ['cA28yF#K=yx*RPHC', 'XyH]#xk76xY6e+bV'], 'ff_lc'],
-                      'ky': ['kyadmin', ['ALtfN#F7Zj%AxXgs=dT9', 'kdT4W3#dEug3$pMM#z7q'], 'ff_ky'],
-                      'city': ['761cityadmin', ['KDpTqUeRH7s-s#D*7]mY', 'bE%ytPX$5nU3c9#d'], 'ff_761city'],
-                      'im': ['imadmin', ['D97W#$gdh=b39jZ7Px', 'nxDe2yt7XyuZ@CcNSE'], 'ff_im'],
-                      'shaba': ['sbadmin', ['UHRkbvu[2%N=5U*#P3JR', 'aR8(W294XV5KQ!Zf#"v9'], 'ff_sb'],
-                      'bbin': ['bbinadmin', 'Csyh*P#jB3y}EyLxtg', 'ff_bbin'],
-                      'gns': ['gnsadmin', 'Gryd#aCPWCkT$F4pmn', 'ff_gns']
-                      }
-        if evn == 0:  # dev
-            ip = '10.13.22.151'
-        elif evn == 1:  # 188
-            ip = '10.6.32.147'
-        else:
-            print('evn 錯誤')
-
-        user_ = third_dict[third][0]
-        db_ = third_dict[third][2]
-
-        if third == 'gns':  # gns只有一個 測試環境
-            passwd_ = third_dict[third][1]
-            ip = '10.6.32.147'  # gns Db 只有 188
-        else:
-            passwd_ = third_dict[third][1][evn]
-
-        db = p.connect(
-            host=ip,
-            user=user_,
-            passwd=passwd_,
-            db=db_)
-        return db
 
     @staticmethod
     def thirdly_tran(db, tran_type, third, user):
@@ -502,7 +356,7 @@ class ApiTestPC(unittest.TestCase):
     @staticmethod
     def plan_num(evn, lottery, plan_len):  # 追號生成
         plan_ = []  # 存放 多少 長度追號的 list
-        ApiTestPC.select_issue(ApiTestPC.get_conn(evn), lottery_dict[lottery][1])
+        ApiTestPC.select_issue(Config.get_conn(evn), LotteryData.lottery_dict[lottery][1])
         for i in range(plan_len):
             plan_.append({"number": issueName[i], "issueCode": issue[i], "multiple": 1})
         return plan_
@@ -590,16 +444,16 @@ class ApiTestPC(unittest.TestCase):
             11: ["chungtienpao.chungtienpao.chungtienpao", "1.01"]  # 快開
         }
 
-        if lottery in lottery_sh:  # 時彩系列
+        if lottery in LotteryData.lottery_sh:  # 時彩系列
             num = 0
             play_ = u'玩法名稱: %s.%s.%s' % (game_group[group_], game_set['zhixuan'],
                                          game_method['fushi'])
 
-        elif lottery in lottery_3d:
+        elif lottery in LotteryData.lottery_3d:
             num = 1
             play_ = u'玩法名稱: %s.%s.%s' % (game_group['qianer'], game_set['zhixuan'],
                                          game_method['zhixuanfushi'])
-        elif lottery in lottery_noRed:
+        elif lottery in LotteryData.lottery_noRed:
             if lottery in ['p5', 'np3']:
                 num = 9
                 play_ = u'玩法名稱: %s.%s.%s' % (game_group['p3sanxing'], game_set['zhixuan'],
@@ -608,17 +462,17 @@ class ApiTestPC(unittest.TestCase):
                 num = 1
                 play_ = u'玩法名稱: %s.%s.%s' % (game_group['qianer'], game_set['zhixuan'],
                                              game_method['zhixuanfushi'])
-        elif lottery in lottery_115:
+        elif lottery in LotteryData.lottery_115:
             num = 2
             play_ = u'玩法名稱: %s.%s.%s' % (game_group['xuanqi'], game_set['renxuanqizhongwu'],
                                          game_method['fushi'])
-        elif lottery in lottery_k3:
+        elif lottery in LotteryData.lottery_k3:
             num = 3
             play_ = u'玩法名稱: %s.%s' % (game_group['sanbutonghao'], game_set['biaozhun'])
-        elif lottery in lottery_sb:
+        elif lottery in LotteryData.lottery_sb:
             num = 4
             play_ = u'玩法名稱: %s' % (game_group['santonghaotongxuan'])
-        elif lottery in lottery_fun:
+        elif lottery in LotteryData.lottery_fun:
             num = 5
             play_ = u'玩法名稱: %s.%s.%s' % (game_group['guanya'], game_set['zhixuan'],
                                          game_method['fushi'])
@@ -669,7 +523,7 @@ class ApiTestPC(unittest.TestCase):
                 project_id = (r.json()['data']['projectId'])  # 訂單號
                 submit_amount = (r.json()['data']['totalprice'])  # 投注金額
                 # submit_mul = u"投注倍數: %s"%m#隨機倍數
-                lottery_name = u'投注彩種: %s' % lottery_dict[lottery][0]
+                lottery_name = u'投注彩種: %s' % LotteryData.lottery_dict[lottery][0]
 
                 if r.json()['isSuccess'] == 0:  #
                     # select_issue(get_conn(envs),lottery_dict[lottery][1])#呼叫目前正在販售的獎期
@@ -709,14 +563,14 @@ class ApiTestPC(unittest.TestCase):
     def test_PCLotterySubmit(moneyunit=1, plan=1):  # 彩種投注
         u"投注測試"
 
-        account = user_
+        account = user_g
         if red_type == 'yes':
             print('使用紅包投注')
         else:
             print('不使用紅包投注')
         while True:
             try:
-                for i in lottery_dict.keys():
+                for i in LotteryData.lottery_dict.keys():
                     # for i in lottery_noRed:
                     statu = 1
                     global mul_  # 傳回 投注出去的組合訊息 req_post_submit 的 content裡
@@ -737,10 +591,10 @@ class ApiTestPC(unittest.TestCase):
 
                     elif i in ['btcffc', 'xyft']:
                         awardmode = 2
-                    elif i in lottery_sb:  # 骰寶只支援  元模式
+                    elif i in LotteryData.lottery_sb:  # 骰寶只支援  元模式
                         moneyunit = 1
 
-                    mul_ = (u'選擇倍數: %s' % mul)
+                    mul_ = (u'選擇倍數: {}'.format(mul))
                     amount = 2 * mul * moneyunit
 
                     # 從DB抓取最新獎期.[1]為 99101類型select_issueselect_issue
@@ -789,7 +643,7 @@ class ApiTestPC(unittest.TestCase):
                     if i in 'lhc':
                         ApiTestPC.req_post_submit(account, 'lhc', post_data_lhc, moneyunit, awardmode)
 
-                    elif i in lottery_sb:
+                    elif i in LotteryData.lottery_sb:
                         ApiTestPC.req_post_submit(account, i, post_data_sb, moneyunit, awardmode)
                     else:
                         if red_type == 'yes':  # 紅包投注
@@ -797,7 +651,7 @@ class ApiTestPC(unittest.TestCase):
                             ApiTestPC.req_post_submit(account, i, post_data, moneyunit, awardmode)
                         else:
                             ApiTestPC.req_post_submit(account, i, post_data, moneyunit, awardmode)
-                ApiTestPC.select_RedBal(ApiTestPC.get_conn(1), user)
+                ApiTestPC.select_RedBal(Config.get_conn(1), user)
                 print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
                 break
             except KeyError as e:
@@ -822,8 +676,8 @@ class ApiTestPC(unittest.TestCase):
         global third_list
         third_list = ['gns', 'shaba', 'im', 'ky', 'lc', 'city']
         cookies_ = {}
-        user = user_
-        account_ = {user_: '輸入的用戶名'}
+        user = user_g
+        account_ = {user_g: '輸入的用戶名'}
         em_url = envConfig.get_em_url()
         password = str.encode(envConfig.get_password())
         envs = envConfig.get_env_id()
@@ -1089,11 +943,11 @@ class ApiTestPC(unittest.TestCase):
 
         for third in statu_dict.keys():
             if statu_dict[third] == True:  # 判斷轉帳的狀態, 才去要 單號
-                ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=0, third=third,
+                ApiTestPC.thirdly_tran(Config.my_con(evn=envs, third=third), tran_type=0, third=third,
                                        user=user)  # tran_type 0為轉轉入
                 count = 0
                 while status_list[-1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=0, third=third,
+                    ApiTestPC.thirdly_tran(Config.my_con(evn=envs, third=third), tran_type=0, third=third,
                                            user=user)  #
                     sleep(1.5)
                     count += 1
@@ -1132,11 +986,11 @@ class ApiTestPC(unittest.TestCase):
 
         for third in statu_dict.keys():
             if statu_dict[third] == True:
-                ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=1, third=third,
+                ApiTestPC.thirdly_tran(Config.my_con(evn=envs, third=third), tran_type=1, third=third,
                                        user=user)  # tran_type 1 是 轉出
                 count = 0
                 while status_list[-1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=0, third=third,
+                    ApiTestPC.thirdly_tran(Config.my_con(evn=envs, third=third), tran_type=0, third=third,
                                            user=user)  #
                     sleep(1)
                     count += 1
@@ -1167,12 +1021,12 @@ class ApiTestPC(unittest.TestCase):
 
     @staticmethod
     def test_redEnvelope():  # 紅包加壁,審核用
-        user = user_
+        user = user_g
         print('用戶: %s' % user)
         red_list = []  # 放交易訂單號id
 
         try:
-            ApiTestPC.select_RedBal(ApiTestPC.get_conn(envs), user)
+            ApiTestPC.select_RedBal(Config.get_conn(envs), user)
             print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
         except IndexError:
             print('紅包餘額為0')
@@ -1187,7 +1041,7 @@ class ApiTestPC(unittest.TestCase):
             print('紅包加幣100')
         else:
             print('失敗')
-        ApiTestPC.select_RedID(ApiTestPC.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
+        ApiTestPC.select_RedID(Config.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
         # print(red_id)
         red_list.append('%s' % red_id[0])
         # print(red_list)
@@ -1198,7 +1052,7 @@ class ApiTestPC(unittest.TestCase):
             print('審核通過')
         else:
             print('審核失敗')
-        ApiTestPC.select_RedBal(ApiTestPC.get_conn(envs), user)
+        ApiTestPC.select_RedBal(Config.get_conn(envs), user)
         print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
 
 
@@ -1211,7 +1065,7 @@ class ApiTestApp(unittest.TestCase):
         u"APP登入測試"
         global userAgent
         userAgent = Config.UserAgent.PC.value
-        account_ = {user_: '輸入的用戶名'}
+        account_ = {user_g: '輸入的用戶名'}
         global token_, userid_
         token_ = {}
         userid_ = {}
@@ -1269,7 +1123,7 @@ class ApiTestApp(unittest.TestCase):
                 print(u"登入失敗")
                 break
             # user_list.setdefault(userid,token)
-        get_token(envs, user_)
+        get_token(envs, user_g)
 
     @staticmethod
     @func_time
@@ -1277,11 +1131,11 @@ class ApiTestApp(unittest.TestCase):
         u"APP投注"
         global user
 
-        user = user_  # 業面用戶登入
+        user = user_g  # 業面用戶登入
         t = time.strftime('%Y%m%d %H:%M:%S')
         print(u'投注帳號: %s, 現在時間: %s' % (user, t))
         try:
-            for i in lottery_dict.keys():
+            for i in LotteryData.lottery_dict.keys():
                 if i in ['slmmc', 'sl115', 'btcctp']:
                     '''
                     data_ = {"head":{"sessionId":token_[user]},
@@ -1295,16 +1149,16 @@ class ApiTestApp(unittest.TestCase):
                     '''
                     pass
                 else:
-                    lotteryid = lottery_dict[i][1]
+                    lotteryid = LotteryData.lottery_dict[i][1]
 
-                    ApiTestPC.select_issue(ApiTestPC.get_conn(envs), lotteryid)  # 目前彩種的獎棋
+                    ApiTestApp.select_issue(Config.get_conn(envs), lotteryid)  # 目前彩種的獎棋
                     # print(issue,issueName)
                     now = int(time.time() * 1000)  # 時間戳
                     ball_type_post = ApiTestPC.game_type(i)  # 玩法和內容,0為玩法名稱, 1為投注內容
                     methodid = ball_type_post[0].replace('.', '')  # ex: housan.zhuiam.fushi , 把.去掉
 
                     # 找出對應的玩法id
-                    ApiTestPC.select_betTypeCode(ApiTestPC.get_conn(envs), lotteryid, methodid)
+                    ApiTestPC.select_betTypeCode(Config.get_conn(envs), lotteryid, methodid)
 
                     data_ = {"head":
                                  {"sessionId": token_[user]},
@@ -1324,18 +1178,18 @@ class ApiTestApp(unittest.TestCase):
                     r = session.post(env + 'game/buy', data=json.dumps(data_), headers=header)
 
                     if r.json()['head']['status'] == 0:  # status0 為投注成功
-                        print(u'%s投注成功' % lottery_dict[i][0])
+                        print('{} 投注成功'.format(LotteryData.lottery_dict[i][0]))
                         print(play_)  # 投注完法 中文名稱
-                        print(u"投注內容: %s" % ball_type_post[1])
-                        print(u"投注金額: %s, 投注倍數: %s" % (2 * mul, mul))  # mul 為game_type方法對甕倍數
+                        print("投注內容 : {}".format(ball_type_post[1]))
+                        print("投注金額 : {}, 投注倍數: {}".format(2 * mul, mul))  # mul 為game_type方法對甕倍數
                         # print(r.json())
                         orderid = (r.json()['body']['result']['orderId'])
-                        ApiTestPC.select_orderCode(ApiTestPC.get_conn(envs), orderid)  # 找出對應ordercode
+                        order_code = Config.get_order_code_iapi(Config.get_conn(envs), orderid)  # 找出對應ordercode
                         # print('orderid: %s'%orderid)
-                        print(u'投注單號: %s' % order_code[-1])
+                        print(u'投注單號: {}'.format(order_code[-1]))
                         print('------------------------------')
                     else:
-                        print('%s投注失敗' % lottery_dict[i][0])
+                        print('{} 投注失敗'.format(LotteryData.lottery_dict[i][0]))
                         pass
         except requests.exceptions.ConnectionError:
             print('please wait')
@@ -1343,9 +1197,36 @@ class ApiTestApp(unittest.TestCase):
             pass
 
     @staticmethod
+    def select_issue(conn, lotteryid):  # 查詢正在銷售的 期號
+        # Joy188Test.date_time()
+        # today_time = '2019-06-10'#for 預售中 ,抓當天時間來比對,會沒獎期
+        try:
+            with conn.cursor() as cursor:
+                sql = "select web_issue_code,issue_code from game_issue where lotteryid = '%s' and sysdate between sale_start_time and sale_end_time" % (
+                    lotteryid)
+
+                cursor.execute(sql)
+                rows = cursor.fetchall()
+
+                global issueName
+                global issue
+                issueName = []
+                issue = []
+                if lotteryid in ['99112', '99306']:  # 順利秒彩,順利11選5  不需 講期. 隨便塞
+                    issueName.append('1')
+                    issue.append('1')
+                else:
+                    for i in rows:  # i 生成tuple
+                        issueName.append(i[0])
+                        issue.append(i[1])
+            conn.close()
+        except:
+            pass
+
+    @staticmethod
     def test_AppOpenLink():
         '''APP開戶/註冊'''
-        user = user_
+        user = user_g
         if envs == 1:  # 188 環境
             data_ = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": "",
                               "sessionId": token_[user]}, "body": {"pager": {"startNo": "1", "endNo": "99999"},
@@ -1839,7 +1720,7 @@ class ApiTestApp(unittest.TestCase):
         else:
             print('創立失敗')
         user_random = random.randint(1, 100000)  # 隨機生成 頁面輸入 用戶名 + 隨機數 的下級
-        new_user = user_ + str(user_random)
+        new_user = user_g + str(user_random)
         data_ = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": ""},
                  # 開戶data
                  "body": {
@@ -1885,7 +1766,7 @@ class ApiTestApp(unittest.TestCase):
     def test_AppBalance():
         '''APP 4.0/第三方餘額'''
         threads = []
-        user = user_
+        user = user_g
         data_ = ApiTestApp.balance_data(user)
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
         print('帳號: %s' % user)
@@ -1914,7 +1795,7 @@ class ApiTestApp(unittest.TestCase):
     @func_time
     def test_ApptransferIn():
         '''APP轉入'''
-        user = user_
+        user = user_g
         data_ = ApiTestApp.amount_data(user)
         print('帳號: %s' % user)
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
@@ -1932,12 +1813,12 @@ class ApiTestApp(unittest.TestCase):
         for third in third_list:
             if third == 'sb':
                 third = 'shaba'
-            ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=0, third=third,
+            ApiTestPC.thirdly_tran(Config.my_con(evn=envs, third=third), tran_type=0, third=third,
                                    user=user)  # 先確認資料轉帳傳泰
             count = 0
             # print(status_list)
             while status_list[-1] != '2' and count != 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=0, third=third,
+                ApiTestPC.thirdly_tran(Config.my_con(evn=envs, third=third), tran_type=0, third=third,
                                        user=user)  #
                 sleep(0.5)
                 count += 1
@@ -1951,7 +1832,7 @@ class ApiTestApp(unittest.TestCase):
     @func_time
     def test_ApptransferOut():
         '''APP轉出'''
-        user = user_
+        user = user_g
         data_ = ApiTestApp.amount_data(user)
         print('帳號: %s' % user)
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
@@ -1966,11 +1847,11 @@ class ApiTestApp(unittest.TestCase):
         for third in third_list:
             if third == 'sb':
                 third = 'shaba'
-            ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=1, third=third,
+            ApiTestPC.thirdly_tran(Config.my_con(evn=envs, third=third), tran_type=1, third=third,
                                    user=user)  # 先確認資料轉帳傳泰
             count = 0
             while status_list[-1] != '2' and count != 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=1, third=third,
+                ApiTestPC.thirdly_tran(Config.my_con(evn=envs, third=third), tran_type=1, third=third,
                                        user=user)  #
                 sleep(1)
                 count += 1
@@ -1994,7 +1875,7 @@ class IntegrationTestWeb(unittest.TestCase):
                 cls.dr = webdriver.Chrome(Config.chromeDriver_Path, chrome_options=Config.chrome_options)
             dr = cls.dr
 
-            user = user_
+            user = user_g
             password = envConfig.get_password()
             print(password)
             post_url = envConfig.get_post_url()
@@ -2292,8 +2173,8 @@ class IntegrationTestWeb(unittest.TestCase):
     @staticmethod
     def submit_message(lottery):  # 投注完的單號
         if '成功' in IntegrationTestWeb.CLASS('pop-text').text:
-            ApiTestPC.select_PcOredrCode(ApiTestPC.get_conn(1), user, lottery)
-            print("方案編號: %s" % order_code[-1])
+            order_code_web = Config.get_order_code_web(Config.get_conn(1), user, lottery)
+            print("方案編號: %s" % order_code_web[-1])
         else:
             print('失敗')
 
@@ -2803,17 +2684,17 @@ class IntegrationTestWeb(unittest.TestCase):
         elif password == 'amberrd':
             safe_pass = 'kerr123'
 
-        ApiTestPC.select_user_id(ApiTestPC.get_conn(env), user_)  # 找出用戶 Userid  , 在回傳給開戶連結
-        ApiTestPC.select_userUrl(ApiTestPC.get_conn(env), userid[0])  # 找出 開戶連結
+        userid = Config.select_user_id(Config.get_conn(env), user_g)  # 找出用戶 Userid  , 在回傳給開戶連結
+        user_url = Config.select_userUrl(Config.get_conn(env), userid[0])  # 找出 開戶連結
 
-        dr.get(post_url + '/register/?%s' % user_url[0])  # 動待找尋 輸入用戶名的  開戶連結
+        dr.get(post_url + '/register/?{}'.format(user_url[0]))  # 動待找尋 輸入用戶名的  開戶連結
         print(dr.title)
         print('註冊連結:%s' % user_url[0])
         global user_random
         user_random = random.randint(1, 100000)  # 隨機生成 kerr下面用戶名
-        new_user = user_ + str(user_random)
-        print(u'註冊用戶名: %s' % new_user)
-        IntegrationTestWeb.ID('J-input-username').send_keys('%s' % new_user)  # 用戶名
+        new_user = user_g + str(user_random)
+        print(u'註冊用戶名: {}'.format(new_user))
+        IntegrationTestWeb.ID('J-input-username').send_keys(new_user)  # 用戶名
         IntegrationTestWeb.ID('J-input-password').send_keys(password)  # 第一次密碼
         IntegrationTestWeb.ID('J-input-password2').send_keys(password)  # 在一次確認密碼
         IntegrationTestWeb.ID('J-button-submit').click()  # 提交註冊
@@ -2904,8 +2785,10 @@ def suite_test(test_cases, username, test_env, is_use_red):
     :return: 
     """
     global logger
+    global today_time
     logger = create_logger(r'\AutoTest')
     logger.info("Auto Test 初始化")
+    today_time = Config.date_time()
     _env_config = Config.EnvConfig(test_env)
     _env_app_config = Config.EnvConfigApp(test_env)
     # pc = []
@@ -2957,7 +2840,7 @@ def suite_test(test_cases, username, test_env, is_use_red):
         runner = HTMLTestRunner.HTMLTestRunner(
             stream=fp,
             title=u'測試報告',
-            description='環境: {env},帳號: {user}'.format(env=envConfig, user=user_),
+            description='環境: {env},帳號: {user}'.format(env=envConfig, user=user_g),
         )
         logger.debug(">>>>>>>>Test Start.<<<<<<<<")
         runner.run(suite)

@@ -302,10 +302,10 @@ def autoTest():
             integration_test_pc = request.form.getlist('integration_test_pc')  # 回傳 測試案例data內容
             env_config = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
             red = request.form.get('red_type')  # 紅包選擇
-            print(env_config, red)
+            logger.debug("env_config.id: {},  red: {}".format(env_config.get_env_id(), red))
 
-            user_id = AutoTest.ApiTestPC.select_user_id(AutoTest.ApiTestPC.get_conn(env_config.get_env_id()),
-                                                        user_name)  # 查詢用戶 user_id,合營
+            # 查詢用戶 user_id,合營
+            user_id = Config.select_user_id(Config.get_conn(env_config.get_env_id()), user_name)
             # joint_venture = AutoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
 
             test_cases.append(api_test_pc)
@@ -318,9 +318,9 @@ def autoTest():
             #     test_cases[1].append(test)
             # for test in integration_test_pc:
             #     test_cases[2].append(test)
-            print('user_id : {}'.format(user_id))
-            print('user_name : {}'.format(user_name))
-            print("test_cases : {}".format(test_cases))
+            logger.info('user_id : {}'.format(user_id))
+            logger.info('user_name : {}'.format(user_name))
+            logger.info("test_cases : {}".format(test_cases))
             if len(user_id) > 0:  # user_id 值為空, 代表該DB環境沒有此用戶名, 就不用做接下來的事
                 AutoTest.suite_test(test_cases, user_name, env_config.get_domain(),
                                     red)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
@@ -646,7 +646,7 @@ def game_result():
         else:
             envs = 1
         if game_code != '':  # game_code 不為空,代表前台 是輸入 訂單號
-            AutoTest.ApiTestPC.select_gameResult(AutoTest.ApiTestPC.get_conn(envs), game_code)  # 傳回此方法.找出相關 訂單細節
+            AutoTest.ApiTestPC.select_gameResult(Config.get_conn(envs), game_code)  # 傳回此方法.找出相關 訂單細節
             game_detail = AutoTest.game_detail  # 將 global  game_detail 宣告變數 遊戲訂單的 內容
             if len(game_detail[game_code]) == 0:
                 return "此環境沒有此訂單號"
@@ -756,7 +756,7 @@ def game_result():
                 print('輸入玩法 有空格需去除掉')
                 game_type = game_type.replace(' ', '')
             print(game_type)
-            AutoTest.ApiTestPC.select_gameorder(AutoTest.ApiTestPC.get_conn(envs), '%' + game_type + '%')
+            AutoTest.ApiTestPC.select_gameorder(Config.get_conn(envs), '%' + game_type + '%')
             game_order = AutoTest.game_order
             len_order = AutoTest.len_order
             # print(game_order)
