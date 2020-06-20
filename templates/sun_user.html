@@ -6,6 +6,13 @@
 <style type="text/css">
 #token,#id,#user,#domain{border-radius: 22px;}
 p{margin-top: 1%;}
+#form1 > table > thead > tr > th{
+    text-align: center;
+    color: #efb000;
+}
+#form1 > table > tbody{
+    text-align: center;
+    }
 </style>
 {% endblock %}  
 {% block script %}
@@ -30,7 +37,7 @@ p{margin-top: 1%;}
             success:function(data){
                 game_detail = data;
                 console.log(typeof(data))
-                if (data.indexOf('太陽城此環境沒有該用戶')>=0){
+                if (data.indexOf('沒有該用戶')>=0){
                     alert(data);
                     //location.reload()  
                 }
@@ -71,6 +78,25 @@ p{margin-top: 1%;}
             })
     }
 </script>
+<script>
+    function check3(){
+        if ($('.dataframe').length>0){
+            $("table").html("");//已經有了先清空
+        }
+        $.ajax({
+            url:"/sun_user2",
+            type:"POST",
+            //dataType: "json",
+            headers:{
+                    Accept:"application/json; charset=utf-8"
+                },
+            data:$("#form1").serialize(),
+            success:function(data){
+                $("#user_detail").after(data);
+            }
+        })
+    }
+</script>
 
 {% endblock %}
 {% block main %}
@@ -82,12 +108,18 @@ p{margin-top: 1%;}
         <option value="1">joy188</option>
         <option value="2">ph158</option>
     </select>
+    <label>選項: </label>
+    <select name='domain_type' id='domain_type'>
+        <option value="0">太陽城</option>
+        <option value="1">申博</option>
+    </select>
     <br>
     請輸入用戶名<input type="text" id="user" name="user"
     size="16"  maxlength="16">
-    <p><input type="button" onclick="check()" value="查詢太陽城用戶"></p>
+    <p><input type="button" onclick="check()" value="查詢用戶"></p>
     <p><input type="button" onclick="check2()" value="查詢轉移成功用戶"></p>
-</form>
+    <p><input type="button" onclick="check3()" value="查詢綁定域名"></p>
+<form>
 <div id='user_detail'>
 </div> 
 {% endblock %}
