@@ -2,7 +2,7 @@ import sys
 import traceback
 
 
-def traceLog(e):
+def trace_log(e):
     error_class = e.__class__.__name__  # 取得錯誤類型
     detail = e.args[0]  # 取得詳細內容
     cl, exc, tb = sys.exc_info()  # 取得Call Stack

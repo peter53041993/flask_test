@@ -20,6 +20,8 @@ import threading
 import redis, re
 
 from utils import Config
+from utils.Logger import create_logger
+from utils.TestTool import trace_log
 
 os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'  # 避免抓出oracle中文 為問號
 
@@ -99,7 +101,7 @@ def get_token(envs, user):
                                             token_time.tm_hour, token_time.tm_min, token_time.tm_sec))
 
 
-class Joy188Test(unittest.TestCase):
+class ApiTestPC(unittest.TestCase):
     u"PC接口測試"
 
     @staticmethod
@@ -224,7 +226,7 @@ class Joy188Test(unittest.TestCase):
 
     @staticmethod
     def select_PcOredrCode(conn, user, lottery):  # webdriver頁面投注產生定單
-        Joy188Test.date_time()  # 先產生今天日期
+        ApiTestPC.date_time()  # 先產生今天日期
         with conn.cursor() as cursor:
             sql = "select order_code from game_order where userid in \
             (select id from user_customer where account = '%s' \
@@ -240,9 +242,10 @@ class Joy188Test(unittest.TestCase):
         conn.close()
 
     @staticmethod
-    def select_userid(conn, account_):
+    def select_user_id(conn, account_):
         with conn.cursor() as cursor:
-            sql = "select id from user_customer where account = '%s'" % account_
+            sql = "select id from user_customer where account = '{}'".format(account_)
+            print('SQL : {}'.format(sql))
             cursor.execute(sql)
             rows = cursor.fetchall()
             global userid  # , joint_venture# joint_ventue 判斷合營  ,合營 等 上188 後 在加上
@@ -250,9 +253,11 @@ class Joy188Test(unittest.TestCase):
             joint_venture = []
 
             for i in rows:
+                print('i : {}'.format(i))
                 userid.append(i[0])
                 # joint_venture.append(i[1])
         conn.close()
+        return userid
 
     @staticmethod
     def select_gameResult(conn, result):  # 查詢用戶訂單號, 回傳訂單各個資訊
@@ -497,7 +502,7 @@ class Joy188Test(unittest.TestCase):
     @staticmethod
     def plan_num(evn, lottery, plan_len):  # 追號生成
         plan_ = []  # 存放 多少 長度追號的 list
-        Joy188Test.select_issue(Joy188Test.get_conn(evn), lottery_dict[lottery][1])
+        ApiTestPC.select_issue(ApiTestPC.get_conn(evn), lottery_dict[lottery][1])
         for i in range(plan_len):
             plan_.append({"number": issueName[i], "issueCode": issue[i], "multiple": 1})
         return plan_
@@ -506,7 +511,7 @@ class Joy188Test(unittest.TestCase):
     def play_type():  # 隨機生成  group .  五星,四星.....
         game_group = {'wuxing': u'五星', 'sixing': u'四星', 'qiansan': u'前三', 'housan': u'後三',
                       'zhongsan': u'中三', 'qianer': u'前二', 'houer': u'後二'}
-        return list(game_group.keys())[Joy188Test.random_mul(6)]
+        return list(game_group.keys())[ApiTestPC.random_mul(6)]
 
     @staticmethod
     def ball_type(test):  # 對應完法,產生對應最大倍數和 投注完法
@@ -515,32 +520,32 @@ class Joy188Test(unittest.TestCase):
         global mul
         if test == 'wuxing':
 
-            ball = [str(Joy188Test.random_mul(9)) for i in range(5)]  # 五星都是數值
-            mul = Joy188Test.random_mul(2)
+            ball = [str(ApiTestPC.random_mul(9)) for i in range(5)]  # 五星都是數值
+            mul = ApiTestPC.random_mul(2)
         elif test == 'sixing':
-            ball = ['-' if i == 0 else str(Joy188Test.random_mul(9)) for i in range(5)]  # 第一個為-
-            mul = Joy188Test.random_mul(22)
+            ball = ['-' if i == 0 else str(ApiTestPC.random_mul(9)) for i in range(5)]  # 第一個為-
+            mul = ApiTestPC.random_mul(22)
         elif test == 'housan':
-            ball = ['-' if i in [0, 1] else str(Joy188Test.random_mul(9)) for i in range(5)]  # 第1和2為-
-            mul = Joy188Test.random_mul(222)
+            ball = ['-' if i in [0, 1] else str(ApiTestPC.random_mul(9)) for i in range(5)]  # 第1和2為-
+            mul = ApiTestPC.random_mul(222)
         elif test == 'qiansan':
-            ball = ['-' if i in [3, 4] else str(Joy188Test.random_mul(9)) for i in range(5)]  # 第4和5為-
-            mul = Joy188Test.random_mul(222)
+            ball = ['-' if i in [3, 4] else str(ApiTestPC.random_mul(9)) for i in range(5)]  # 第4和5為-
+            mul = ApiTestPC.random_mul(222)
         elif test == 'zhongsan':
-            ball = ['-' if i in [0, 4] else str(Joy188Test.random_mul(9)) for i in range(5)]  # 第2,3,4為-
-            mul = Joy188Test.random_mul(222)
+            ball = ['-' if i in [0, 4] else str(ApiTestPC.random_mul(9)) for i in range(5)]  # 第2,3,4為-
+            mul = ApiTestPC.random_mul(222)
         elif test == 'houer':
-            ball = ['-' if i in [0, 1, 2] else str(Joy188Test.random_mul(9)) for i in range(5)]  # 第1,2,3為-
-            mul = Joy188Test.random_mul(2222)
+            ball = ['-' if i in [0, 1, 2] else str(ApiTestPC.random_mul(9)) for i in range(5)]  # 第1,2,3為-
+            mul = ApiTestPC.random_mul(2222)
         elif test == 'qianer':
-            ball = ['-' if i in [2, 3, 4] else str(Joy188Test.random_mul(9)) for i in range(5)]  # 第3,4,5為-
-            mul = Joy188Test.random_mul(2222)
+            ball = ['-' if i in [2, 3, 4] else str(ApiTestPC.random_mul(9)) for i in range(5)]  # 第3,4,5為-
+            mul = ApiTestPC.random_mul(2222)
         elif test == 'yixing':  # 五個號碼,只有一個隨機數值
-            ran = Joy188Test.random_mul(4)
-            ball = ['-' if i != ran else str(Joy188Test.random_mul(9)) for i in range(5)]
-            mul = Joy188Test.random_mul(2222)
+            ran = ApiTestPC.random_mul(4)
+            ball = ['-' if i != ran else str(ApiTestPC.random_mul(9)) for i in range(5)]
+            mul = ApiTestPC.random_mul(2222)
         else:
-            mul = Joy188Test.random_mul(1)
+            mul = ApiTestPC.random_mul(1)
         a = (",".join(ball))
         return a
 
@@ -561,14 +566,14 @@ class Joy188Test(unittest.TestCase):
             'renxuan7': u'任選7'
         }
 
-        group_ = Joy188Test.play_type()  # 建立 個隨機的goup玩法 ex: wuxing,目前先給時彩系列使用
+        group_ = ApiTestPC.play_type()  # 建立 個隨機的goup玩法 ex: wuxing,目前先給時彩系列使用
         # set_ = game_set.keys()[0]#ex: zhixuan
         # method_ = game_method.keys()[0]# ex: fushi
         global play_
 
         # play_ = ''#除了 不是 lottery_sh 裡的彩種
 
-        lottery_ball = Joy188Test.ball_type(group_)  # 組出什麼玩法 的 投注內容 ,目前只有給時彩系列用
+        lottery_ball = ApiTestPC.ball_type(group_)  # 組出什麼玩法 的 投注內容 ,目前只有給時彩系列用
 
         test_dicts = {
             0: ["%s.zhixuan.fushi" % (group_,), lottery_ball],
@@ -716,7 +721,7 @@ class Joy188Test(unittest.TestCase):
                     statu = 1
                     global mul_  # 傳回 投注出去的組合訊息 req_post_submit 的 content裡
                     global mul
-                    ball_type_post = Joy188Test.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
+                    ball_type_post = ApiTestPC.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
 
                     awardmode = 1
                     if i == 'btcctp':
@@ -724,11 +729,11 @@ class Joy188Test(unittest.TestCase):
 
                         awardmode = 2
                         moneyunit = 1
-                        mul = Joy188Test.random_mul(1)  # 不支援倍數,所以random參數為1
+                        mul = ApiTestPC.random_mul(1)  # 不支援倍數,所以random參數為1
                     elif i == 'bjkl8':
-                        mul = Joy188Test.random_mul(5)  # 北京快樂8
+                        mul = ApiTestPC.random_mul(5)  # 北京快樂8
                     elif i == 'p5':
-                        mul = Joy188Test.random_mul(5)
+                        mul = ApiTestPC.random_mul(5)
 
                     elif i in ['btcffc', 'xyft']:
                         awardmode = 2
@@ -745,14 +750,14 @@ class Joy188Test(unittest.TestCase):
                         # Joy188Test.select_issue(Joy188Test.get_conn(1),lottery_dict[i][1])
                         # 從DB抓取最新獎期.[1]為 99101類型
                         # print(issueName,issue)
-                        Joy188Test.web_issuecode(i)
+                        ApiTestPC.web_issuecode(i)
                         plan_ = [{"number": '123', "issueCode": issuecode, "multiple": 1}]
                         print(u'一般投住')
                         isTrace = 0
                         traceWinStop = 0
                         traceStopValue = -1
                     else:  # 追號
-                        plan_ = Joy188Test.plan_num(envs, i, Joy188Test.random_mul(30))  # 隨機生成 50期內的比數
+                        plan_ = ApiTestPC.plan_num(envs, i, ApiTestPC.random_mul(30))  # 隨機生成 50期內的比數
                         print(u'追號, 期數:%s' % len(plan_))
                         isTrace = 1
                         traceWinStop = 1
@@ -782,17 +787,17 @@ class Joy188Test(unittest.TestCase):
                                     "orders": plan_}
 
                     if i in 'lhc':
-                        Joy188Test.req_post_submit(account, 'lhc', post_data_lhc, moneyunit, awardmode)
+                        ApiTestPC.req_post_submit(account, 'lhc', post_data_lhc, moneyunit, awardmode)
 
                     elif i in lottery_sb:
-                        Joy188Test.req_post_submit(account, i, post_data_sb, moneyunit, awardmode)
+                        ApiTestPC.req_post_submit(account, i, post_data_sb, moneyunit, awardmode)
                     else:
                         if red_type == 'yes':  # 紅包投注
                             post_data['redDiscountAmount'] = 2  # 增加紅包參數
-                            Joy188Test.req_post_submit(account, i, post_data, moneyunit, awardmode)
+                            ApiTestPC.req_post_submit(account, i, post_data, moneyunit, awardmode)
                         else:
-                            Joy188Test.req_post_submit(account, i, post_data, moneyunit, awardmode)
-                Joy188Test.select_RedBal(Joy188Test.get_conn(1), user)
+                            ApiTestPC.req_post_submit(account, i, post_data, moneyunit, awardmode)
+                ApiTestPC.select_RedBal(ApiTestPC.get_conn(1), user)
                 print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
                 break
             except KeyError as e:
@@ -815,11 +820,9 @@ class Joy188Test(unittest.TestCase):
         global envs  # 回傳redis 或 sql 環境變數   ,dev :0, 188:1
         global cookies_
         global third_list
-        global content
         third_list = ['gns', 'shaba', 'im', 'ky', 'lc', 'city']
         cookies_ = {}
         user = user_
-        content["PC登入案例"] = ""  # 回傳測試資訊
         account_ = {user_: '輸入的用戶名'}
         em_url = envConfig.get_em_url()
         password = str.encode(envConfig.get_password())
@@ -850,7 +853,7 @@ class Joy188Test(unittest.TestCase):
                 for i in account_.keys():
                     postData = {
                         "username": i,
-                        "password": Joy188Test.md(password, param),
+                        "password": ApiTestPC.md(password, param),
                         "param": param
                     }
                     session = requests.Session()
@@ -944,8 +947,6 @@ class Joy188Test(unittest.TestCase):
     @func_time
     def test_PcThirdHome():  # 登入第三方頁面,創立帳號
         u"第三方頁面測試"
-        global content
-        content["第三方頁面測試"] = ""
         threads = []
         third_url = ['gns', 'ag', 'sport', 'shaba', 'lc', 'im', 'ky', 'fhx', 'bc', 'fhll', 'bc']
 
@@ -959,7 +960,7 @@ class Joy188Test(unittest.TestCase):
                     url = '/fhll/home/%s' % i
                     # print(url)
                     # print(fhll_dict[i])#列印 中文(因為fhll的title都是一樣)
-                    t = threading.Thread(target=Joy188Test.session_get, args=(user, post_url, url))
+                    t = threading.Thread(target=ApiTestPC.session_get, args=(user, post_url, url))
                     threads.append(t)
                     # Joy188Test.session_get(user,post_url,url)# get方法
                 break  # 不再跑到 下面 session_get 的func
@@ -968,7 +969,7 @@ class Joy188Test(unittest.TestCase):
             else:
                 url = '/%s/home' % i
             # print(url)
-            t = threading.Thread(target=Joy188Test.session_get, args=(user, post_url, url))
+            t = threading.Thread(target=ApiTestPC.session_get, args=(user, post_url, url))
             threads.append(t)
         for i in threads:
             i.start()
@@ -987,14 +988,14 @@ class Joy188Test(unittest.TestCase):
         em_188 = ['/gameUserCenter/queryOrdersEnter', '/gameUserCenter/queryPlans']
         for i in url_188:
             if i in ['/frontCheckIn/checkInIndex', '/frontScoreMall/pointsMall']:
-                Joy188Test.session_get(user, post_url, i)
+                ApiTestPC.session_get(user, post_url, i)
             else:
-                t = threading.Thread(target=Joy188Test.session_get, args=(user, post_url, i))
+                t = threading.Thread(target=ApiTestPC.session_get, args=(user, post_url, i))
                 threads.append(t)
             # Joy188Test.session_get(user,post_url,i)
         for i in em_188:
             # Joy188Test.session_get(user,em_url,i)
-            t = threading.Thread(target=Joy188Test.session_get, args=(user, em_url, i))
+            t = threading.Thread(target=ApiTestPC.session_get, args=(user, em_url, i))
             threads.append(t)
         for i in threads:
             i.start()
@@ -1011,16 +1012,16 @@ class Joy188Test(unittest.TestCase):
         low_url = ['d3', 'v3d']
         fun_url = ['xyft', 'pk10']
         for i in ssh_url:
-            Joy188Test.session_get(user, em_url, '/game/chart/%s/Wuxing' % i)
+            ApiTestPC.session_get(user, em_url, '/game/chart/%s/Wuxing' % i)
         for i in k3_url:
-            Joy188Test.session_get(user, em_url, '/game/chart/%s/chart' % i)
+            ApiTestPC.session_get(user, em_url, '/game/chart/%s/chart' % i)
         for i in low_url:
-            Joy188Test.session_get(user, em_url, '/game/chart/%s/Qiansan' % i)
+            ApiTestPC.session_get(user, em_url, '/game/chart/%s/Qiansan' % i)
         for i in fun_url:
-            Joy188Test.session_get(user, em_url, '/game/chart/%s/CaipaiweiQianfushi' % i)
-        Joy188Test.session_get(user, em_url, '/game/chart/p5/p5chart')
-        Joy188Test.session_get(user, em_url, '/game/chart/ssq/ssq_basic')
-        Joy188Test.session_get(user, em_url, '/game/chart/kl8/Quwei')
+            ApiTestPC.session_get(user, em_url, '/game/chart/%s/CaipaiweiQianfushi' % i)
+        ApiTestPC.session_get(user, em_url, '/game/chart/p5/p5chart')
+        ApiTestPC.session_get(user, em_url, '/game/chart/ssq/ssq_basic')
+        ApiTestPC.session_get(user, em_url, '/game/chart/kl8/Quwei')
 
     @staticmethod
     @func_time
@@ -1041,9 +1042,9 @@ class Joy188Test(unittest.TestCase):
                 third_url = '/%s/thirdlyBalance' % third
                 # r = session.post(post_url+third_url,headers=header)
             # print('%s, 餘額: %s'%(third,r.json()['balance']))
-            t = threading.Thread(target=Joy188Test.session_post, args=(user, third, third_url, ''))
+            t = threading.Thread(target=ApiTestPC.session_post, args=(user, third, third_url, ''))
             threads.append(t)
-        t = threading.Thread(target=Joy188Test.session_post, args=(user, '', '/index/getuserbal', ''))
+        t = threading.Thread(target=ApiTestPC.session_post, args=(user, '', '/index/getuserbal', ''))
         threads.append(t)
         for i in threads:
             i.start()
@@ -1088,12 +1089,12 @@ class Joy188Test(unittest.TestCase):
 
         for third in statu_dict.keys():
             if statu_dict[third] == True:  # 判斷轉帳的狀態, 才去要 單號
-                Joy188Test.thirdly_tran(Joy188Test.my_con(evn=envs, third=third), tran_type=0, third=third,
-                                        user=user)  # tran_type 0為轉轉入
+                ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=0, third=third,
+                                       user=user)  # tran_type 0為轉轉入
                 count = 0
                 while status_list[-1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    Joy188Test.thirdly_tran(Joy188Test.my_con(evn=envs, third=third), tran_type=0, third=third,
-                                            user=user)  #
+                    ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=0, third=third,
+                                           user=user)  #
                     sleep(1.5)
                     count += 1
                     if count == 15:
@@ -1103,7 +1104,7 @@ class Joy188Test(unittest.TestCase):
             else:
                 pass
 
-        Joy188Test.test_PcThirdBalance()
+        ApiTestPC.test_PcThirdBalance()
 
     @staticmethod
     @func_time
@@ -1131,12 +1132,12 @@ class Joy188Test(unittest.TestCase):
 
         for third in statu_dict.keys():
             if statu_dict[third] == True:
-                Joy188Test.thirdly_tran(Joy188Test.my_con(evn=envs, third=third), tran_type=1, third=third,
-                                        user=user)  # tran_type 1 是 轉出
+                ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=1, third=third,
+                                       user=user)  # tran_type 1 是 轉出
                 count = 0
                 while status_list[-1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    Joy188Test.thirdly_tran(Joy188Test.my_con(evn=envs, third=third), tran_type=0, third=third,
-                                            user=user)  #
+                    ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=0, third=third,
+                                           user=user)  #
                     sleep(1)
                     count += 1
                     if count == 9:
@@ -1145,7 +1146,7 @@ class Joy188Test(unittest.TestCase):
                 print('狀態成功. %s ,sn 單號: %s' % (third, thirdly_sn[-1]))
             else:
                 pass
-        Joy188Test.test_PcThirdBalance()
+        ApiTestPC.test_PcThirdBalance()
 
     @staticmethod
     def admin_login():
@@ -1171,11 +1172,11 @@ class Joy188Test(unittest.TestCase):
         red_list = []  # 放交易訂單號id
 
         try:
-            Joy188Test.select_RedBal(Joy188Test.get_conn(envs), user)
+            ApiTestPC.select_RedBal(ApiTestPC.get_conn(envs), user)
             print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
         except IndexError:
             print('紅包餘額為0')
-        Joy188Test.admin_login()  # 登入後台
+        ApiTestPC.admin_login()  # 登入後台
         data = {"receives": user, "blockType": "2", "lotteryType": "1", "lotteryCodes": "",
                 "amount": "100", "note": "test"}
         header['Cookie'] = 'ANVOAID=' + admin_cookie['admin_cookie']  # 存放後台cookie
@@ -1186,7 +1187,7 @@ class Joy188Test(unittest.TestCase):
             print('紅包加幣100')
         else:
             print('失敗')
-        Joy188Test.select_RedID(Joy188Test.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
+        ApiTestPC.select_RedID(ApiTestPC.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
         # print(red_id)
         red_list.append('%s' % red_id[0])
         # print(red_list)
@@ -1197,11 +1198,11 @@ class Joy188Test(unittest.TestCase):
             print('審核通過')
         else:
             print('審核失敗')
-        Joy188Test.select_RedBal(Joy188Test.get_conn(envs), user)
+        ApiTestPC.select_RedBal(ApiTestPC.get_conn(envs), user)
         print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
 
 
-class Joy188Test3(unittest.TestCase):
+class ApiTestApp(unittest.TestCase):
     u'APP接口測試'
 
     @staticmethod
@@ -1296,14 +1297,14 @@ class Joy188Test3(unittest.TestCase):
                 else:
                     lotteryid = lottery_dict[i][1]
 
-                    Joy188Test.select_issue(Joy188Test.get_conn(envs), lotteryid)  # 目前彩種的獎棋
+                    ApiTestPC.select_issue(ApiTestPC.get_conn(envs), lotteryid)  # 目前彩種的獎棋
                     # print(issue,issueName)
                     now = int(time.time() * 1000)  # 時間戳
-                    ball_type_post = Joy188Test.game_type(i)  # 玩法和內容,0為玩法名稱, 1為投注內容
+                    ball_type_post = ApiTestPC.game_type(i)  # 玩法和內容,0為玩法名稱, 1為投注內容
                     methodid = ball_type_post[0].replace('.', '')  # ex: housan.zhuiam.fushi , 把.去掉
 
                     # 找出對應的玩法id
-                    Joy188Test.select_betTypeCode(Joy188Test.get_conn(envs), lotteryid, methodid)
+                    ApiTestPC.select_betTypeCode(ApiTestPC.get_conn(envs), lotteryid, methodid)
 
                     data_ = {"head":
                                  {"sessionId": token_[user]},
@@ -1329,7 +1330,7 @@ class Joy188Test3(unittest.TestCase):
                         print(u"投注金額: %s, 投注倍數: %s" % (2 * mul, mul))  # mul 為game_type方法對甕倍數
                         # print(r.json())
                         orderid = (r.json()['body']['result']['orderId'])
-                        Joy188Test.select_orderCode(Joy188Test.get_conn(envs), orderid)  # 找出對應ordercode
+                        ApiTestPC.select_orderCode(ApiTestPC.get_conn(envs), orderid)  # 找出對應ordercode
                         # print('orderid: %s'%orderid)
                         print(u'投注單號: %s' % order_code[-1])
                         print('------------------------------')
@@ -1885,16 +1886,16 @@ class Joy188Test3(unittest.TestCase):
         '''APP 4.0/第三方餘額'''
         threads = []
         user = user_
-        data_ = Joy188Test3.balance_data(user)
+        data_ = ApiTestApp.balance_data(user)
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
         print('帳號: %s' % user)
         for third in third_list:
             if third == 'shaba':
                 third = 'sb'
             # r = requests.post(env+'/%s/balance'%third,data=json.dumps(data_),headers=header)
-            t = threading.Thread(target=Joy188Test.APP_SessionPost, args=(third, 'balance', data_))
+            t = threading.Thread(target=ApiTestPC.APP_SessionPost, args=(third, 'balance', data_))
             threads.append(t)
-        t = threading.Thread(target=Joy188Test.APP_SessionPost, args=('information', 'getBalance', data_))
+        t = threading.Thread(target=ApiTestPC.APP_SessionPost, args=('information', 'getBalance', data_))
         threads.append(t)
         for i in threads:
             i.start()
@@ -1914,7 +1915,7 @@ class Joy188Test3(unittest.TestCase):
     def test_ApptransferIn():
         '''APP轉入'''
         user = user_
-        data_ = Joy188Test3.amount_data(user)
+        data_ = ApiTestApp.amount_data(user)
         print('帳號: %s' % user)
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
         for third in third_list:
@@ -1931,27 +1932,27 @@ class Joy188Test3(unittest.TestCase):
         for third in third_list:
             if third == 'sb':
                 third = 'shaba'
-            Joy188Test.thirdly_tran(Joy188Test.my_con(evn=envs, third=third), tran_type=0, third=third,
-                                    user=user)  # 先確認資料轉帳傳泰
+            ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=0, third=third,
+                                   user=user)  # 先確認資料轉帳傳泰
             count = 0
             # print(status_list)
             while status_list[-1] != '2' and count != 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                Joy188Test.thirdly_tran(Joy188Test.my_con(evn=envs, third=third), tran_type=0, third=third,
-                                        user=user)  #
+                ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=0, third=third,
+                                       user=user)  #
                 sleep(0.5)
                 count += 1
                 if count == 15:
                     print('轉帳狀態失敗')  # 如果跑道9次  需確認
                     # pass
             print('%s ,sn 單號: %s' % (third, thirdly_sn[-1]))
-        Joy188Test3.test_AppBalance()
+        ApiTestApp.test_AppBalance()
 
     @staticmethod
     @func_time
     def test_ApptransferOut():
         '''APP轉出'''
         user = user_
-        data_ = Joy188Test3.amount_data(user)
+        data_ = ApiTestApp.amount_data(user)
         print('帳號: %s' % user)
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
         for third in third_list:  # PC 沙巴 是 shaba , iapi 是 sb
@@ -1965,22 +1966,22 @@ class Joy188Test3(unittest.TestCase):
         for third in third_list:
             if third == 'sb':
                 third = 'shaba'
-            Joy188Test.thirdly_tran(Joy188Test.my_con(evn=envs, third=third), tran_type=1, third=third,
-                                    user=user)  # 先確認資料轉帳傳泰
+            ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=1, third=third,
+                                   user=user)  # 先確認資料轉帳傳泰
             count = 0
             while status_list[-1] != '2' and count != 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                Joy188Test.thirdly_tran(Joy188Test.my_con(evn=envs, third=third), tran_type=1, third=third,
-                                        user=user)  #
+                ApiTestPC.thirdly_tran(ApiTestPC.my_con(evn=envs, third=third), tran_type=1, third=third,
+                                       user=user)  #
                 sleep(1)
                 count += 1
                 if count == 15:
                     print('轉帳狀態失敗')  # 如果跑道9次  需確認
 
             print('%s, sn 單號: %s' % (third, thirdly_sn[-1]))
-        Joy188Test3.test_AppBalance()
+        ApiTestApp.test_AppBalance()
 
 
-class Joy188Test2(unittest.TestCase):
+class IntegrationTestWeb(unittest.TestCase):
     u"瀏覽器功能測試"
 
     @classmethod
@@ -2013,8 +2014,8 @@ class Joy188Test2(unittest.TestCase):
             else:
                 print('%s登入失敗' % user)
         except Exception as e:
-            from utils.TestTool import traceLog
-            traceLog(e)
+            from utils.TestTool import trace_log
+            trace_log(e)
 
     @staticmethod
     def ID(element):
@@ -2040,24 +2041,24 @@ class Joy188Test2(unittest.TestCase):
     def id_element(element1):  # 抓取id元素,判斷提示窗
 
         try:
-            element = Joy188Test2.CSS("a.btn.closeTip")
+            element = IntegrationTestWeb.CSS("a.btn.closeTip")
             if element.is_displayed():
-                Joy188Test2.LINK("关 闭").click()
+                IntegrationTestWeb.LINK("关 闭").click()
             else:
-                Joy188Test2.ID(element1).click()
+                IntegrationTestWeb.ID(element1).click()
         except WebDriverException as e:
             pass
 
     @staticmethod
     def css_element(element1):  # 抓取css元素,判斷提示窗
         try:
-            element = Joy188Test2.CSS("a.btn.closeTip")
+            element = IntegrationTestWeb.CSS("a.btn.closeTip")
             if element.is_displayed():
                 sleep(3)
                 element.click()
-                Joy188Test2.CSS(element1).click()
+                IntegrationTestWeb.CSS(element1).click()
             else:
-                Joy188Test2.CSS(element1).click()
+                IntegrationTestWeb.CSS(element1).click()
         except WebDriverException as e:
             pass
         except NoSuchElementException as e:
@@ -2069,12 +2070,12 @@ class Joy188Test2(unittest.TestCase):
     def xpath_element(element1):  # 抓取xpath元素,判斷提示窗
 
         try:
-            element = Joy188Test2.CSS("a.btn.closeTip")
+            element = IntegrationTestWeb.CSS("a.btn.closeTip")
             if element.is_displayed():
                 element.click()
-                Joy188Test2.XPATH(element1).click()
+                IntegrationTestWeb.XPATH(element1).click()
             else:
-                Joy188Test2.XPATH(element1).click()
+                IntegrationTestWeb.XPATH(element1).click()
         except WebDriverException as e:
             pass
         except NoSuchElementException as e:
@@ -2083,12 +2084,12 @@ class Joy188Test2(unittest.TestCase):
     @staticmethod
     def link_element(element1):  # 抓取link_text元素,判斷提示窗
         try:
-            element = Joy188Test2.CSS("a.btn.closeTip")
+            element = IntegrationTestWeb.CSS("a.btn.closeTip")
             if element.is_displayed():
                 element.click()
-                Joy188Test2.LINK(element1).click()
+                IntegrationTestWeb.LINK(element1).click()
             else:
-                Joy188Test2.LINK(element1).click()
+                IntegrationTestWeb.LINK(element1).click()
         except WebDriverException as e:
             pass
         except NoSuchElementException as e:
@@ -2211,56 +2212,56 @@ class Joy188Test2(unittest.TestCase):
 
     @staticmethod
     def game_ssh(type_='0'):  # 時彩系列  有含 普通玩法,超級2000,趣味玩法, 預設type_ 是有超級2000
-        Joy188Test2.normal_type('wuxing')  # 先呼叫 normal_type方法, 產生game_list 列表
+        IntegrationTestWeb.normal_type('wuxing')  # 先呼叫 normal_type方法, 產生game_list 列表
         if type_ == 'no':
             list_type = game_list2
         else:
             list_type = game_list
         for game in list_type:  # 產生 五星,四星,.....列表
             if game == 'special':  # 要到趣味玩法頁簽, 沒提供 css_element 的定位方法, 使用xpath
-                Joy188Test2.xpath_element('//li[@game-mode="special"]')
+                IntegrationTestWeb.xpath_element('//li[@game-mode="special"]')
             else:
-                Joy188Test2.css_element('li.%s' % game)
+                IntegrationTestWeb.css_element('li.%s' % game)
             sleep(2)
-            Joy188Test2.id_element('randomone')  # 進入tab,複式玩法為預設,值接先隨機一住
+            IntegrationTestWeb.id_element('randomone')  # 進入tab,複式玩法為預設,值接先隨機一住
             if game in ['yixing', 'yixing_2000.caojiduizhi', 'longhu.special']:
                 pass
             else:
-                element_list = Joy188Test2.normal_type(game)  # return 元素列表
+                element_list = IntegrationTestWeb.normal_type(game)  # return 元素列表
                 for i in element_list:  # 普通,五星玩法 元素列表
-                    Joy188Test2.css_element(i)
-                    Joy188Test2.css_element('a#randomone.take-one')  # 隨機一住
+                    IntegrationTestWeb.css_element(i)
+                    IntegrationTestWeb.css_element('a#randomone.take-one')  # 隨機一住
 
     @staticmethod
     def game_ssh2(type_='0'):  # 吉利分彩頁面 特殊用法
-        Joy188Test2.normal_type('wuxing')  # 先呼叫 normal_type方法, 產生game_list 列表
+        IntegrationTestWeb.normal_type('wuxing')  # 先呼叫 normal_type方法, 產生game_list 列表
         if type_ == 'no':
             list_type = game_list2
         else:
             list_type = game_list
         for game in list_type:  # 產生 五星,四星,.....列表
             if game == 'special':  # 要到趣味玩法頁簽, 沒提供 css_element 的定位方法, 使用xpath
-                Joy188Test2.xpath_element('//li[@game-mode="special"]')
+                IntegrationTestWeb.xpath_element('//li[@game-mode="special"]')
             else:
 
-                Joy188Test2.css_element('li.%s' % game)
+                IntegrationTestWeb.css_element('li.%s' % game)
             sleep(2)
-            Joy188Test2.id_element('randomone')  # 進入tab,複式玩法為預設,值接先隨機一住
+            IntegrationTestWeb.id_element('randomone')  # 進入tab,複式玩法為預設,值接先隨機一住
             if game in ['yixing', 'yixing_2000.caojiduizhi', 'longhu.special']:
                 pass
             else:
-                element_list = Joy188Test2.normal_type(game)  # return 元素列表
+                element_list = IntegrationTestWeb.normal_type(game)  # return 元素列表
                 for i in element_list:  # 普通,五星玩法 元素列表
-                    Joy188Test2.css_element('li.%s' % game)  # 差別在這邊,需再點一次頁面元素
-                    Joy188Test2.css_element(i)
-                    Joy188Test2.css_element('a#randomone.take-one')  # 隨機一住
+                    IntegrationTestWeb.css_element('li.%s' % game)  # 差別在這邊,需再點一次頁面元素
+                    IntegrationTestWeb.css_element(i)
+                    IntegrationTestWeb.css_element('a#randomone.take-one')  # 隨機一住
 
     @staticmethod
     def mul_submit():  # 追號
         if dr.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').is_selected():
             dr.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').click()  # 取消紅包追號
-        Joy188Test2.id_element('randomone')  # 先隨機一住
-        Joy188Test2.id_element('J-trace-switch')  # 追號
+        IntegrationTestWeb.id_element('randomone')  # 先隨機一住
+        IntegrationTestWeb.id_element('J-trace-switch')  # 追號
 
     @staticmethod
     def result():  # 投注結果
@@ -2283,15 +2284,15 @@ class Joy188Test2(unittest.TestCase):
 
     @staticmethod
     def submit(time_=2):  # 業面投注按鈕, 和result() func, 再加上業面確認按鈕
-        Joy188Test2.id_element('J-submit-order')  # 馬上投注
-        Joy188Test2.result()
-        Joy188Test2.link_element("确 认")
+        IntegrationTestWeb.id_element('J-submit-order')  # 馬上投注
+        IntegrationTestWeb.result()
+        IntegrationTestWeb.link_element("确 认")
         sleep(time_)
 
     @staticmethod
     def submit_message(lottery):  # 投注完的單號
-        if '成功' in Joy188Test2.CLASS('pop-text').text:
-            Joy188Test.select_PcOredrCode(Joy188Test.get_conn(1), user, lottery)
+        if '成功' in IntegrationTestWeb.CLASS('pop-text').text:
+            ApiTestPC.select_PcOredrCode(ApiTestPC.get_conn(1), user, lottery)
             print("方案編號: %s" % order_code[-1])
         else:
             print('失敗')
@@ -2305,9 +2306,9 @@ class Joy188Test2(unittest.TestCase):
             '''
             element = WebDriverWait(dr, 5).until(
                 EC.presence_of_element_located((By.XPATH, "//p[@class='text-title']")))
-            if Joy188Test2.XPATH("//p[@class='text-title']").text == '请选择一个奖金组，便于您投注时使用。':  # 獎金詳情彈窗
-                Joy188Test2.XPATH("//input[@class='radio']").click()
-                Joy188Test2.LINK('确 认').click()
+            if IntegrationTestWeb.XPATH("//p[@class='text-title']").text == '请选择一个奖金组，便于您投注时使用。':  # 獎金詳情彈窗
+                IntegrationTestWeb.XPATH("//input[@class='radio']").click()
+                IntegrationTestWeb.LINK('确 认').click()
                 dr.refresh()
         except NoSuchElementException:
             dr.refresh()
@@ -2322,16 +2323,16 @@ class Joy188Test2(unittest.TestCase):
         sleep(1)
         dr.get(em_url + '/gameBet/cqssc')
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
 
         '''
         Joy188Test2.game_ssh()#所以玩法投注
         '''
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
+        IntegrationTestWeb.submit()
 
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_hljssc():  # 黑龍江
@@ -2340,14 +2341,14 @@ class Joy188Test2(unittest.TestCase):
         dr.get(em_url + '/gameBet/hljssc')
         print(dr.title)
         sleep(2)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
 
         '''
         Joy188Test2.game_ssh()
         '''
-        Joy188Test2.mul_submit()
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.mul_submit()
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_xjssc():
@@ -2355,13 +2356,13 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'xjssc'
         dr.get(em_url + '/gameBet/xjssc')
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
 
         # Joy188Test2.game_ssh()
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_fhxjc():
@@ -2369,12 +2370,12 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'fhxjc'
         dr.get(em_url + '/gameBet/fhxjc')
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh()
 
-        Joy188Test2.mul_submit()  # 追號方法
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.mul_submit()  # 追號方法
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_fhcqc():
@@ -2382,12 +2383,12 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'fhcqc'
         dr.get(em_url + '/gameBet/fhcqc')
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh()
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_txffc():  # 五星完髮不同
@@ -2395,12 +2396,12 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'txffc'
         dr.get(em_url + '/gameBet/txffc')
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_jlffc():  # 五星完髮不同
@@ -2408,12 +2409,12 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'jlffc'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
-        Joy188Test2.game_ssh2('no')  #
+        IntegrationTestWeb.assert_bouns()
+        IntegrationTestWeb.game_ssh2('no')  #
         # Joy188Test2.mul_submit()#追號方法
         # sleep(1000)
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_hnffc():  #
@@ -2421,12 +2422,12 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'hnffc'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
-        Joy188Test2.game_ssh('no')  #
+        IntegrationTestWeb.assert_bouns()
+        IntegrationTestWeb.game_ssh('no')  #
         # Joy188Test2.mul_submit()#追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_360ffc():  #
@@ -2434,99 +2435,100 @@ class Joy188Test2(unittest.TestCase):
         lottery = '360ffc'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
-        Joy188Test2.game_ssh('no')  #
+        IntegrationTestWeb.assert_bouns()
+        IntegrationTestWeb.game_ssh('no')  #
         # Joy188Test2.mul_submit()#追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_shssl():
         lottery = 'shssl'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_sd115():
         lottery = 'sd115'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_jx115():
         lottery = 'jx115'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_gd115():
         lottery = 'gd115'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_sl115():
         lottery = 'sl115'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
 
-        Joy188Test2.XPATH("//a[@data-param='action=batchSetBall&row=0&bound=all&start=1']").click()  # 全玩法
-        Joy188Test2.ID('J-add-order').click()  # 添加號碼
-        Joy188Test2.ID('J-submit-order').click()  # 馬上開獎
+        IntegrationTestWeb.XPATH("//a[@data-param='action=batchSetBall&row=0&bound=all&start=1']").click()  # 全玩法
+        IntegrationTestWeb.ID('J-add-order').click()  # 添加號碼
+        IntegrationTestWeb.ID('J-submit-order').click()  # 馬上開獎
         sleep(1)
-        Joy188Test2.result_sl('cell1', '方案編號:')
-        Joy188Test2.result_sl('cell2', '投注時間:')
-        Joy188Test2.result_sl('cell4', '投注金額:')
+        IntegrationTestWeb.result_sl('cell1', '方案編號:')
+        IntegrationTestWeb.result_sl('cell2', '投注時間:')
+        IntegrationTestWeb.result_sl('cell4', '投注金額:')
 
     @staticmethod
     def test_slmmc():
         lottery = 'slmmc'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
         while True:
             try:
                 for i in range(3):
-                    Joy188Test2.XPATH("//a[@data-param='action=batchSetBall&row=%s&bound=all']" % i).click()  # 全玩法
+                    IntegrationTestWeb.XPATH(
+                        "//a[@data-param='action=batchSetBall&row=%s&bound=all']" % i).click()  # 全玩法
                 break
             except ElementClickInterceptedException:
                 dr.refresh()
                 break
 
-        Joy188Test2.ID('J-add-order').click()  # 添加號碼
-        Joy188Test2.ID('J-submit-order').click()  # 馬上開獎
+        IntegrationTestWeb.ID('J-add-order').click()  # 添加號碼
+        IntegrationTestWeb.ID('J-submit-order').click()  # 馬上開獎
         sleep(1)
-        Joy188Test2.result_sl('cell1', '方案編號:')
-        Joy188Test2.result_sl('cell2', '投注時間:')
-        Joy188Test2.result_sl('cell4', '投注金額:')
+        IntegrationTestWeb.result_sl('cell1', '方案編號:')
+        IntegrationTestWeb.result_sl('cell2', '投注時間:')
+        IntegrationTestWeb.result_sl('cell4', '投注金額:')
 
     @staticmethod
     def test_fhjlssc():
@@ -2534,12 +2536,12 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'fhjlssc'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_v3d():  #
@@ -2547,12 +2549,12 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'v3d'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_p5():  # 五星完髮不同
@@ -2560,12 +2562,12 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'p5'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_ssq():  # 五星完髮不同
@@ -2573,12 +2575,12 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'ssq'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_fc3d():  # 五星完髮不同
@@ -2586,12 +2588,12 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'fc3d'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_llssc():
@@ -2599,31 +2601,31 @@ class Joy188Test2(unittest.TestCase):
         lottery = 'llssc'
         dr.get(em_url + '/gameBet/llssc')
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
-        Joy188Test2.mul_submit()  # 追號方法
+        IntegrationTestWeb.mul_submit()  # 追號方法
 
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_btcffc():
         lottery = 'btcffc'
         dr.get(em_url + '/gameBet/btcffc')
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         # Joy188Test2.game_ssh('no')#
-        Joy188Test2.mul_submit()  # 追號方法
-        Joy188Test2.submit()
+        IntegrationTestWeb.mul_submit()  # 追號方法
+        IntegrationTestWeb.submit()
 
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_ahk3():
         lottery = 'ahk3'
         dr.get(em_url + '/gameBet/ahk3')
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         '''
         k3_element = ['li.hezhi.normal','li.santonghaotongxuan.normal','li.santonghaodanxuan.normal',
         'li.sanbutonghao.normal','li.sanlianhaotongxuan.normal','li.ertonghaofuxuan.normal',
@@ -2633,16 +2635,16 @@ class Joy188Test2(unittest.TestCase):
             sleep(0.5)
             Joy188Test2.id_element('randomone')
         '''
-        Joy188Test2.mul_submit()  # 追號方法
-        Joy188Test2.submit()
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.mul_submit()  # 追號方法
+        IntegrationTestWeb.submit()
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_jsk3():
         lottery = 'jsk3'
         dr.get(em_url + '/gameBet/jsk3')
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         '''
         k3_element = ['li.hezhi.normal','li.santonghaotongxuan.normal','li.santonghaodanxuan.normal',
         'li.sanbutonghao.normal','li.sanlianhaotongxuan.normal','li.ertonghaofuxuan.normal',
@@ -2652,17 +2654,17 @@ class Joy188Test2(unittest.TestCase):
             sleep(0.5)
             Joy188Test2.id_element('randomone')
         '''
-        Joy188Test2.mul_submit()  # 追號方法
-        Joy188Test2.submit()
+        IntegrationTestWeb.mul_submit()  # 追號方法
+        IntegrationTestWeb.submit()
 
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_jsdice():
         lottery = 'jsdice'
         dr.get(em_url + '/gameBet/jsdice')
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         global sb_element
         # 江蘇骰寶 列表, div 1~ 52
         num = 1
@@ -2670,13 +2672,13 @@ class Joy188Test2(unittest.TestCase):
 
         for i in sb_element:
             sleep(1)
-            Joy188Test2.xpath_element(i)
+            IntegrationTestWeb.xpath_element(i)
         sleep(0.5)
-        Joy188Test2.xpath_element('//*[@id="J-dice-bar"]/div[5]/button[1]')  # 下注
-        Joy188Test2.result()
-        Joy188Test2.CSS('a.btn.btn-important').click()  # 確認
+        IntegrationTestWeb.xpath_element('//*[@id="J-dice-bar"]/div[5]/button[1]')  # 下注
+        IntegrationTestWeb.result()
+        IntegrationTestWeb.CSS('a.btn.btn-important').click()  # 確認
 
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_jldice():
@@ -2684,29 +2686,29 @@ class Joy188Test2(unittest.TestCase):
         for lottery in ['jldice1', 'jldice2']:
             dr.get(em_url + '/gameBet/%s' % lottery)
             print(dr.title)
-            Joy188Test2.assert_bouns()
+            IntegrationTestWeb.assert_bouns()
             for i in sb_element:
-                if Joy188Test2.ID('diceCup').is_displayed():  # 吉利骰寶 遇到中間開獎, 讓他休息,在繼續
+                if IntegrationTestWeb.ID('diceCup').is_displayed():  # 吉利骰寶 遇到中間開獎, 讓他休息,在繼續
                     sleep(15)
                 else:
                     sleep(1)
-                    Joy188Test2.xpath_element(i)
+                    IntegrationTestWeb.xpath_element(i)
             sleep(0.5)
 
-            if Joy188Test2.ID('diceCup').is_displayed():
+            if IntegrationTestWeb.ID('diceCup').is_displayed():
                 sleep(15)
             else:
-                Joy188Test2.xpath_element('//*[@id="J-dice-bar"]/div[5]/a[1]')  # 下注
-                Joy188Test2.result()
-                Joy188Test2.XPATH('/html/body/div[14]/a[1]').click()  # 確認
-            Joy188Test2.submit_message(lottery)
+                IntegrationTestWeb.xpath_element('//*[@id="J-dice-bar"]/div[5]/a[1]')  # 下注
+                IntegrationTestWeb.result()
+                IntegrationTestWeb.XPATH('/html/body/div[14]/a[1]').click()  # 確認
+            IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_bjkl8():
         lottery = 'bjkl8'
         dr.get(em_url + '/gameBet/bjkl8')
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         '''
         bjk_element = ['dd.renxuan%s'%i for i in range(1,8)]#任選1 到 任選7
         Joy188Test2.id_element('randomone')
@@ -2718,38 +2720,38 @@ class Joy188Test2(unittest.TestCase):
             Joy188Test2.id_element('randomone')
         '''
 
-        Joy188Test2.mul_submit()
-        Joy188Test2.submit()
+        IntegrationTestWeb.mul_submit()
+        IntegrationTestWeb.submit()
 
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_pk10():
         lottery = 'pk10'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         for i in range(2):
-            Joy188Test2.XPATH("//a[@data-param='action=batchSetBall&row=%s&bound=all&start=1']" % i).click()
-        Joy188Test2.ID('J-add-order').click()  # 選好了
-        Joy188Test2.ID('J-trace-switch').click()  # 追號
-        Joy188Test2.submit()
+            IntegrationTestWeb.XPATH("//a[@data-param='action=batchSetBall&row=%s&bound=all&start=1']" % i).click()
+        IntegrationTestWeb.ID('J-add-order').click()  # 選好了
+        IntegrationTestWeb.ID('J-trace-switch').click()  # 追號
+        IntegrationTestWeb.submit()
 
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_xyft():
         lottery = 'xyft'
         dr.get(em_url + '/gameBet/%s' % lottery)
         print(dr.title)
-        Joy188Test2.assert_bouns()
+        IntegrationTestWeb.assert_bouns()
         for i in range(2):
-            Joy188Test2.XPATH("//a[@data-param='action=batchSetBall&row=%s&bound=all&start=1']" % i).click()
-        Joy188Test2.ID('J-add-order').click()  # 選好了
-        Joy188Test2.ID('J-trace-switch').click()  # 追號
-        Joy188Test2.submit()
+            IntegrationTestWeb.XPATH("//a[@data-param='action=batchSetBall&row=%s&bound=all&start=1']" % i).click()
+        IntegrationTestWeb.ID('J-add-order').click()  # 選好了
+        IntegrationTestWeb.ID('J-trace-switch').click()  # 追號
+        IntegrationTestWeb.submit()
 
-        Joy188Test2.submit_message(lottery)
+        IntegrationTestWeb.submit_message(lottery)
 
     @staticmethod
     def test_safepersonal():
@@ -2761,29 +2763,29 @@ class Joy188Test2(unittest.TestCase):
             new_password = 'amberrd'
         else:
             new_password = '123qwe'
-        Joy188Test2.ID('J-password').send_keys(password)
+        IntegrationTestWeb.ID('J-password').send_keys(password)
         print(u'當前登入密碼: %s' % password)
-        Joy188Test2.ID('J-password-new').send_keys(new_password)
-        Joy188Test2.ID('J-password-new2').send_keys(new_password)
+        IntegrationTestWeb.ID('J-password-new').send_keys(new_password)
+        IntegrationTestWeb.ID('J-password-new2').send_keys(new_password)
         print(u'新登入密碼: %s,確認新密碼: %s' % (new_password, new_password))
-        Joy188Test2.ID('J-button-submit-text').click()
+        IntegrationTestWeb.ID('J-button-submit-text').click()
         sleep(2)
-        if Joy188Test2.ID('Idivs').is_displayed():  # 成功修改密碼彈窗出現
+        if IntegrationTestWeb.ID('Idivs').is_displayed():  # 成功修改密碼彈窗出現
             print(u'恭喜%s密码修改成功，请重新登录。' % user)
-            Joy188Test2.ID('closeTip1').click()  # 關閉按紐,跳回登入頁
+            IntegrationTestWeb.ID('closeTip1').click()  # 關閉按紐,跳回登入頁
             sleep(1)
-            Joy188Test2.ID('J-user-name').send_keys(user)
-            Joy188Test2.ID('J-user-password').send_keys(new_password)
-            Joy188Test2.ID('J-form-submit').click()
+            IntegrationTestWeb.ID('J-user-name').send_keys(user)
+            IntegrationTestWeb.ID('J-user-password').send_keys(new_password)
+            IntegrationTestWeb.ID('J-form-submit').click()
             sleep(1)
             print((dr.current_url))
             if dr.current_url == post_url + '/index':  # 判斷是否登入成功
                 print(u'%s登入成功' % user)
                 dr.get(post_url + '/safepersonal/safecodeedit')
-                Joy188Test2.ID('J-password').send_keys(new_password)  # 在重新把密碼改回原本的amberrd
-                Joy188Test2.ID('J-password-new').send_keys(password)
-                Joy188Test2.ID('J-password-new2').send_keys(password)
-                Joy188Test2.ID('J-button-submit-text').click()
+                IntegrationTestWeb.ID('J-password').send_keys(new_password)  # 在重新把密碼改回原本的amberrd
+                IntegrationTestWeb.ID('J-password-new').send_keys(password)
+                IntegrationTestWeb.ID('J-password-new2').send_keys(password)
+                IntegrationTestWeb.ID('J-button-submit-text').click()
                 sleep(3)
             else:
                 print(u'登入失敗')
@@ -2801,8 +2803,8 @@ class Joy188Test2(unittest.TestCase):
         elif password == 'amberrd':
             safe_pass = 'kerr123'
 
-        Joy188Test.select_userid(Joy188Test.get_conn(env), user_)  # 找出用戶 Userid  , 在回傳給開戶連結
-        Joy188Test.select_userUrl(Joy188Test.get_conn(env), userid[0])  # 找出 開戶連結
+        ApiTestPC.select_user_id(ApiTestPC.get_conn(env), user_)  # 找出用戶 Userid  , 在回傳給開戶連結
+        ApiTestPC.select_userUrl(ApiTestPC.get_conn(env), userid[0])  # 找出 開戶連結
 
         dr.get(post_url + '/register/?%s' % user_url[0])  # 動待找尋 輸入用戶名的  開戶連結
         print(dr.title)
@@ -2811,10 +2813,10 @@ class Joy188Test2(unittest.TestCase):
         user_random = random.randint(1, 100000)  # 隨機生成 kerr下面用戶名
         new_user = user_ + str(user_random)
         print(u'註冊用戶名: %s' % new_user)
-        Joy188Test2.ID('J-input-username').send_keys('%s' % new_user)  # 用戶名
-        Joy188Test2.ID('J-input-password').send_keys(password)  # 第一次密碼
-        Joy188Test2.ID('J-input-password2').send_keys(password)  # 在一次確認密碼
-        Joy188Test2.ID('J-button-submit').click()  # 提交註冊
+        IntegrationTestWeb.ID('J-input-username').send_keys('%s' % new_user)  # 用戶名
+        IntegrationTestWeb.ID('J-input-password').send_keys(password)  # 第一次密碼
+        IntegrationTestWeb.ID('J-input-password2').send_keys(password)  # 在一次確認密碼
+        IntegrationTestWeb.ID('J-button-submit').click()  # 提交註冊
         sleep(5)
         '''
         if dr.current_url == post_url + '/index':
@@ -2830,10 +2832,10 @@ class Joy188Test2(unittest.TestCase):
 
         dr.get(post_url + '/safepersonal/safecodeset')  # 安全密碼連結
         print(dr.title)
-        Joy188Test2.ID('J-safePassword').send_keys(safe_pass)
-        Joy188Test2.ID('J-safePassword2').send_keys(safe_pass)
+        IntegrationTestWeb.ID('J-safePassword').send_keys(safe_pass)
+        IntegrationTestWeb.ID('J-safePassword2').send_keys(safe_pass)
         print(u'設置安全密碼/確認安全密碼: %s' % safe_pass)
-        Joy188Test2.ID('J-button-submit').click()
+        IntegrationTestWeb.ID('J-button-submit').click()
         if dr.current_url == post_url + '/safepersonal/safecodeset?act=smt':  # 安全密碼成功Url
             print(u'恭喜%s安全密码设置成功！' % new_user)
         else:
@@ -2841,11 +2843,11 @@ class Joy188Test2(unittest.TestCase):
         dr.get(post_url + '/safepersonal/safequestset')  # 安全問題
         print(dr.title)
         for i in range(1, 4, 1):  # J-answrer 1,2,3
-            Joy188Test2.ID('J-answer%s' % i).send_keys('kerr')  # 問題答案
+            IntegrationTestWeb.ID('J-answer%s' % i).send_keys('kerr')  # 問題答案
         for i in range(1, 6, 2):  # i產生  1,3,5 li[i], 問題選擇
-            Joy188Test2.XPATH('//*[@id="J-safe-question-select"]/li[%s]/select/option[2]' % i).click()
-        Joy188Test2.ID('J-button-submit').click()  # 設置按鈕
-        Joy188Test2.ID('J-safequestion-submit').click()  # 確認
+            IntegrationTestWeb.XPATH('//*[@id="J-safe-question-select"]/li[%s]/select/option[2]' % i).click()
+        IntegrationTestWeb.ID('J-button-submit').click()  # 設置按鈕
+        IntegrationTestWeb.ID('J-safequestion-submit').click()  # 確認
         if dr.current_url == post_url + '/safepersonal/safequestset?act=smt':  # 安全問題成功url
             print(u'恭喜%s安全问题设置成功！' % new_user)
         else:
@@ -2856,34 +2858,34 @@ class Joy188Test2(unittest.TestCase):
         fake = Factory.create()
         card = (fake.credit_card_number(card_type='visa16'))  # 產生一個16位的假卡號
 
-        Joy188Test2.XPATH('//*[@id="bankid"]/option[2]').click()  # 開戶銀行選擇
-        Joy188Test2.XPATH('//*[@id="province"]/option[2]').click()  # 所在城市  :北京
-        Joy188Test2.ID('branchAddr').send_keys(u'內湖分行')  # 之行名稱
-        Joy188Test2.ID('bankAccount').send_keys('kerr')  # 開戶人
-        Joy188Test2.ID('bankNumber').send_keys(str(card))  # 銀行卡浩
+        IntegrationTestWeb.XPATH('//*[@id="bankid"]/option[2]').click()  # 開戶銀行選擇
+        IntegrationTestWeb.XPATH('//*[@id="province"]/option[2]').click()  # 所在城市  :北京
+        IntegrationTestWeb.ID('branchAddr').send_keys(u'內湖分行')  # 之行名稱
+        IntegrationTestWeb.ID('bankAccount').send_keys('kerr')  # 開戶人
+        IntegrationTestWeb.ID('bankNumber').send_keys(str(card))  # 銀行卡浩
         print(u'綁定銀行卡號: %s' % card)
-        Joy188Test2.ID('bankNumber2').send_keys(str(card))  # 確認銀行卡浩
-        Joy188Test2.ID('securityPassword').send_keys(safe_pass)  # 安全密碼
-        Joy188Test2.ID('J-Submit').click()  # 提交
+        IntegrationTestWeb.ID('bankNumber2').send_keys(str(card))  # 確認銀行卡浩
+        IntegrationTestWeb.ID('securityPassword').send_keys(safe_pass)  # 安全密碼
+        IntegrationTestWeb.ID('J-Submit').click()  # 提交
         sleep(3)
-        if Joy188Test2.ID('div_ok').is_displayed():
+        if IntegrationTestWeb.ID('div_ok').is_displayed():
             print(u'%s银行卡绑定成功！' % new_user)
-            Joy188Test2.ID('CloseDiv2').click()  # 關閉
+            IntegrationTestWeb.ID('CloseDiv2').click()  # 關閉
         else:
             print(u'銀行卡綁定失敗')
         # u"數字貨幣綁卡"
         dr.get(post_url + '/bindcard/bindcarddigitalwallet?bindcardType=2')
         print(dr.title)
         card = random.randint(1000, 1000000000)  # usdt數字綁卡,隨機生成
-        Joy188Test2.ID('walletAddr').send_keys(str(card))
+        IntegrationTestWeb.ID('walletAddr').send_keys(str(card))
         print(u'提現錢包地址: %s' % card)
-        Joy188Test2.ID('securityPassword').send_keys(safe_pass)
+        IntegrationTestWeb.ID('securityPassword').send_keys(safe_pass)
         print(u'安全密碼: %s' % safe_pass)
-        Joy188Test2.ID('J-Submit').click()  # 提交
+        IntegrationTestWeb.ID('J-Submit').click()  # 提交
         sleep(3)
-        if Joy188Test2.ID('div_ok').is_displayed():  # 彈窗出現
+        if IntegrationTestWeb.ID('div_ok').is_displayed():  # 彈窗出現
             print(u'%s数字货币钱包账户绑定成功！' % new_user)
-            Joy188Test2.ID('CloseDiv2').click()
+            IntegrationTestWeb.ID('CloseDiv2').click()
         else:
             print(u"數字貨幣綁定失敗")
 
@@ -2892,13 +2894,22 @@ class Joy188Test2(unittest.TestCase):
         cls.dr.quit()
 
 
-def suite_test(testcase, username, env, red):
-    global content
-    env_config_ = Config.EnvConfig(env)
-    env_app_config_ = Config.EnvConfigApp(env)
-    content = {}
+def suite_test(test_cases, username, test_env, is_use_red):
+    """
+    AutoTest 初始化
+    :param test_cases: Array[][]; 測試項目，為二維矩陣。第一維區分測試類型（PC_API、APP_API、PC整合），二維紀錄測試method名稱
+    :param username: String; 就是個用戶名
+    :param test_env: String; 網域名稱，用於Config.encConfig初始化
+    :param is_use_red: String; yse or no; 目前未使用
+    :return: 
+    """
+    global logger
+    logger = create_logger(r'\AutoTest')
+    logger.info("Auto Test 初始化")
+    _env_config = Config.EnvConfig(test_env)
+    _env_app_config = Config.EnvConfigApp(test_env)
     # pc = []
-    # app =[]
+    # app =[]test_PcLogin
     # driver =[]
     suite_list = []
     # threads =[]
@@ -2906,52 +2917,51 @@ def suite_test(testcase, username, env, red):
                     'pk10', 'xyft', 'v3d', 'fc3d', 'p5', 'ssq', 'slmmc', 'sl115']
     test_list = ['xjssc']
     return_user(username)  # 回傳 頁面上 輸入的用戶名
-    return_env(env_config_)  # 初始化環境參數
-    return_env_app(env_app_config_)  # 初始化App環境參數
-    return_red(red)
+    return_env(_env_config)  # 初始化環境參數
+    return_env_app(_env_app_config)  # 初始化App環境參數
+    return_red(is_use_red)
+    logger.debug('AutoTest test_cases : {}'.format(test_cases))
     try:
         suite = unittest.TestSuite()
         # suite_pc = unittest.TestSuite()
         # suite_app = unittest.TestSuite()
         now = time.strftime('%Y_%m_%d %H-%M-%S')
         # print(len(testcase))
-        for i in testcase:
-            if i in ['test_PcLogin', 'test_PcLotterySubmit', 'test_PcThirdHome', 'test_PcFFHome',
-                     'test_PcChart', 'test_PcThirdBalance', 'test_PcTransferin', 'test_PcTransferout',
-                     'test_PCLotterySubmit',
-                     'test_redEnvelope']:  # PC 案例
-                suite_list.append(Joy188Test(i))
-            elif i in ['test_AppLogin', 'test_AppSubmit', 'test_AppOpenLink', 'test_AppBalance', 'test_ApptransferIn',
-                       'test_ApptransferOut']:  # APP案例
-                suite_list.append(Joy188Test3(i))
-            elif i in ['test_safepersonal', 'test_applycenter', 'test_plan']:  # 瀏覽器案例
-                if i == 'test_plan':
+        for case in test_cases[0]:
+            if case in ['test_PcLogin', 'test_PcLotterySubmit', 'test_PcThirdHome', 'test_PcFFHome',
+                        'test_PcChart', 'test_PcThirdBalance', 'test_PcTransferin', 'test_PcTransferout',
+                        'test_PCLotterySubmit',
+                        'test_redEnvelope']:  # PC 案例
+                suite_list.append(ApiTestPC(case))
+
+        for case in test_cases[1]:
+            if case in ['test_AppLogin', 'test_AppSubmit', 'test_AppOpenLink', 'test_AppBalance', 'test_ApptransferIn',
+                        'test_ApptransferOut']:  # APP案例
+                suite_list.append(ApiTestApp(case))
+
+        for case in test_cases[2]:
+            if case in ['test_safepersonal', 'test_applycenter', 'test_plan']:  # 瀏覽器案例
+                if case == 'test_plan':
                     for lottery in test_list:
-                        suite_list.append(Joy188Test2('test_%s' % lottery))
+                        suite_list.append(IntegrationTestWeb('test_{}'.format(lottery)))
                 else:
-                    suite_list.append(Joy188Test2(i))
-            else:  # NONE
-                pass
-        # print(suite_list)
+                    suite_list.append(IntegrationTestWeb(case))
+
+        logger.debug("測試內容 suite_list : {}".format(suite_list))
 
         suite.addTests(suite_list)
-        # print(content)
         print(suite)
 
         filename = Config.reportHtml_Path  # now + u'自動化測試' + '.html'
-        global fp
         fp = open(filename, 'wb')
-        global runner
         runner = HTMLTestRunner.HTMLTestRunner(
             stream=fp,
             title=u'測試報告',
-            description='環境: %s,帳號: %s' % (envConfig, user_),
+            description='環境: {env},帳號: {user}'.format(env=envConfig, user=user_),
         )
-        print('start')
-        # print(runner)
+        logger.debug(">>>>>>>>Test Start.<<<<<<<<")
         runner.run(suite)
-        # print(content)
-        print('end')
+        logger.debug(">>>>>>>>Test End.<<<<<<<<")
         fp.close()
-    except TypeError:
-        msg = "錯誤"
+    except Exception as e:
+        trace_log(e)

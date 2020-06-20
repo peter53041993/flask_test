@@ -295,38 +295,42 @@ def autoTest():
             current_app.logger.info('logged by current_app.logger')
             # response_status ='start_progress'
             # return redirect("/progress")
-            testcase = []
-            username = request.form.get('username')
-            test_case = request.form.getlist('test_Suite')  # 回傳 測試案例data內容
-            envConfig = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
+            test_cases = []
+            user_name = request.form.get('user_name')
+            api_test_pc = request.form.getlist('api_test_pc')  # 回傳 測試案例data內容
+            api_test_app = request.form.getlist('api_test_app')  # 回傳 測試案例data內容
+            integration_test_pc = request.form.getlist('integration_test_pc')  # 回傳 測試案例data內容
+            env_config = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
             red = request.form.get('red_type')  # 紅包選擇
-            print(envConfig, red)
+            print(env_config, red)
 
-            AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(envConfig.get_env_id()),
-                                              username)  # 查詢用戶 userid,合營
-            userid = AutoTest.userid
+            user_id = AutoTest.ApiTestPC.select_user_id(AutoTest.ApiTestPC.get_conn(env_config.get_env_id()),
+                                                        user_name)  # 查詢用戶 user_id,合營
             # joint_venture = AutoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
-            print(userid)  # joint_venture)
-            print(username)
 
-            for test in test_case:
-                testcase.append(test)
-            print(testcase)
-            if len(userid) > 0:  # userid 值為空,　代表該ＤＢ　環境　沒有此用戶名　，　就不用做接下來的事
-                AutoTest.suite_test(testcase, username, envConfig.get_domain(),
+            test_cases.append(api_test_pc)
+            test_cases.append(api_test_app)
+            test_cases.append(integration_test_pc)
+
+            # for test in api_test_pc:
+            #     test_cases[0].append(test)
+            # for test in api_test_app:
+            #     test_cases[1].append(test)
+            # for test in integration_test_pc:
+            #     test_cases[2].append(test)
+            print('user_id : {}'.format(user_id))
+            print('user_name : {}'.format(user_name))
+            print("test_cases : {}".format(test_cases))
+            if len(user_id) > 0:  # user_id 值為空, 代表該DB環境沒有此用戶名, 就不用做接下來的事
+                AutoTest.suite_test(test_cases, user_name, env_config.get_domain(),
                                     red)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
-                # content = AutoTest.content#測試案例 開始訊息
-                # print(content)
-                # return msg
                 return redirect('report')
             else:
-                # print(response_status)
                 raise Exception('此環境沒有該用戶')
         # return redirect("/report")
     except Exception as e:
-        from utils.TestTool import traceLog
-        traceLog(e)
-        abort(500)
+        from utils.TestTool import trace_log
+        trace_log(e)
     return render_template('autoTest.html')
 
 
@@ -642,7 +646,7 @@ def game_result():
         else:
             envs = 1
         if game_code != '':  # game_code 不為空,代表前台 是輸入 訂單號
-            AutoTest.Joy188Test.select_gameResult(AutoTest.Joy188Test.get_conn(envs), game_code)  # 傳回此方法.找出相關 訂單細節
+            AutoTest.ApiTestPC.select_gameResult(AutoTest.ApiTestPC.get_conn(envs), game_code)  # 傳回此方法.找出相關 訂單細節
             game_detail = AutoTest.game_detail  # 將 global  game_detail 宣告變數 遊戲訂單的 內容
             if len(game_detail[game_code]) == 0:
                 return "此環境沒有此訂單號"
@@ -678,7 +682,7 @@ def game_result():
 
                 if env not in cookies_.keys():
                     print("瀏覽器上 還沒有後台cookie,需登入")
-                    AutoTest.Joy188Test.admin_login()
+                    AutoTest.ApiTestPC.admin_login()
                     award_id = game_detail[game_code][17]  # 獎金id, 傳后查詢尋是哪個獎金組
                     lotteryid = game_detail[game_code][14]  # 採種Id 傳給 後台 查詢哪個彩種
                     session = requests.Session()
@@ -752,7 +756,7 @@ def game_result():
                 print('輸入玩法 有空格需去除掉')
                 game_type = game_type.replace(' ', '')
             print(game_type)
-            AutoTest.Joy188Test.select_gameorder(AutoTest.Joy188Test.get_conn(envs), '%' + game_type + '%')
+            AutoTest.ApiTestPC.select_gameorder(AutoTest.ApiTestPC.get_conn(envs), '%' + game_type + '%')
             game_order = AutoTest.game_order
             len_order = AutoTest.len_order
             # print(game_order)
@@ -806,14 +810,13 @@ def user_acitve():  # 驗證第三方有校用戶
         else:
             envs = 2
 
-        AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(envs), user)
+        userid = AutoTest.ApiTestPC.select_user_id(AutoTest.ApiTestPC.get_conn(envs), user)
         # 查詢用戶 userid
-        userid = AutoTest.userid
         print(user, env)
         if len(userid) == 0:
             return ("此環境沒有該用戶")
         else:
-            AutoTest.Joy188Test.select_activeAPP(AutoTest.Joy188Test.get_conn(envs), user)
+            AutoTest.ApiTestPC.select_activeAPP(AutoTest.ApiTestPC.get_conn(envs), user)
             # 查詢APP有效用戶 是否有值  ,沒值 代表 沒投注
 
             active_app = AutoTest.active_app  # 呼叫 此變數
@@ -822,11 +825,11 @@ def user_acitve():  # 驗證第三方有校用戶
             card_number = []  # 該綁卡,有被多少張數綁定,但段 是否為有效性
             # print(active_app)
 
-            AutoTest.Joy188Test.select_activeFund(AutoTest.Joy188Test.get_conn(envs), user)  # 當月充值
+            AutoTest.ApiTestPC.select_activeFund(AutoTest.ApiTestPC.get_conn(envs), user)  # 當月充值
             user_fund = AutoTest.user_fund
             print(user_fund)
 
-            AutoTest.Joy188Test.select_activeCard(AutoTest.Joy188Test.get_conn(envs), user, envs)  # 查詢綁卡數量
+            AutoTest.ApiTestPC.select_activeCard(AutoTest.ApiTestPC.get_conn(envs), user, envs)  # 查詢綁卡數量
             card_num = AutoTest.card_num  # 綁卡 和 該卡榜定幾張
 
             if len(active_app) == 0:  # 非有效用戶,也代表 APP 有效用戶表沒資料(舊式沒投注)
@@ -906,7 +909,7 @@ def app_bet():
         envs = 1
     else:
         envs = 2
-    AutoTest.Joy188Test.select_AppBet(AutoTest.Joy188Test.get_conn(envs), user)  # APP代理中心,銷量/盈虧
+    AutoTest.ApiTestPC.select_AppBet(AutoTest.ApiTestPC.get_conn(envs), user)  # APP代理中心,銷量/盈虧
     app_bet = AutoTest.app_bet  # 銷量/盈虧
     third_list = []  # 存放第三方列表
     all_bet = []  # 總投注

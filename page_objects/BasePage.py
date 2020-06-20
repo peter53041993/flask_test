@@ -10,7 +10,7 @@ from enum import Enum
 
 from utils import Config
 from utils import TestTool
-from utils.TestTool import traceLog
+from utils.TestTool import trace_log
 
 
 def sleep(sec):
@@ -63,7 +63,7 @@ class BasePage:
                 self.driver.implicitly_wait(1)
                 self.driver.set_page_load_timeout(120)
             except Exception as e:
-                TestTool.traceLog(e)
+                TestTool.trace_log(e)
         return self.driver
 
     def go_to(self):
@@ -74,7 +74,7 @@ class BasePage:
             self.driver.execute(Command.STATUS)
             return True
         except Exception as e:
-            traceLog(e)
+            trace_log(e)
             return False
 
     def get_visibal_elements(self, elements):
@@ -86,37 +86,37 @@ class BasePage:
 
     def jump_to(self, names):
         if names == GameNames.JLFFC:
-            return BetPageJlffc(self.envConfig, self.driver)
+            return BetPage_Jlffc(self.envConfig, self.driver)
         elif names == GameNames.CQSSC:
-            return BetPageCqssc(self.envConfig, self.driver)
+            return BetPage_Cqssc(self.envConfig, self.driver)
         elif names == GameNames.FFC360:
-            return BetPage360ffc(self.envConfig, self.driver)
+            return BetPage_360ffc(self.envConfig, self.driver)
         elif names == GameNames.BTCFFC:
-            return BetPageBtcffc(self.envConfig, self.driver)
+            return BetPage_Btcffc(self.envConfig, self.driver)
         elif names == GameNames.F5C360:
-            return BetPage3605fc(self.envConfig, self.driver)
+            return BetPage_3605fc(self.envConfig, self.driver)
         elif names == GameNames.FHCQC:
-            return BetPageFhcqc(self.envConfig, self.driver)
+            return BetPage_Fhcqc(self.envConfig, self.driver)
         elif names == GameNames.FHJLSSC:
-            return BetPageFhjlssc(self.envConfig, self.driver)
+            return BetPage_Fhjlssc(self.envConfig, self.driver)
         elif names == GameNames.HLJSSC:
-            return BetPageHljssc(self.envConfig, self.driver)
+            return BetPage_Hljssc(self.envConfig, self.driver)
         elif names == GameNames.LLSSC:
-            return BetPageLlssc(self.envConfig, self.driver)
+            return BetPage_Llssc(self.envConfig, self.driver)
         elif names == GameNames.FHXJC:
-            return BetPageFhxjc(self.envConfig, self.driver)
+            return BetPage_Fhxjc(self.envConfig, self.driver)
         elif names == GameNames.SHSSL:
-            return BetPageShssl(self.envConfig, self.driver)
+            return BetPage_Shssl(self.envConfig, self.driver)
         elif names == GameNames.SLMMC:
-            return BetPageSlmmc(self.envConfig, self.driver)
+            return BetPage_Slmmc(self.envConfig, self.driver)
         elif names == GameNames.TJSSC:
-            return BetPageTjssc(self.envConfig, self.driver)
+            return BetPage_Tjssc(self.envConfig, self.driver)
         elif names == GameNames.TXFFC:
-            return BetPageTxffc(self.envConfig, self.driver)
+            return BetPage_Txffc(self.envConfig, self.driver)
         elif names == GameNames.V3D:
-            return BetPageV3d(self.envConfig, self.driver)
+            return BetPage_V3d(self.envConfig, self.driver)
         elif names == GameNames.XJSSC:
-            return BetPageXjssc(self.envConfig, self.driver)
+            return BetPage_Xjssc(self.envConfig, self.driver)
 
 
 class BaseBetPage(BasePage):
@@ -166,13 +166,13 @@ class BaseBetPage(BasePage):
         try:
             self.driver.find_element_by_id(self.randomOneId).click()
         except Exception as e:
-            traceLog(e)
+            trace_log(e)
 
     def add_random_bet_5(self):
         try:
             self.driver.find_element_by_id(self.randomFiveId)
         except Exception as e:
-            traceLog(e)
+            trace_log(e)
 
     def submit_bet(self):
         try:
@@ -181,7 +181,7 @@ class BaseBetPage(BasePage):
             WebDriverWait(self.driver, 30).until(
                 expected_conditions.presence_of_element_located((By.XPATH, self.betSuccessXpath)))
         except Exception as e:
-            traceLog(e)
+            trace_log(e)
 
     def bet_all(self, index_t=0, index_m=0, index_g=0):
         """
@@ -205,7 +205,7 @@ class BaseBetPage(BasePage):
                     index_m = 0  # 當本輪皆添加後需初始話避免後續短少
                 self.submit_bet()
             except Exception as e:
-                traceLog(e)
+                trace_log(e)
                 self.check_period_popup()  # 排除臨時顯示彈窗
                 logger.warning("Retry bet all with type:%s, method:%s, game:%s" % (index_t, index_m, index_g))
                 self.bet_all(_temp_t, _temp_m, _temp_g)  # 從中斷點再次運行
@@ -214,7 +214,7 @@ class BaseBetPage(BasePage):
                 self._bet_all(index_m, index_g)
                 self.submit_bet()
             except Exception as e:
-                traceLog(e)
+                trace_log(e)
                 self.check_period_popup()  # 排除臨時顯示彈窗
                 logger.warning("Retry bet all with type:%s, method:%s, game:%s" % (index_t, index_m, index_g))
                 self.bet_all(_temp_t, _temp_m, _temp_g)  # 從中斷點再次運行
@@ -244,7 +244,7 @@ class BaseBetPage(BasePage):
                 index_g = 0  # 當本輪皆添加後需初始話避免後續短少
         except Exception as e:
             print(e)
-            traceLog(e)
+            trace_log(e)
             self.check_period_popup()  # 排除臨時顯示彈窗
             logger.warning("Retry bet all with method:%s, game:%s" % (index_m, index_g))
             self._bet_all(_temp_m, _temp_g)  # 從中斷點再次運行
@@ -257,7 +257,10 @@ class BaseBetPage(BasePage):
             pass
 
 
-class BetPageCqssc(BaseBetPage):
+class BetPage_Cqssc(BaseBetPage):
+    """
+    重慶時時彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
@@ -275,7 +278,10 @@ class BetPageCqssc(BaseBetPage):
             pass
 
 
-class BetPageXjssc(BaseBetPage):
+class BetPage_Xjssc(BaseBetPage):
+    """
+    新疆時時彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
@@ -293,7 +299,10 @@ class BetPageXjssc(BaseBetPage):
             pass
 
 
-class BetPageHljssc(BaseBetPage):
+class BetPage_Hljssc(BaseBetPage):
+    """
+    黑龍江時時彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
@@ -311,61 +320,49 @@ class BetPageHljssc(BaseBetPage):
             pass
 
 
-class BetPageShssl(BaseBetPage):
+class BetPage_Shssl(BaseBetPage):
+    """
+    上海時時樂彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
         self.link = '/gameBet/shssl'
         self.go_to()
-        self.check_guide()
         self.check_prize_select_popup()
         self.get_types()
 
-    def check_guide(self):
-        try:
-            element = self.driver.find_element_by_class_name('guide20000-close')
-            element.click()
-        except Exception:
-            pass
 
-
-class BetPageTjssc(BaseBetPage):
+class BetPage_Tjssc(BaseBetPage):
+    """
+    天津時時彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
         self.link = '/gameBet/tjssc'
         self.go_to()
-        self.check_guide()
         self.check_prize_select_popup()
         self.get_types()
 
-    def check_guide(self):
-        try:
-            element = self.driver.find_element_by_class_name('guide20000-close')
-            element.click()
-        except Exception:
-            pass
 
-
-class BetPageTxffc(BaseBetPage):
+class BetPage_Txffc(BaseBetPage):
+    """
+    騰訊分分彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
         self.link = '/gameBet/txffc'
         self.go_to()
-        self.check_guide()
         self.check_prize_select_popup()
         self.get_types()
 
-    def check_guide(self):
-        try:
-            element = self.driver.find_element_by_class_name('guide20000-close')
-            element.click()
-        except Exception:
-            pass
 
-
-class BetPageFhjlssc(BaseBetPage):
+class BetPage_Fhjlssc(BaseBetPage):
+    """
+    吉利時時彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
@@ -383,7 +380,10 @@ class BetPageFhjlssc(BaseBetPage):
             pass
 
 
-class BetPageFhcqc(BaseBetPage):
+class BetPage_Fhcqc(BaseBetPage):
+    """
+    重慶全球彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
@@ -401,43 +401,36 @@ class BetPageFhcqc(BaseBetPage):
             pass
 
 
-class BetPageFhxjc(BaseBetPage):
+class BetPage_Fhxjc(BaseBetPage):
+    """
+    新疆全球彩彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
         self.link = '/gameBet/fhxjc'
         self.go_to()
-        self.check_guide()
         self.check_prize_select_popup()
         self.get_types()
 
-    def check_guide(self):
-        try:
-            element = self.driver.find_element_by_class_name('guide20000-close')
-            element.click()
-        except Exception:
-            pass
 
-
-class BetPage3605fc(BaseBetPage):
+class BetPage_3605fc(BaseBetPage):
+    """
+    360五分彩彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
         self.link = '/gameBet/3605fc'
         self.go_to()
-        self.check_guide()
         self.check_prize_select_popup()
         self.get_types()
 
-    def check_guide(self):
-        try:
-            element = self.driver.find_element_by_class_name('guide20000-close')
-            element.click()
-        except Exception:
-            pass
 
-
-class BetPageV3d(BaseBetPage):
+class BetPage_V3d(BaseBetPage):
+    """
+    勝利3D投注頁
+    """
 
     def __init__(self, env, driver):
         self.currentMethodsXpath = "//*[@id='change']/ul[2]/li"
@@ -447,7 +440,10 @@ class BetPageV3d(BaseBetPage):
         self.check_prize_select_popup()
 
 
-class BetPageSlmmc(BaseBetPage):
+class BetPage_Slmmc(BaseBetPage):
+    """
+    順利秒秒彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
@@ -456,8 +452,22 @@ class BetPageSlmmc(BaseBetPage):
         self.check_prize_select_popup()
         self.get_types()
 
+    def check_guide(self):
+        """
+        處理秒秒彩加注說明彈窗
+        :return: None
+        """
+        try:
+            element = self.driver.find_element_by_class_name('guide20000-close guide20000-close2')
+            element.click()
+        except Exception:
+            pass
 
-class BetPageBtcffc(BaseBetPage):
+
+class BetPage_Btcffc(BaseBetPage):
+    """
+    比特幣分分彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
@@ -467,7 +477,10 @@ class BetPageBtcffc(BaseBetPage):
         self.get_types()
 
 
-class BetPageLlssc(BaseBetPage):
+class BetPage_Llssc(BaseBetPage):
+    """
+    樂利時時彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
@@ -477,7 +490,10 @@ class BetPageLlssc(BaseBetPage):
         self.get_types()
 
 
-class BetPage360ffc(BaseBetPage):
+class BetPage_360ffc(BaseBetPage):
+    """
+    360分分彩投注頁
+    """
 
     def __init__(self, env, driver):
         super().__init__(env, driver)
@@ -487,7 +503,11 @@ class BetPage360ffc(BaseBetPage):
         self.get_types()
 
 
-class BetPageJlffc(BaseBetPage):
+class BetPage_Jlffc(BaseBetPage):
+    """
+    吉利分分彩投注頁
+    """
+
     def __init__(self, env, driver):
         super().__init__(env, driver)
         self.link = '/gameBet/jlffc'
@@ -519,4 +539,4 @@ class LoginPage(BasePage):
         sleep(3)
 
     def to_game_page(self):
-        return BetPageCqssc(self.envConfig, self.driver)
+        return BetPage_Cqssc(self.envConfig, self.driver)

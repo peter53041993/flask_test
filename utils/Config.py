@@ -1,19 +1,17 @@
 from selenium.webdriver.chrome.options import Options
 from enum import Enum
 
-project_path = r"C:\Users\Wen\PycharmProjects\kerr_flask"
-# ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
-chromeDriver_Path = project_path + r'\chromedriver_83.exe'
-# report.html 絕對路徑
-reportHtml_Path = project_path + r"\templates\report.html"
+# 各檔路徑
+project_path = r"C:\Users\Wen\PycharmProjects\kerr_flask"  # 專案路徑
+chromeDriver_Path = project_path + r'\Drivers\chromedriver_83.exe'  # ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
+reportHtml_Path = project_path + r"\templates\report.html"  # report.html 絕對路徑
 logging_config_path = project_path + r"\logs\logging_config.ini"
 log_folder_path = project_path + r"\logs"
 
 # ChromeDriver 設定參數
 chrome_options = Options()
-# chrome_options.add_argument("--headless")  # 背景執行
+chrome_options.add_argument("--headless")  # 背景執行
 chrome_options.add_argument("--start-maximized")  # 全螢幕
-
 
 class UserAgent(Enum):
     PC = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36"

@@ -1,5 +1,5 @@
-from PageObjects import BasePage
-from utils.TestTool import traceLog
+from page_objects import BasePage
+from utils.TestTool import trace_log
 
 page = BasePage.LoginPage("dev02")
 page.login("twen101", "123qwe")
