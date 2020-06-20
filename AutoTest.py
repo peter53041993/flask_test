@@ -185,13 +185,22 @@ class Joy188Test(unittest.TestCase):
                 red_bal.append(i[0])
         conn.close()
     @staticmethod
-    def select_sunuser(conn,user,type_):
+    def select_sunuser(conn,user,type_,domain):
+        if domain == '1':#申博
+            come_from = 'sunGame138'
+            note = '申博'
+        elif domain == '0':# 太陽城
+            come_from = 'sunGame'
+            note = '太阳城'
         with conn.cursor() as cursor:
             if type_ == 1: # 1 查詢轉移的用戶
                 sql = "select account,cellphone,transfer_status,transfer_date from sun_game_user where  transfer_status = 1 \
-                order by transfer_date desc"
-            else:
-                sql = "select * from sun_game_user where account = '%s'"%user
+                and come_from = '%s' order by transfer_date desc"%come_from
+            elif type_ ==2:# 查詢 指定domain flask_test. sun_user2()
+                sql = "select a.domain,a.agent,b.url,a.register_display,a.status,a.note,b.days,b.registers  from  GLOBAL_DOMAIN_LIST a inner join user_url b on a.register_url_id = b.id  \
+                where note = '%s' order by a.status asc"%note
+            else:# 查詢 指定用戶
+                sql = "select * from sun_game_user where account = '%s' and come_from = '%s'"%(user,come_from)
             print(sql)
             cursor.execute(sql)
             rows = cursor.fetchall()
@@ -259,9 +268,9 @@ class Joy188Test(unittest.TestCase):
                 order_code.append(i[0])
         conn.close()
     @staticmethod
-    def select_userid(conn,account_):
+    def select_userid(conn,account_,joint_type=0):
         with conn.cursor() as cursor:
-            sql = "select id from user_customer where account = '%s'"%account_
+            sql = "select id from user_customer where account = '%s' and joint_venture = '%s'"%(account_,joint_type)
             cursor.execute(sql)
             rows = cursor.fetchall()
             global userid#, joint_venture# joint_ventue 判斷合營  ,合營 等 上188 後 在加上
@@ -418,20 +427,21 @@ class Joy188Test(unittest.TestCase):
         conn.close()
 
     @staticmethod
-    def select_userUrl(conn,user,type=1):#用戶的 連結 ,type= 1 找用戶本身開戶連結, 0 找用戶的從哪個連結開出
+    def select_userUrl(conn,user,type=1,joint_type=''):#用戶的 連結 ,type= 1 找用戶本身開戶連結, 0 找用戶的從哪個連結開出
         global user_url
         with conn.cursor() as cursor:
-            if type == 1:# 這邊user參數 為 userid
+            if type == 1:# 這邊user參數 為 userid , test_applycenter()方法使用
                 user_url = []
                 sql = "select url from user_url where url like '%"+ '%s'%(user) +"%' and days=-1"
             elif type==2:# user 為用戶名,這個表如果沒有, 有可能是 上級開戶連結 刪除,導致空 ,再去做else 那段
                 user_url = {}
                 sql = "select user_customer.account,user_url.url, user_customer.user_chain,user_customer.device,user_url.days \
                 from user_customer inner join  user_url on user_customer.url_id = user_url.id \
-                where user_customer.account = '%s'"%user
+                where user_customer.account = '%s' and joint_venture = '%s' "%(user,joint_type)
             else:# 最後才去用 user_customer. referer 去找, 這邊APP 開戶出來的會是null 
                 user_url = {}
-                sql = "select account,referer,user_chain,device from user_customer where account = '%s'"%user
+                sql = "select account,referer,user_chain,device from user_customer where account = '%s' \
+                and joint_venture = '%s'"%(user,joint_type)
             cursor.execute(sql)
             rows = cursor.fetchall()
             print(sql)
