@@ -4,6 +4,8 @@
     {{ super() }}
     <style type="text/css">
     #stock_search,#stock_search2{border-radius: 22px;}
+    #img > img{width: 500px;height: 500px;}
+    #img2 > img{width: 500px;height: 500px;}
     </style>
 {% endblock %}
 {% block script %}
@@ -28,11 +30,14 @@
             if ($('#img').html()!=''){// 不等於空 ,代表有圖,需先清除
                 $('#img').html('');
             }
+            if ($('#img2').html()!=''){// 不等於空 ,代表有圖,需先清除
+                $('#img2').html('');}
             if ($("#stock_search").val()=="" && $('#stock_search2').val()==""){
                 alert("號碼名稱皆為空");
                 location.reload()
             }
             else{
+                alert('請燒等');
                 $.ajax({
                     url:"/stock_search",
                     type:"POST",
@@ -50,12 +55,17 @@
                     
                     //console.log(data);
                     $('#stock_detail').after(data);
-                    var img = "<img src='{{url_for('static', filename='image/'+'test'+'.jpg')}}'>";
+                    var img_name = "<img src='{{url_for('static', filename='image/'+'test'+'.jpg')}}'>";
                     if (stock_num ==''){// 有可能頁面輸入的是名稱 , 會為空,照片名為是以股號為名稱
                         stock_num = document.querySelector("body > main > table > tbody > tr > td:nth-child(3)").textContent;
                     }
-                    img =img.replace('test',stock_num)
+                    img =img_name.replace('test',stock_num)
+                    img2 = img_name.replace('test',stock_num+'_test')
+                    console.log(img2)
                     document.getElementById("img").innerHTML=img;
+                    $("#img").append(img2);
+            
+                    //document.getElementById("img2").innerHTML=img2;
                     $('#stock_search').val('');
                     $('#stock_search2').val('');
                     }               
@@ -70,6 +80,11 @@
             if ($('.dataframe').length>0){
                 $("table").html("");//已經有了先清空
             }
+            if ($('#img').html()!=''){// 不等於空 ,代表有圖,需先清除
+                $('#img').html('');
+            }
+            if ($('#img2').html()!=''){// 不等於空 ,代表有圖,需先清除
+                $('#img2').html('');}
             alert("請稍後");
             $.ajax({
                 url:"/stock_search2",
@@ -104,7 +119,8 @@
         <p><input type="button" onclick="check2()" value="確認">前10個</p>
     </form>
     <div id='stock_detail'></div>
-    <div id='img'>
+    <div id='img'> 
         <!--img src="{{url_for('static', filename='image/1234.jpg')}}"/-->
     </div>
+    <div id='img2'></div>
 {% endblock %}
