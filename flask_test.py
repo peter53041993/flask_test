@@ -3,30 +3,25 @@
 import traceback
 from http.client import HTTPException
 
-from flask import Flask, render_template, request, jsonify, redirect, make_response, url_for, Response, abort
+from flask import Flask, render_template, request, jsonify, redirect, url_for, Response, abort
 import datetime
 from dateutil.relativedelta import relativedelta
 import requests
 import json
 import image_test
 import os
-import AutoTest
+from autoTest import AutoTest
 from time import sleep
-import random
 import threading
-import time
 import test_benefit
 import calendar
-import celery
 import test_lotteryRecord
 import logging
 from flask import current_app
-from logging import FileHandler
 import urllib3
 from bs4 import BeautifulSoup
 import twstock, stock
 import pandas as pd
-import numpy as np
 import re
 from utils import Config
 
@@ -306,7 +301,7 @@ def autoTest():
 
             # 查詢用戶 user_id,合營
             user_id = Config.select_user_id(Config.get_conn(env_config.get_env_id()), user_name)
-            # joint_venture = AutoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
+            # joint_venture = autoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
 
             test_cases.append(api_test_pc)
             test_cases.append(api_test_app)
@@ -838,7 +833,7 @@ def user_acitve():  # 驗證第三方有校用戶
                 active_submit = 0  # 有效投注
                 is_active = "否"  # 有效用戶值
 
-                # AutoTest.Joy188Test.select_activeFund(AutoTest.Joy188Test.get_conn(envs),user)#當月充值
+                # autoTest.Joy188Test.select_activeFund(autoTest.Joy188Test.get_conn(envs),user)#當月充值
                 if user_fund[0] == None:  # 確認沒充值
                     real_charge = 0
                 else:
@@ -868,7 +863,7 @@ def user_acitve():  # 驗證第三方有校用戶
                     print("%s用戶 為有效用戶" % user)
                 active_submit = active_app[3]
 
-                # AutoTest.Joy188Test.select_activeFund(AutoTest.Joy188Test.get_conn(envs),user)#當月充值
+                # autoTest.Joy188Test.select_activeFund(autoTest.Joy188Test.get_conn(envs),user)#當月充值
 
                 if user_fund[0] == None:  # 確認沒充值
                     real_charge = 0

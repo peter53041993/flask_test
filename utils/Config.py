@@ -1,5 +1,5 @@
 import datetime
-
+import random
 import cx_Oracle
 import pymysql
 from selenium.webdriver.chrome.options import Options
@@ -90,10 +90,12 @@ def get_order_code_web(conn, user, lottery):  # webdriver頁面投注產生定�
     with conn.cursor() as cursor:
         sql = "select order_code from game_order where userid in \
         (select id from user_customer where account = '{user}' \
-        and order_time > to_date('{time}','YYYY-MM-DD')and lotteryid = {lottery_id})".format(user=user, time=date_time(),
+        and order_time > to_date('{time}','YYYY-MM-DD')and lotteryid = {lottery_id})".format(user=user,
+                                                                                             time=date_time(),
                                                                                              lottery_id=
-                                                                                             LotteryData.lottery_dict[
-                                                                                                 lottery][1])
+                                                                                                           LotteryData.lottery_dict[
+                                                                                                               lottery][
+                                                                                                               1])
         cursor.execute(sql)
         rows = cursor.fetchall()
 
@@ -106,7 +108,8 @@ def get_order_code_web(conn, user, lottery):  # webdriver頁面投注產生定�
 
 def get_order_code_iapi(conn, orderid):  # 從iapi投注的orderid對應出 order_code 方案編號
     with conn.cursor() as cursor:
-        sql = "select order_code from game_order where id in (select orderid from game_slip where orderid = '{}')".format(orderid)
+        sql = "select order_code from game_order where id in (select orderid from game_slip where orderid = '{}')".format(
+            orderid)
 
         cursor.execute(sql)
         rows = cursor.fetchall()
@@ -149,6 +152,49 @@ def my_con(evn, third):  # 第三方  mysql連線
         passwd=passwd_,
         db=db_)
     return db
+
+
+def thirdly_tran(db, tran_type, third, user):
+    cur = db.cursor()
+    # third 判斷 第三方 是那個 ,gns table 名稱不同
+    if third in ['lc', 'ky', 'city', 'im', 'shaba']:
+        table_name = 'THIRDLY_TRANSCATION_LOG'
+        if tran_type == 0:  # 轉入
+            trans_name = 'FIREFROG_TO_THIRDLY'
+        else:  # 轉出
+            trans_name = 'THIRDLY_TO_FIREFROG'
+    elif third == 'gns':
+        table_name = 'GNS_TRANSCATION_LOG'
+        if tran_type == 0:  # gns轉入
+            trans_name = 'FIREFROG_TO_GNS'
+        else:
+            trans_name = 'GNS_TO_FIREFROG'
+    else:
+        print('第三方 名稱錯誤')
+
+    sql = "SELECT SN,STATUS FROM %s WHERE FF_ACCOUNT = '%s'\
+    AND CREATE_DATE > DATE(NOW()) AND TRANS_NAME= '%s'" % (table_name, user, trans_name)
+
+    cur.execute(sql)
+    for row in cur.fetchall():
+        result = [row[0], row[1]]
+        return result
+
+
+def random_mul(num):  # 生成random數, NUM參數為範圍
+    return random.randint(1, num)
+
+
+def play_type():  # 隨機生成  group .  五星,四星.....
+    game_group = {'wuxing': u'五星', 'sixing': u'四星', 'qiansan': u'前三', 'housan': u'後三',
+                  'zhongsan': u'中三', 'qianer': u'前二', 'houer': u'後二'}
+    return list(game_group.keys())[random_mul(6)]
+
+
+def play_type():  # 隨機生成  group .  五星,四星.....
+    game_group = {'wuxing': u'五星', 'sixing': u'四星', 'qiansan': u'前三', 'housan': u'後三',
+                  'zhongsan': u'中三', 'qianer': u'前二', 'houer': u'後二'}
+    return list(game_group.keys())[random_mul(6)]
 
 
 class LotteryData:
