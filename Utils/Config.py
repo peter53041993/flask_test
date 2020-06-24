@@ -1,10 +1,14 @@
 from selenium.webdriver.chrome.options import Options
 from enum import Enum
+import os
+import AutoTest
 
 # ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
 chromeDriver_Path = r'C:\Users\Wen\PycharmProjects\kerr_flask\chromedriver_83.exe'
 # report.html 絕對路徑
-reportHtml_Path = r"C:\Users\Wen\PycharmProjects\kerr_flask\templates\report.html"
+path1=os.path.abspath('.')
+
+reportHtml_Path = path1 + "\\templates\\report.html"  
 
 # ChromeDriver 設定參數
 chrome_options = Options()
@@ -100,6 +104,26 @@ class EnvConfig:
             return {'username': 'cancus', 'password': 'amberrd', 'bindpwd': 123456}
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
+    
+    def get_joint_venture(self,env,domain):
+        AutoTest.Joy188Test.select_domainUrl(AutoTest.Joy188Test.get_conn(int(env)),domain)#先去全局 找是否有設定 該domain
+        # 查詢後台是否有設置
+        try:
+            domain_type  = AutoTest.domain_url[0][5]# 判斷 該domain 再後台全局設定 的 joint_venture 是多少
+            print("後台設置: %s"%domain_type)
+            return domain_type
+        except KeyError:
+            print("全局後台沒設置")
+            if self.env_domain is None:
+                raise Exception('env 環境未初始化')
+            elif self.env_domain in ['dev02', 'joy188']:
+                return 0
+            elif self.env_domain in ['fh82dev02', 'teny2020dev02', 'joy188.teny2020', 'joy188.195353']:
+                return 1
+            elif self.env_domain in ['joy188.88hlqp', '88hlqpdev02']:
+                return 2
+            else:
+                raise Exception('無對應網域參數，請至Config envConfigApp()新增')
 
 
 class EnvConfigApp(EnvConfig):
