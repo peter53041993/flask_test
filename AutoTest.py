@@ -178,12 +178,11 @@ class Joy188Test(unittest.TestCase):
             for i in rows:  # i 生成tuple
                 red_bal.append(i[0])
         conn.close()
-<<<<<<< HEAD
     @staticmethod
     def select_sunuser(conn,user,type_,domain):
         if domain == '1':#申博
             come_from = 'sunGame138'
-            note = '申博'
+            note = '申博138'
         elif domain == '0':# 太陽城
             come_from = 'sunGame'
             note = '太阳城'
@@ -199,9 +198,13 @@ class Joy188Test(unittest.TestCase):
             print(sql)
             cursor.execute(sql)
             rows = cursor.fetchall()
+            global sun_user
+            sun_user = {}
+            for num,tuple_ in enumerate(rows):# i 生成tuple
+                sun_user[num] = list(tuple_)
+            #print(sun_user)
+        conn.close()
             #print(rows)
-=======
->>>>>>> c61d2f63c370e20096ada0afd6733a9d4d1d1756
 
     @staticmethod
     def select_RedID(conn, user):  # 紅包加壁  的訂單號查詢 ,用來審核用
@@ -264,15 +267,9 @@ class Joy188Test(unittest.TestCase):
         conn.close()
 
     @staticmethod
-<<<<<<< HEAD
     def select_userid(conn,account_,joint_type=0):
         with conn.cursor() as cursor:
             sql = "select id from user_customer where account = '%s' and joint_venture = '%s'"%(account_,joint_type)
-=======
-    def select_userid(conn, account_):
-        with conn.cursor() as cursor:
-            sql = "select id from user_customer where account = '%s'" % account_
->>>>>>> c61d2f63c370e20096ada0afd6733a9d4d1d1756
             cursor.execute(sql)
             rows = cursor.fetchall()
             global userid  # , joint_venture# joint_ventue 判斷合營  ,合營 等 上188 後 在加上
@@ -370,12 +367,12 @@ class Joy188Test(unittest.TestCase):
             app_bet = {}
             for third in ['ALL', 'LC', 'KY', 'CITY', 'GNS', 'FHLL', 'BBIN', 'IM', 'SB', 'AG']:
                 if third == 'ALL':
-                    sql = "select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
-                    from V_THIRDLY_AGENT_CENTER where account = '%s' \
+                    sql = "select sum(cost) 用戶總有效銷量, sum(prize) ,sum(prize) - sum(cost) 用戶總盈虧 \
+                    from THIRDLY_AGENT_CENTER where account = '%s' \
                     and create_date > trunc(sysdate,'mm')" % user
                 else:
-                    sql = "select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
-                    from V_THIRDLY_AGENT_CENTER where account = '%s' \
+                    sql = "select sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(prize) - sum(cost) 用戶總盈虧\
+                    from THIRDLY_AGENT_CENTER where account = '%s' \
                     and create_date > trunc(sysdate,'mm') and plat='%s'" % (user, third)
                 cursor.execute(sql)
                 rows = cursor.fetchall()
@@ -429,7 +426,6 @@ class Joy188Test(unittest.TestCase):
         conn.close()
 
     @staticmethod
-<<<<<<< HEAD
     def select_userUrl(conn,user,type=1,joint_type=''):#用戶的 連結 ,type= 1 找用戶本身開戶連結, 0 找用戶的從哪個連結開出
         global user_url
         with conn.cursor() as cursor:
@@ -474,18 +470,17 @@ class Joy188Test(unittest.TestCase):
         conn.close()
     @staticmethod 
     def select_domainUrl(conn,domain):#查詢 全局管理 後台設置的domain ,連結設置 (因為生產 沒權限,看不到)
-=======
-    def select_userUrl(conn, userid):
->>>>>>> c61d2f63c370e20096ada0afd6733a9d4d1d1756
         with conn.cursor() as cursor:
-            sql = "select url from user_url where url like '%" + '%s' % (userid) + "%'"
+            sql = "select a.domain,a.agent,b.url,a.register_display,a.app_download_display,a.domain_type,a.status from  \
+            GLOBAL_DOMAIN_LIST a inner join user_url b \
+            on a.register_url_id = b.id  where a.domain like '%%%s%%' "%domain
             cursor.execute(sql)
             rows = cursor.fetchall()
-            global user_url
-            user_url = []
-
-            for i in rows:
-                user_url.append(i[0])
+            global domain_url
+            domain_url = {}
+            for num,url in enumerate(rows):
+                domain_url[num]= list(url)
+            #print(domain_url)
         conn.close()
 
     @staticmethod
@@ -919,8 +914,8 @@ class Joy188Test(unittest.TestCase):
         header = {
             'User-Agent': userAgent
         }
-        print("userAgent : " + userAgent)
-        print("post_url : " + post_url)
+        #print("userAgent : " + userAgent)
+        #print("post_url : " + post_url)
         global session
         while True:
             try:
@@ -3014,7 +3009,6 @@ def suite_test(testcase, username, env, red):
         suite.addTests(suite_list)
         # print(content)
         print(suite)
-
         filename = Config.reportHtml_Path  # now + u'自動化測試' + '.html'
         global fp
         fp = open(filename, 'wb')
@@ -3022,7 +3016,7 @@ def suite_test(testcase, username, env, red):
         runner = HTMLTestRunner.HTMLTestRunner(
             stream=fp,
             title=u'測試報告',
-            description='環境: %s,帳號: %s' % (envConfig, user_),
+            description='環境: %s,帳號: %s' % (envConfig.get_post_url(), user_),
         )
         print('start')
         # print(runner)
