@@ -286,62 +286,6 @@ def imageAdj():
 
     return json.dumps(testInfo['msg'])
 
-<<<<<<< HEAD
-@app.route('/autoTest',methods=["GET","POST"])#自動化測試 頁面
-def autoTest():
-    if request.method == "POST":
-        logger.info('logged by app.module')
-        current_app.logger.info('logged by current_app.logger')
-
-        testcase = []
-        username = request.form.get('username')
-        test_case = request.form.getlist('test_Suite')#回傳 測試案例data內容
-        env = request.form.get('env_type')#環境選擇
-        awardmode = request.form.get('awardmode')# 頁面獎金玩法選擇
-        red = request.form.get('red_type')#紅包選擇
-        money = request.form.get('moneymode')#金額模式
-        print(env,red,awardmode)
-        if env in ['dev02','fh82dev02','88hlqpdev02','teny2020dev02']:# 多判斷合營,歡樂棋牌
-            if env == 'dev02':
-                joint_type == 0
-            elif env == '88hlqpdev02':
-                joint_type = 2
-            else:
-                joint_type =1 
-            env_ = 0# env_ 查詢 頁面上  該環境 是否真的有  此用戶名 ,哪來查DB環境用
-        elif env in ['joy188','joy188.teny2020','joy188.195353','joy188.88hlqp','joy188.fh888']:
-            if env == 'joy188':
-                joint_type == 0
-            elif env == 'joy188.88hlqp':
-                joint_type = 2
-            else:
-                joint_type =1 
-
-            env_ = 1
-        else:
-            print(env)
-
-        AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(env_),username,joint_type)#查詢用戶 userid,合營
-        userid = AutoTest.userid
-        #joint_venture = AutoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
-        print(userid)#joint_venture)
-        print(username)
-
-        for test in test_case:
-            testcase.append(test)
-        print(testcase)
-        if len(userid) > 0: # userid 值為空,　代表該ＤＢ　環境　沒有此用戶名　，　就不用做接下來的事
-            AutoTest.suite_test(testcase,username,env,red,awardmode,money)#呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
-            return redirect('report')
-        else:
-
-            #print(response_status)
-            return '此環境沒有該用戶'
-
-
-        #return redirect("/report")
-=======
-
 @app.route('/autoTest', methods=["GET", "POST"])  # 自動化測試 頁面
 def autoTest():
     try:
@@ -353,12 +297,16 @@ def autoTest():
             testcase = []
             username = request.form.get('username')
             test_case = request.form.getlist('test_Suite')  # 回傳 測試案例data內容
-            envConfig = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
+            envConfig = Config.EnvConfig(request.form.get('env_type'))  # 初始化
             red = request.form.get('red_type')  # 紅包選擇
-            print(envConfig, red)
+            print(red)
+            print(envConfig.get_post_url())# url
+            domain_url = envConfig.get_post_url().split('http://')[1]# 後台全局 url 需把 http做切割
+            
+            domain_type = envConfig.get_joint_venture(envConfig.get_env_id(),domain_url)# 查詢 後台是否有設置 該url 
+            #domain_type = Config.domain_type#後台 該url joint_venture 的 類型
 
-            AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(envConfig.get_env_id()),
-                                              username)  # 查詢用戶 userid,合營
+            AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(envConfig.get_env_id()),username,domain_type)  # 查詢用戶 userid
             userid = AutoTest.userid
             # joint_venture = AutoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
             print(userid)  # joint_venture)
@@ -370,25 +318,21 @@ def autoTest():
             if len(userid) > 0:  # userid 值為空,　代表該ＤＢ　環境　沒有此用戶名　，　就不用做接下來的事
                 AutoTest.suite_test(testcase, username, envConfig.get_domain(),
                                     red)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
-                # content = AutoTest.content#測試案例 開始訊息
-                # print(content)
-                # return msg
                 return redirect('report')
             else:
                 # print(response_status)
-                raise Exception('此環境沒有該用戶')
+                return('此環境沒有該用戶')# 強制return 讓頁面location.reload
         # return redirect("/report")
     except Exception as e:
         from Utils.TestTool import traceLog
         traceLog(e)
         abort(500)
->>>>>>> c61d2f63c370e20096ada0afd6733a9d4d1d1756
     return render_template('autoTest.html')
 
 
 @app.route("/report", methods=['GET'])
 def report():
-    return render_template('report.html')
+    return render_template('report.html'),'tst'
 
 
 @app.route('/progress')
@@ -574,7 +518,6 @@ def stock_search():
     try:
         if request.method == "POST":
             stock_num = request.form.get('stock_search')
-<<<<<<< HEAD
             stock_name = request.form.get('stock_search2')
             print(stock_num,stock_name)#股票號碼,股票名稱
             if stock_name not in  [None,'']:# 代表頁面 輸入名稱 , 先從DB 找 有沒有該名稱,在去yahoo找
@@ -640,14 +583,6 @@ def stock_search():
             print('現在時數: %s,禮拜:%s'%(now_hour,weekday))
             if now_hour > 14 or weekday in [6,7] :
                 print('大於最後成交時間或者六日,不再做更新股價')
-=======
-            print(stock_num)  # 股票號碼
-            stock.stock_select(stock.kerr_conn(), int(stock_num))  # 有股號後, 從mysql 抓出更多資訊
-            stock_detail = twstock.realtime.get(stock_num)  # 股票價位
-            print(stock_detail)
-            if len(stock.stock_detail2) == 0:  # 代表空的,正常是頁面輸入錯誤,或真的沒有
-                return "沒有該股票號碼: %s" % stock_num
->>>>>>> c61d2f63c370e20096ada0afd6733a9d4d1d1756
             else:
                 print(stock.stock_detail2)  # mysql抓出來的 資訊
                 stock_prize = (stock_detail['realtime']['latest_trade_price'])  # 股票 最新一筆成交價
@@ -666,10 +601,10 @@ def stock_search():
                         "高點": stock_detail['realtime']['high'], "低點": stock_detail['realtime']['low'],
                         "查詢時間": stock_detail['info']['time']}
 
-                frame = pd.DataFrame(data, index=[0])
-                print(frame)
-                # print(frame.to_html())
-                return frame.to_html()
+            frame = pd.DataFrame(data, index=[0])
+            print(frame)
+            # print(frame.to_html())
+            return frame.to_html()
         return render_template('stock.html')
     except requests.exceptions.Timeout as e:
         print(e)
@@ -677,9 +612,9 @@ def stock_search():
 
 @app.route('/stock_search2', methods=["POST"])
 def stock_search2():
-    stock_type = request.form.get('Revenue')
+    stock_type = request.form.getlist('Revenue')
     print(stock_type)
-    stock.stock_select2(stock.kerr_conn())  # select 出來
+    stock.stock_select2(stock.kerr_conn(),stock_type)  # select 出來
     stock_detail3 = stock.stock_detail3
     stock_num, stock_name, stock_prize, stock_curMonRev, stock_lastMonRev, stock_lastYearMonRev, stock_lastMonRate, stock_lastYearMonRate, stock_curYearRev, stock_lastYearRev, stock_lastYearRate, stock_memo = [], [], [], [], [], [], [], [], [], [], [], []
 
@@ -930,14 +865,8 @@ def user_acitve():  # 驗證第三方有校用戶
             envs = 1
         else:
             envs = 2
-<<<<<<< HEAD
         AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(envs),user,int(joint_type))
         #查詢用戶 userid
-=======
-
-        AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(envs), user)
-        # 查詢用戶 userid
->>>>>>> c61d2f63c370e20096ada0afd6733a9d4d1d1756
         userid = AutoTest.userid
         print(user, env)
         if len(userid) == 0:
@@ -1030,6 +959,7 @@ def user_acitve():  # 驗證第三方有校用戶
 def app_bet():
     user = request.form.get('user')
     env = request.form.get('env_type')
+    joint = request.form.get('joint_type')
     if env == 'dev02':
         envs = 0
     elif env == 'joy188':
@@ -1037,9 +967,13 @@ def app_bet():
     else:
         envs = 2
     AutoTest.Joy188Test.select_AppBet(AutoTest.Joy188Test.get_conn(envs), user)  # APP代理中心,銷量/盈虧
+    AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(envs),user,int(joint))#查詢用戶 userid
+    userid = AutoTest.userid
+    print(userid)
+    if len(userid) == 0:
+        return('此環境沒有該用戶')
     app_bet = AutoTest.app_bet  # 銷量/盈虧
     third_list = []  # 存放第三方列表
-    all_bet = []  # 總投注
     active_bet = []  # 第三方有效投注
     third_prize = []  # 第三方獎金
     third_report = []  # 第三方盈虧
@@ -1047,30 +981,28 @@ def app_bet():
     user_list = []
     for third in app_bet.keys():
         third_list.append(third)
-        all_bet.append(app_bet[third][0])
-        active_bet.append(app_bet[third][1])  # 有效銷量 為列表 1
-        third_prize.append(app_bet[third][2])
-        third_report.append(0 - (app_bet[third][3]))
+        active_bet.append(app_bet[third][0])  # 有效銷量 為列表 1
+        third_prize.append(app_bet[third][1])
+        third_report.append(app_bet[third][2])
         if third == "ALL":
             user_list.append(user)
         else:
             user_list.append("")
         if third == "ALL":
-            third_memo.append("用戶盈虧: 總獎金-總投注,盈虧<0: 用戶輸錢")
+            third_memo.append("用戶盈虧: 總獎金-有效銷量")
         elif third == 'CITY':
             third_memo.append("#後台投注紀錄盈虧值 為用戶角度")
         elif third == 'BBIN':
-            third_memo.append('獎金>投注: 用戶贏   #獎金不會小於0')
+            third_memo.append('#獎金不會小於0')
         else:  # 待後續確認每個第三方 規則
             third_memo.append('')
     # print(user_list,active_bet,third_prize,third_report)
 
-    data = {"用戶名": user_list, "總投注": all_bet, "有效銷量": active_bet, "總獎金": third_prize, "用戶盈虧": third_report,
+    data = {"用戶名": user_list,"有效銷量": active_bet, "總獎金": third_prize, "用戶盈虧": third_report,
             "備註": third_memo}
     frame = pd.DataFrame(data, index=third_list)
     print(frame)
     return frame.to_html()
-<<<<<<< HEAD
 @app.route('/url_token',methods=["POST","GET"])    
 def url_token():
     domain_keys ={ # url 為 keys,values 0 為預設連結, 1為 DB環境參數 , 2 為預設註冊按紐顯示 
@@ -1305,12 +1237,14 @@ def sun_user():# 太陽成用戶 找尋
             index_len = [0]
             AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(int(env)),user,int(domain))# 4.0 資料庫
             userid = AutoTest.userid
+            '''
             if len(userid) == 0:# 代表該4.0環境沒有該用戶
                 FF_memo = '無'
             else:
                 FF_memo = '有'
+            '''
             data = {'環境/類型':env_name+domain_type,'用戶名':user,'電話號碼':phone,'轉移狀態':tran_statu,'轉移時間':tran_time,
-            '4.0資料庫':FF_memo
+            #'4.0資料庫':FF_memo
             }
         else:# 找尋以轉移用戶, 資料會很多筆
             user = []
@@ -1336,11 +1270,6 @@ def sun_user():# 太陽成用戶 找尋
 
 
 @app.route('/error')#錯誤處理
-=======
-
-
-@app.route('/error')  # 錯誤處理
->>>>>>> c61d2f63c370e20096ada0afd6733a9d4d1d1756
 def error():
     abort(404)
 
