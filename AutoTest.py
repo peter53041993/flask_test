@@ -76,6 +76,15 @@ def return_red(red):  # 頁面是否紅包投注
     global red_type
     red_type = red
 
+def return_awardmode(awardmode):#頁面 選擇獎金模式 
+    global awardmode_type
+    awardmode_type = []
+    awardmode_type.append(awardmode)
+def return_money(money):#頁面選擇 金額模式
+    global money_type 
+    money_type = []
+    money_type.append(money)
+
 
 def get_rediskey(envs):  # env參數 決定是哪個環境
     redis_dict = {'ip': ['10.13.22.152', '10.6.1.82']}  # 0:dev,1:188
@@ -101,7 +110,6 @@ def get_token(envs, user):
 
 class Joy188Test(unittest.TestCase):
     u"PC接口測試"
-
     @staticmethod
     def md(password, param):
         m = hashlib.md5()
@@ -192,7 +200,7 @@ class Joy188Test(unittest.TestCase):
                 and come_from = '%s' order by transfer_date desc"%come_from
             elif type_ ==2:# 查詢 指定domain flask_test. sun_user2()
                 sql = "select a.domain,a.agent,b.url,a.register_display,a.status,a.note,b.days,b.registers  from  GLOBAL_DOMAIN_LIST a inner join user_url b on a.register_url_id = b.id  \
-                where note = '%s' order by a.status asc"%note
+                where note = '%s' order by a.status asc,b.registers desc"%note
             else:# 查詢 指定用戶
                 sql = "select * from sun_game_user where account = '%s' and come_from = '%s'"%(user,come_from)
             print(sql)
@@ -790,21 +798,33 @@ class Joy188Test(unittest.TestCase):
                     global mul
                     ball_type_post = Joy188Test.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
 
-                    awardmode = 1
-                    if i == 'btcctp':
-                        statu = 0
+                    if awardmode_type[0] == '0':# 頁面獎金玩法使用 預設
+                        awardmode =1
+                        if i in ['btcctp','xyft','btcffc']:
+                            awardmode = 2
+                        else:
+                            pass
+                    elif awardmode_type[0] == '1':#頁面使用一般
+                        awardmode = 1
+                    elif awardmode_type[0] == '2':#高獎金
+                        awardmode =2
+                    print('awardmode: %s'%awardmode)
 
-                        awardmode = 2
+                    if money_type[0] == '1':#使用元模式
                         moneyunit = 1
-                        mul = Joy188Test.random_mul(1)  # 不支援倍數,所以random參數為1
+                    elif money_type[0] == '2':#使用角模式
+                        moneyunit = 0.1
+                    else:
+                        moneyunit = 0.01# 分模式
+                    if i  == 'btcctp':
+                        statu = 0
+                        #moneyunit = 1
+                        mul = Joy188Test.random_mul(1)#不支援倍數,所以random參數為1
                     elif i == 'bjkl8':
-                        mul = Joy188Test.random_mul(5)  # 北京快樂8
+                        mul = Joy188Test.random_mul(5)#北京快樂8
                     elif i == 'p5':
                         mul = Joy188Test.random_mul(5)
-
-                    elif i in ['btcffc', 'xyft']:
-                        awardmode = 2
-                    elif i in lottery_sb:  # 骰寶只支援  元模式
+                    elif i in lottery_sb:#骰寶只支援  元模式
                         moneyunit = 1
 
                     mul_ = (u'選擇倍數: %s' % mul)
@@ -2964,7 +2984,7 @@ class Joy188Test2(unittest.TestCase):
         cls.dr.quit()
 
 
-def suite_test(testcase, username, env, red):
+def suite_test(testcase,username,env,red,awardmode,money):
     global content
     env_config_ = Config.EnvConfig(env)
     env_app_config_ = Config.EnvConfigApp(env)
@@ -2981,6 +3001,8 @@ def suite_test(testcase, username, env, red):
     return_env(env_config_)  # 初始化環境參數
     return_env_app(env_app_config_)  # 初始化App環境參數
     return_red(red)
+    return_awardmode(awardmode)# 獎金玩法
+    return_money(money)# 元角分
     try:
         suite = unittest.TestSuite()
         # suite_pc = unittest.TestSuite()
