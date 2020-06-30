@@ -1,3 +1,4 @@
+import datetime
 import unittest
 from time import sleep
 
@@ -13,26 +14,65 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 import random
 
+import utils.Config
 from utils import Config, Logger
+from utils.Config import LotteryData
+
+
+def date_time():  # 給查詢 獎期to_date時間用, 今天時間
+    now = datetime.datetime.now()
+    year = now.year
+    month = now.month
+    day = now.day
+    format_day = '{:02d}'.format(day)
+    today_time = '%s-%s-%s' % (year, month, format_day)
+
+
+def get_order_code_web(conn, user, lottery):  # webdriver頁面投注產生定單
+    with conn.cursor() as cursor:
+        sql = "select order_code from game_order where userid in \
+        (select id from user_customer where account = '{user}' \
+        and order_time > to_date('{time}','YYYY-MM-DD')and lotteryid = {lottery_id})".format(user=user,
+                                                                                             time=date_time(),
+                                                                                             lottery_id=
+                                                                                                           LotteryData.lottery_dict[
+                                                                                                               lottery][
+                                                                                                               1])
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+
+        order_code = []
+        for i in rows:  # i 生成tuple
+            order_code.append(i[0])
+    conn.close()
+    return order_code
+
+
+def select_userUrl(conn, userid):
+    with conn.cursor() as cursor:
+        sql = "select url from user_url where url like '%{}%'".format(userid)
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        user_url = []
+
+        for i in rows:
+            user_url.append(i[0])
+    conn.close()
+    return user_url
 
 
 class IntegrationTestWeb(unittest.TestCase):
     u"瀏覽器功能測試"
-    envConfig = ""
-    user = ""
-    red_type = ""
-    logger = ""
-    dr = ""
-    password = ""
-    post_url = ""
-    em_url = ""
+    envConfig = None
+    user = None
+    red_type = None
+    logger = None
+    dr = None
+    password = None
+    post_url = None
+    em_url = None
 
-    def __init__(self, case, env, user, red_type):
-        super().__init__(case)
-        self.logger = Logger.create_logger(self.__class__.__name__)
-        self.envConfig = env
-        self.user = user
-        self.red_type = red_type
+    def setUp(self):
         try:
             if 'ChromeDriver' in locals() or 'ChromeDriver' in globals():
                 self.dr = webdriver.Chrome(chrome_options=Config.chrome_options)
@@ -41,6 +81,14 @@ class IntegrationTestWeb(unittest.TestCase):
         except Exception as e:
             from utils.TestTool import trace_log
             trace_log(e)
+
+    def __init__(self, case, env, user, red_type):
+        super().__init__(case)
+        if not self.logger:
+            self.logger = Logger.create_logger(r"\IntegrationTestWeb")
+        self.envConfig = env
+        self.user = user
+        self.red_type = red_type
 
     def login(self):
         self.password = self.envConfig.get_password()
@@ -85,8 +133,8 @@ class IntegrationTestWeb(unittest.TestCase):
                 self.LINK("关 闭").click()
             else:
                 self.ID(element1).click()
-        except WebDriverWait.driverException as e:
-            pass
+        except NoSuchElementException as e:
+            self.logger.error(e)
 
     def css_element(self, element1):  # 抓取css元素,判斷提示窗
         try:
@@ -97,12 +145,10 @@ class IntegrationTestWeb(unittest.TestCase):
                 self.CSS(element1).click()
             else:
                 self.CSS(element1).click()
-        except WebDriverWait.driverException as e:
-            pass
         except NoSuchElementException as e:
-            pass
-        except AttributeError:
-            pass
+            self.logger.error(e)
+        except AttributeError as e:
+            self.logger.error(e)
 
     def xpath_element(self, element1):  # 抓取xpath元素,判斷提示窗
 
@@ -113,10 +159,8 @@ class IntegrationTestWeb(unittest.TestCase):
                 self.XPATH(element1).click()
             else:
                 self.XPATH(element1).click()
-        except WebDriverWait.driverException as e:
-            pass
         except NoSuchElementException as e:
-            pass
+            self.logger.error(e)
 
     def link_element(self, element1):  # 抓取link_text元素,判斷提示窗
         try:
@@ -126,10 +170,8 @@ class IntegrationTestWeb(unittest.TestCase):
                 self.LINK(element1).click()
             else:
                 self.LINK(element1).click()
-        except WebDriverWait.driverException as e:
-            pass
         except NoSuchElementException as e:
-            pass
+            self.logger.error(e)
 
     def normal_type(self, game):  # 普通玩法元素
         global game_list, game_list2
@@ -303,6 +345,7 @@ class IntegrationTestWeb(unittest.TestCase):
                 print(c.text)
 
     def result_sl(self, element1, element2):
+        soup = ''
         for i in range(5):
             soup = BeautifulSoup(self.dr.page_source, 'lxml')
         a = soup.find_all('ul', {'class': 'program-chase-list program-chase-list-body'})
@@ -319,7 +362,7 @@ class IntegrationTestWeb(unittest.TestCase):
 
     def submit_message(self, lottery):  # 投注完的單號
         if '成功' in self.CLASS('pop-text').text:
-            order_code_web = Config.get_order_code_web(Config.get_conn(1), self.user, lottery)
+            order_code_web = get_order_code_web(utils.Config.get_conn(1), self.user, lottery)
             print("方案編號: %s" % order_code_web[-1])
         else:
             print('失敗')
@@ -796,10 +839,12 @@ class IntegrationTestWeb(unittest.TestCase):
             safe_pass = 'hsieh123'
         elif self.password == 'amberrd':
             safe_pass = 'kerr123'
+        else:
+            raise Exception('無對應安全密碼，請至test_applycenter新增')
 
-        userid = Config.select_user_id(Config.get_conn(self.envConfig.get_env_id()),
-                                       self.user)  # 找出用戶 Userid  , 在回傳給開戶連結
-        user_url = Config.select_userUrl(Config.get_conn(self.envConfig.get_env_id()), userid[0])  # 找出 開戶連結
+        userid = utils.Config.select_user_id(utils.Config.get_conn(self.envConfig.get_env_id()),
+                                             self.user)  # 找出用戶 Userid  , 在回傳給開戶連結
+        user_url = select_userUrl(utils.Config.get_conn(self.envConfig.get_env_id()), userid[0])  # 找出 開戶連結
 
         self.dr.get(self.post_url + '/register/?{}'.format(user_url[0]))  # 動待找尋 輸入用戶名的  開戶連結
         print(self.dr.title)
@@ -884,6 +929,5 @@ class IntegrationTestWeb(unittest.TestCase):
         else:
             print(u"數字貨幣綁定失敗")
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.dr.quit()
+    def tearDown(self):
+        self.dr.quit()

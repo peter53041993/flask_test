@@ -9,65 +9,90 @@ import random
 import requests
 import time
 
+import utils.Config
 from utils import Config, Logger
-from utils.Config import LotteryData
-from utils.Config import func_time
+from utils.TestTool import trace_log
+from utils.Config import LotteryData, func_time
+
 
 def get_rediskey(envs):  # env參數 決定是哪個環境
     redis_dict = {'ip': ['10.13.22.152', '10.6.1.82']}  # 0:dev,1:188
-    global r
     pool = redis.ConnectionPool(host=redis_dict['ip'][envs], port=6379)
-    r = redis.Redis(connection_pool=pool)
+    return redis.Redis(connection_pool=pool)
+
 
 def get_token(envs, user):
-    get_rediskey(envs)
-    global redis_
-    redis_ = r_keys = (r.keys('USER_TOKEN_%s*' % re.findall(r'[0-9]+|[a-z]+', user)[0]))
-    for i in r_keys:
-        if user in str(i):
-            user_keys = (str(i).replace("'", '')[1:])
+    redis_conn = get_rediskey(envs)
+    user_keys = ''
+    redis_keys = redis_conn.keys('USER_TOKEN_{}*'.format(re.findall(r'[0-9]+|[a-z]+', user)[0]))
+    for index in redis_keys:
+        if user in str(index):
+            user_keys = (str(index).replace("'", '')[1:])
+    if user_keys == '':
+        raise Exception('token 取得失敗')
 
-    user_dict = r.get(user_keys)
+    user_dict = redis_conn.get(user_keys)
     timestap = str(user_dict).split('timeOut')[1].split('"token"')[0][2:-4]  #
     token_time = time.localtime(int(timestap))
     print('token到期時間: %s-%s-%s %s:%s:%s' % (token_time.tm_year, token_time.tm_mon, token_time.tm_mday,
                                             token_time.tm_hour, token_time.tm_min, token_time.tm_sec))
 
+
+def get_order_code_iapi(conn, orderid):  # 從iapi投注的orderid對應出 order_code 方案編號
+    with conn.cursor() as cursor:
+        sql = "select order_code from game_order where id in (select orderid from game_slip where orderid = '{}')".format(
+            orderid)
+
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+
+        order_code = []
+        for i in rows:  # i 生成tuple
+            order_code.append(i[0])
+    conn.close()
+    return order_code
+
+
+loggerApiTest = Logger.create_logger(r"\ApiTestApp")
+
 class ApiTestApp(unittest.TestCase):
     u'APP接口測試'
-    envConfig = ""
-    user_g = ""
-    red_type = ""
-    logger = ""
+    envConfig = None
+    user = None
+    red_type = None
+    # loggerApiTest = None
+    userAgent = Config.UserAgent.PC.value
+    header = None
 
-    def __init__(self, case, env, user, red_type):
-        super().__init__(case)
-        self.logger = Logger.create_logger(self.__class__.__name__)
-        self.envConfig = env
-        self.user_g = user
-        self.red_type = red_type
+    def setUp(self):
+        loggerApiTest.info('ApiTestApp setUp : {}'.format(self._testMethodName))
+
+    def __init__(self, case_, env_, user_, red_type_):
+        super().__init__(case_)
+        # if not loggerApiTest:
+        #     loggerApiTest = loggerApiTest.create_loggerApiTest(r"\ApiTestApp")
+        self.envConfig = env_
+        self.user = user_
+        self.red_type = red_type_
+        self.header = {
+            'User-Agent': self.userAgent,
+            'Content-Type': 'application/json'
+        }
+        loggerApiTest.info('ApiTestApp __init__.')
 
     @func_time
     def test_AppLogin(self):
         u"APP登入測試"
-        global userAgent
-        userAgent = Config.UserAgent.PC.value
-        account_ = {self.user_g: '輸入的用戶名'}
+        account_ = {self.user: '輸入的用戶名'}
         global token_, userid_
         token_ = {}
         userid_ = {}
-        global header
-        header = {
-            'User-Agent': userAgent,
-            'Content-Type': 'application/json'
-        }
 
         # 判斷用戶是dev或188,  uuid和loginpasssource為固定值
-        global envs, env, domain_url  # envs : DB環境 用, env 環境 url ,request url 用, domin_url APP開戶 參數用
+        global env_id, env_iapi  # envs : DB環境 用, env 環境 url ,request url 用, domin_url APP開戶 參數用
 
-        env = self.envConfig.get_iapi()
-        domain_url = self.envConfig.get_domain()
-        envs = self.envConfig.get_env_id()
+        env_iapi = self.envConfig.get_iapi()
+        env_id = self.envConfig.get_env_id()
         uuid = self.envConfig.get_uuid()
         loginpasssource = self.envConfig.get_login_pass_source()
         jointVenture = self.envConfig.get_joint_venture()
@@ -96,7 +121,7 @@ class ApiTestApp(unittest.TestCase):
             print("Joy188Test3 Start")
             print(login_data)
             try:
-                r = requests.post(env + 'front/login', data=json.dumps(login_data), headers=header)
+                r = requests.post(env_iapi + 'front/login', data=json.dumps(login_data), headers=self.header)
                 # print(r.json())
                 token = r.json()['body']['result']['token']
                 userid = r.json()['body']['result']['userid']
@@ -106,18 +131,17 @@ class ApiTestApp(unittest.TestCase):
                 print("Token: %s" % token)
                 print("Userid: %s" % userid)
             except ValueError as e:
-                print(e)
-                print(u"登入失敗")
-                break
+                trace_log(e)
+                raise Exception(u"登入失敗")
             # user_list.setdefault(userid,token)
-        get_token(envs, self.user_g)
+        get_token(env_id, self.user)
 
     @func_time
     def test_AppSubmit(self):
         u"APP投注"
         global user
 
-        user = self.user_g  # 業面用戶登入
+        user = self.user  # 業面用戶登入
         t = time.strftime('%Y%m%d %H:%M:%S')
         print(u'投注帳號: %s, 現在時間: %s' % (user, t))
         try:
@@ -137,14 +161,14 @@ class ApiTestApp(unittest.TestCase):
                 else:
                     lotteryid = LotteryData.lottery_dict[i][1]
 
-                    self.select_issue(Config.get_conn(envs), lotteryid)  # 目前彩種的獎棋
+                    self.select_issue(utils.Config.get_conn(env_id), lotteryid)  # 目前彩種的獎棋
                     # print(issue,issueName)
                     now = int(time.time() * 1000)  # 時間戳
                     ball_type_post = self.game_type(i)  # 玩法和內容,0為玩法名稱, 1為投注內容
                     methodid = ball_type_post[0].replace('.', '')  # ex: housan.zhuiam.fushi , 把.去掉
 
                     # 找出對應的玩法id
-                    bet_type = self.select_betTypeCode(Config.get_conn(envs), lotteryid, methodid)
+                    bet_type = self.select_betTypeCode(utils.Config.get_conn(env_id), lotteryid, methodid)
 
                     data_ = {"head":
                                  {"sessionId": token_[user]},
@@ -161,7 +185,8 @@ class ApiTestApp(unittest.TestCase):
                                                 "userIp": 168627247, "channelId": 402, "traceStop": 0}}}
                     session = requests.session()
 
-                    r = session.post(env + 'game/buy', data=json.dumps(data_), headers=header)
+                    r = session.post(self.envConfig.get_post_url() + 'game/buy', data=json.dumps(data_),
+                                     headers=self.header)
 
                     if r.json()['head']['status'] == 0:  # status0 為投注成功
                         print('{} 投注成功'.format(LotteryData.lottery_dict[i][0]))
@@ -170,7 +195,7 @@ class ApiTestApp(unittest.TestCase):
                         print("投注金額 : {}, 投注倍數: {}".format(2 * mul, mul))  # mul 為game_type方法對甕倍數
                         # print(r.json())
                         orderid = (r.json()['body']['result']['orderId'])
-                        order_code = Config.get_order_code_iapi(Config.get_conn(envs), orderid)  # 找出對應ordercode
+                        order_code = get_order_code_iapi(utils.Config.get_conn(env_id), orderid)  # 找出對應ordercode
                         # print('orderid: %s'%orderid)
                         print(u'投注單號: {}'.format(order_code[-1]))
                         print('------------------------------')
@@ -213,32 +238,32 @@ class ApiTestApp(unittest.TestCase):
         global mul
         if test == 'wuxing':
 
-            ball = [str(Config.random_mul(9)) for i in range(5)]  # 五星都是數值
-            mul = Config.random_mul(2)
+            ball = [str(utils.Config.random_mul(9)) for i in range(5)]  # 五星都是數值
+            mul = utils.Config.random_mul(2)
         elif test == 'sixing':
-            ball = ['-' if i == 0 else str(Config.random_mul(9)) for i in range(5)]  # 第一個為-
-            mul = Config.random_mul(22)
+            ball = ['-' if i == 0 else str(utils.Config.random_mul(9)) for i in range(5)]  # 第一個為-
+            mul = utils.Config.random_mul(22)
         elif test == 'housan':
-            ball = ['-' if i in [0, 1] else str(Config.random_mul(9)) for i in range(5)]  # 第1和2為-
-            mul = Config.random_mul(222)
+            ball = ['-' if i in [0, 1] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第1和2為-
+            mul = utils.Config.random_mul(222)
         elif test == 'qiansan':
-            ball = ['-' if i in [3, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第4和5為-
-            mul = Config.random_mul(222)
+            ball = ['-' if i in [3, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第4和5為-
+            mul = utils.Config.random_mul(222)
         elif test == 'zhongsan':
-            ball = ['-' if i in [0, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第2,3,4為-
-            mul = Config.random_mul(222)
+            ball = ['-' if i in [0, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第2,3,4為-
+            mul = utils.Config.random_mul(222)
         elif test == 'houer':
-            ball = ['-' if i in [0, 1, 2] else str(Config.random_mul(9)) for i in range(5)]  # 第1,2,3為-
-            mul = Config.random_mul(2222)
+            ball = ['-' if i in [0, 1, 2] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第1,2,3為-
+            mul = utils.Config.random_mul(2222)
         elif test == 'qianer':
-            ball = ['-' if i in [2, 3, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第3,4,5為-
-            mul = Config.random_mul(2222)
+            ball = ['-' if i in [2, 3, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第3,4,5為-
+            mul = utils.Config.random_mul(2222)
         elif test == 'yixing':  # 五個號碼,只有一個隨機數值
-            ran = Config.random_mul(4)
-            ball = ['-' if i != ran else str(Config.random_mul(9)) for i in range(5)]
-            mul = Config.random_mul(2222)
+            ran = utils.Config.random_mul(4)
+            ball = ['-' if i != ran else str(utils.Config.random_mul(9)) for i in range(5)]
+            mul = utils.Config.random_mul(2222)
         else:
-            mul = Config.random_mul(1)
+            mul = utils.Config.random_mul(1)
         a = (",".join(ball))
         return a
 
@@ -258,7 +283,7 @@ class ApiTestApp(unittest.TestCase):
             'renxuan7': u'任選7'
         }
 
-        group_ = Config.play_type()  # 建立 個隨機的goup玩法 ex: wuxing,目前先給時彩系列使用
+        group_ = utils.Config.play_type()  # 建立 個隨機的goup玩法 ex: wuxing,目前先給時彩系列使用
         # set_ = game_set.keys()[0]#ex: zhixuan
         # method_ = game_method.keys()[0]# ex: fushi
         play_ = ''
@@ -341,8 +366,8 @@ class ApiTestApp(unittest.TestCase):
 
     def test_AppOpenLink(self):
         '''APP開戶/註冊'''
-        user = self.user_g
-        if envs == 1:  # 188 環境
+        user = self.user
+        if env_id == 1:  # 188 環境
             data_ = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": "",
                               "sessionId": token_[user]}, "body": {"pager": {"startNo": "1", "endNo": "99999"},
                                                                    "param": {"CGISESSID": token_[user], "type": 1,
@@ -811,8 +836,11 @@ class ApiTestApp(unittest.TestCase):
                      "lotterySeriesName": "\\u9ad8\\u9891\\u5f69\\u7cfb", "awardGroupId": 238,
                      "awardName": "\\u5956\\u91d1\\u7ec41800", "directLimitRet": 980}], "memo": "", "setUp": 1,
                           "needContact": "N", "authenCellphone": "N", "showRegisterBtn": "Y"}}}
-        r = requests.post(env + 'information/doRetSetting', data=json.dumps(data_), headers=header)  # 儲存連結反點,生成連結
-        # print(r.json())
+        loggerApiTest.info('link = {}'.format(self.envConfig.get_post_url() + '/information/doRetSetting'))
+        r = requests.post(self.envConfig.get_post_url() + '/information/doRetSetting', data=json.dumps(data_),
+                          headers=self.header)  # 儲存連結反點,生成連結
+        print(r.content)
+        loggerApiTest.info(r.content)
         if r.json()['head']['status'] == 0:
             print('開戶連結創立成功')
             data_ = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": "",
@@ -820,8 +848,8 @@ class ApiTestApp(unittest.TestCase):
                      "body": {"param": {"CGISESSID": token_[user], "app_id": "10", "come_from": "4",
                                         "appname": "1"}, "pager": {"startNo": "", "endNo": ""}}}
 
-            r = requests.post(env + 'information/openLinkList', data=json.dumps(data_),
-                              headers=header)  # 找出開戶連結后的註冊id,回傳註冊
+            r = requests.post(self.envConfig.get_post_url() + 'information/openLinkList', data=json.dumps(data_),
+                              headers=self.header)  # 找出開戶連結后的註冊id,回傳註冊
             # print(r.json())
             result = r.json()['body']['result']['list'][0]
             global regCode, token, exp, pid
@@ -834,8 +862,9 @@ class ApiTestApp(unittest.TestCase):
             print("註冊連結: %s, \n註冊碼: %s, 建置於: %s" % (result['urlstring'], result['regCode'], result['start']))
         else:
             print('創立失敗')
+            raise Exception('創立失敗')
         user_random = random.randint(1, 100000)  # 隨機生成 頁面輸入 用戶名 + 隨機數 的下級
-        new_user = self.user_g + str(user_random)
+        new_user = self.user + str(user_random)
         data_ = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": ""},
                  # 開戶data
                  "body": {
@@ -851,7 +880,7 @@ class ApiTestApp(unittest.TestCase):
         else:  # 歡樂棋牌
             data_['body']['param']['jointVenture'] = 2
 
-        r = requests.post(env + 'user/register', data=json.dumps(data_), headers=header)
+        r = requests.post(self.envConfig.get_post_url() + 'user/register', data=json.dumps(data_), headers=self.header)
         if r.json()['head']['status'] == 0:
             print('%s 註冊成功' % new_user)
         else:
@@ -875,25 +904,23 @@ class ApiTestApp(unittest.TestCase):
         return data
 
     def APP_SessionPost(self, third, url, post_data):  # 共用 session post方式 (Pc)
-        header = {
-            'User-Agent': userAgent,
+        self.header = {
+            'User-Agent': self.userAgent,
             'Content-Type': 'application/json; charset=UTF-8',
         }
         try:
             session = requests.Session()
-            # r = requests.post(env+'/%s/balance'%third,data=json.dumps(data_),headers=header)
-            # print(env)
-            r = session.post(env + '/%s/%s' % (third, url), headers=header, data=json.dumps(post_data))
+            response = session.post(env_iapi + '/%s/%s' % (third, url), headers=self.header, data=json.dumps(post_data))
 
             if 'balance' in url:
-                balance = r.json()['body']['result']['balance']
-                print('%s 的餘額為: %s' % (third, balance))
+                balance = response.json()['body']['result']['balance']
+                print('{} 的餘額為: {}'.format(third, balance))
             elif 'getBalance' in url:
-                balance = r.json()['body']['result']['balance']
-                print('4.0餘額: %s' % balance)
+                balance = response.json()['body']['result']['balance']
+                print('4.0餘額: '.format(balance))
 
         except requests.exceptions.ConnectionError:
-            print(u'連線有問題,請稍等')
+            raise Exception(u'連線有問題,請稍等')
 
     def select_betTypeCode(self, conn, lotteryid, game_type):  # 從game_type 去對應玩法的數字,給app投注使用
         with conn.cursor() as cursor:
@@ -913,14 +940,14 @@ class ApiTestApp(unittest.TestCase):
     def test_AppBalance(self):
         '''APP 4.0/第三方餘額'''
         threads = []
-        user = self.user_g
+        user = self.user
         data_ = self.balance_data(user)
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
         print('帳號: %s' % user)
         for third in third_list:
             if third == 'shaba':
                 third = 'sb'
-            # r = requests.post(env+'/%s/balance'%third,data=json.dumps(data_),headers=header)
+            # r = requests.post(env+'/%s/balance'%third,data=json.dumps(data_),headers=self.header)
             t = threading.Thread(target=self.APP_SessionPost, args=(third, 'balance', data_))
             threads.append(t)
         t = threading.Thread(target=self.APP_SessionPost, args=('information', 'getBalance', data_))
@@ -933,7 +960,7 @@ class ApiTestApp(unittest.TestCase):
             # balance = r.json()['body']['result']['balance']
             # print('%s 的餘額為: %s'%(third,balance))
         '''
-        r = requests.post(env+'/information/getBalance',data=json.dumps(data_),headers=header)
+        r = requests.post(env+'/information/getBalance',data=json.dumps(data_),headers=self.header)
         balance =  r.json()['body']['result']['balance']
         print('4.0餘額: %s'%balance)
         '''
@@ -941,67 +968,75 @@ class ApiTestApp(unittest.TestCase):
     @func_time
     def test_ApptransferIn(self):
         '''APP轉入'''
-        user = self.user_g
-        data_ = self.amount_data(user)
-        print('帳號: %s' % user)
+        data_ = self.amount_data(self.user)
+        print('帳號: {}'.format(self.user))
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
         for third in third_list:
+            loggerApiTest.info('First.  for third in third_list:')
             tran_url = 'Thirdly'  # gns規則不同
             if third == 'gns':
                 tran_url = 'Gns'
-            r = requests.post(env + '/%s/transferTo%s' % (third, tran_url), data=json.dumps(data_), headers=header)
-            # print(r.json())#列印出來
-            status = r.json()['body']['result']['status']
+            response = requests.post(env_iapi + '/%s/transferTo%s' % (third, tran_url), data=json.dumps(data_),
+                                     headers=self.header)
+            loggerApiTest.info('test_ApptransferIn third = {}, response = {}'.format(third, response.content))
+            status = response.json()['body']['result']['status']
             if status == 'Y':
-                print('轉入%s金額 10' % third)
+                print('轉入{}金額 10'.format(third))
             else:
-                print('%s 轉入失敗' % third)
+                raise Exception('{} 轉入失敗'.format(third))
+
         for third in third_list:
+            loggerApiTest.info('Second.  for third in third_list:')
             if third == 'sb':
                 third = 'shaba'
-            tran_result = Config.thirdly_tran(Config.my_con(evn=envs, third=third), tran_type=0, third=third,
-                                              user=user)  # 先確認資料轉帳傳泰
+            tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=env_id, third=third), tran_type=0,
+                                                    third=third,
+                                                    user=self.user)  # 先確認資料轉帳狀態
             count = 0
-            # print(status_list)
-            while tran_result[1] != '2' and count != 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                tran_result = Config.thirdly_tran(Config.my_con(evn=envs, third=third), tran_type=0, third=third,
-                                                  user=user)  #
+            while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
+                tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=env_id, third=third), tran_type=0,
+                                                        third=third,
+                                                        user=self.user)  #
                 sleep(0.5)
                 count += 1
                 if count == 15:
-                    print('轉帳狀態失敗')  # 如果跑道9次  需確認
-                    # pass
-            print('%s ,sn 單號: %s' % (third, tran_result[0]))
+                    raise Exception('轉帳狀態失敗 : {}'.format(third))  # 如果跑道9次  需確認
+            print('{} ,sn 單號: {}'.format(third, tran_result[0]))
         self.test_AppBalance()
 
     @func_time
     def test_ApptransferOut(self):
         '''APP轉出'''
-        user = self.user_g
-        data_ = self.amount_data(user)
-        print('帳號: %s' % user)
+        data_ = self.amount_data(self.user)
+        print('帳號: {}'.format(self.user))
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
         for third in third_list:  # PC 沙巴 是 shaba , iapi 是 sb
-            r = requests.post(env + '/%s/transferToFF' % third, data=json.dumps(data_), headers=header)
-            # print(r.json())
-            status = r.json()['body']['result']['status']
+            response = requests.post(env_iapi + '/%s/transferToFF' % third, data=json.dumps(data_), headers=self.header)
+            loggerApiTest.info('test_ApptransferOut : third = {}, response = {}'.format(third, response.content))
+            status = response.json()['body']['result']['status']
             if status == 'Y':
-                print('%s轉出金額 10' % third)
+                print('{} 轉出金額 10'.format(third))
             else:
-                print('%s 轉出失敗' % third)
+                raise Exception('{} 轉出失敗'.format(third))
         for third in third_list:
             if third == 'sb':
                 third = 'shaba'
-            tran_result = Config.thirdly_tran(Config.my_con(evn=envs, third=third), tran_type=1, third=third,
-                                              user=user)  # 先確認資料轉帳傳泰
+            tran_result = Config.thirdly_tran(Config.my_con(evn=env_id, third=third), tran_type=1,
+                                              third=third,
+                                              user=self.user)  # 先確認資料轉帳傳泰
             count = 0
-            while tran_result[1] != '2' and count != 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                tran_result = Config.thirdly_tran(Config.my_con(evn=envs, third=third), tran_type=1, third=third,
-                                                  user=user)  #
+            while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
+                tran_result = Config.thirdly_tran(Config.my_con(evn=env_id, third=third), tran_type=1,
+                                                  third=third,
+                                                  user=self.user)  #
+                loggerApiTest.info('tran_result : {}'.format(tran_result))
                 sleep(1)
                 count += 1
                 if count == 15:
-                    print('轉帳狀態失敗')  # 如果跑道9次  需確認
+                    raise Exception('轉帳狀態失敗')  # 驗證超出次數
 
-            print('%s, sn 單號: %s' % (third, tran_result[0]))
+            print('{}, sn 單號: {}'.format(third, tran_result[0]))
         self.test_AppBalance()
+
+    def tearDown(self) -> None:
+        pass
