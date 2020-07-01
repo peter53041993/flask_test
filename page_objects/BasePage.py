@@ -1,4 +1,8 @@
-import time
+import random
+from time import sleep
+
+from selenium.webdriver import ActionChains
+
 from utils.Logger import create_logger
 
 from selenium import webdriver
@@ -12,9 +16,7 @@ from utils import Config
 from utils import TestTool
 from utils.TestTool import trace_log
 
-
-def sleep(sec):
-    time.sleep(sec)
+logger = None
 
 
 class GameNames(Enum):
@@ -37,17 +39,18 @@ class GameNames(Enum):
 
 
 class BasePage:
-    global logger
     logger = create_logger(r'\BasePage')
     driver = None
     envConfig = None
     link = None
+    user = None
+    password = None
 
-    def __init__(self, env, driver=None):
-        if type(env) is Config.EnvConfig:
-            self.envConfig = env
+    def __init__(self, env_domain, driver=None):
+        if type(env_domain) is Config.EnvConfig:
+            self.envConfig = env_domain
         else:
-            self.envConfig = Config.EnvConfig(env)
+            self.envConfig = Config.EnvConfig(env_domain)
         if driver is None:
             self.get_driver()
         else:
@@ -84,39 +87,54 @@ class BasePage:
                 tempElements += element
         return tempElements
 
-    def jump_to(self, names):
+    def dir_jump_to(self, names):
         if names == GameNames.JLFFC:
-            return BetPage_Jlffc(self.envConfig, self.driver)
+            return BetPage_Jlffc(self)
         elif names == GameNames.CQSSC:
-            return BetPage_Cqssc(self.envConfig, self.driver)
+            return BetPage_Cqssc(self)
         elif names == GameNames.FFC360:
-            return BetPage_360ffc(self.envConfig, self.driver)
+            return BetPage_360ffc(self)
         elif names == GameNames.BTCFFC:
-            return BetPage_Btcffc(self.envConfig, self.driver)
+            return BetPage_Btcffc(self)
         elif names == GameNames.F5C360:
-            return BetPage_3605fc(self.envConfig, self.driver)
+            return BetPage_3605fc(self)
         elif names == GameNames.FHCQC:
-            return BetPage_Fhcqc(self.envConfig, self.driver)
+            return BetPage_Fhcqc(self)
         elif names == GameNames.FHJLSSC:
-            return BetPage_Fhjlssc(self.envConfig, self.driver)
+            return BetPage_Fhjlssc(self)
         elif names == GameNames.HLJSSC:
-            return BetPage_Hljssc(self.envConfig, self.driver)
+            return BetPage_Hljssc(self)
         elif names == GameNames.LLSSC:
-            return BetPage_Llssc(self.envConfig, self.driver)
+            return BetPage_Llssc(self)
         elif names == GameNames.FHXJC:
-            return BetPage_Fhxjc(self.envConfig, self.driver)
+            return BetPage_Fhxjc(self)
         elif names == GameNames.SHSSL:
-            return BetPage_Shssl(self.envConfig, self.driver)
+            return BetPage_Shssl(self)
         elif names == GameNames.SLMMC:
-            return BetPage_Slmmc(self.envConfig, self.driver)
+            return BetPage_Slmmc(self)
         elif names == GameNames.TJSSC:
-            return BetPage_Tjssc(self.envConfig, self.driver)
+            return BetPage_Tjssc(self)
         elif names == GameNames.TXFFC:
-            return BetPage_Txffc(self.envConfig, self.driver)
+            return BetPage_Txffc(self)
         elif names == GameNames.V3D:
-            return BetPage_V3d(self.envConfig, self.driver)
+            return BetPage_V3d(self)
         elif names == GameNames.XJSSC:
-            return BetPage_Xjssc(self.envConfig, self.driver)
+            return BetPage_Xjssc(self)
+
+    def register(self):
+        user_id = Config.get_sql_exec(self.envConfig.get_env_id(),
+                                      "select id from user_customer where account = '{}'".format(self.user))
+        self.link = Config.get_sql_exec(self.envConfig.get_env_id(),
+                                        "select url from user_url where url like '%{}%'".format(user_id))
+        self.driver.get(self.envConfig.get_post_url() + '/register/?{}'.format(self.link[0]))
+        _random = random.randint(1, 100000)
+        new_user = self.user + _random
+        self.driver.find_element_by_id('J-input-username').send_key(new_user)
+        self.driver.find_element_by_id('J-input-password').send_key(self.password)
+        self.driver.find_element_by_id('J-input-password2').send_key(self.password)
+        self.driver.find_element_by_id('J-button-submit').click()
+        sleep(5)
+        self.user = new_user
 
 
 class BaseBetPage(BasePage):
@@ -257,13 +275,61 @@ class BaseBetPage(BasePage):
             pass
 
 
+class AppCenterPage(BasePage):
+    """安全中心"""
+
+    class buttons(Enum):
+        change_password = 'changePWBtn'
+
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
+        self.link = '/safepersonal/safecenter'
+        self.go_to()
+
+    def jump_to(self, button):
+        """
+        :param button: self.buttons(Enum)
+        :return: other page of module
+        """
+        if button == self.buttons.change_password:
+            self.driver.find_element_by_id(self.buttons.change_password.value).click()
+            return ChangePasswordPage(self)
+        else:
+            raise Exception('無對應按鈕')
+
+
+class ChangePasswordPage(BasePage):
+    """修改密碼頁"""
+
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
+        self.link = '/safepersonal/safecodeedit'
+        self.go_to()
+        if self.envConfig.get_env_id() == 0:
+            self.safe_pass = 'hsieh123'
+        elif self.envConfig.get_env_id() == 1:
+            self.safe_pass = 'kerr123'
+        else:
+            raise Exception('無對應安全密碼，請至test_applycenter新增')
+
+    def change_password(self, password):
+        expected = '恭喜您密码修改成功，请重新登录。'
+        self.driver.find_element_by_id('J-password').send_key(password)
+        self.driver.find_element_by_id('J-password-new').send_key(password)
+        self.driver.find_element_by_id('J-password-new2').send_key(password)
+        self.driver.find_element_by_id('J-button-submit-password').click()
+        assert self.driver.find_element_by_xpath("//*[@id='Idivs']//*[@class='pop-text']").text == expected
+        self.driver.find_element_by_id('closeTip1').click()
+        return LoginPage(self.envConfig.get_domain())
+
+
 class BetPage_Cqssc(BaseBetPage):
     """
     重慶時時彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/cqssc'
         self.go_to()
         self.check_guide()
@@ -283,8 +349,8 @@ class BetPage_Xjssc(BaseBetPage):
     新疆時時彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/xjssc'
         self.go_to()
         self.check_guide()
@@ -304,8 +370,8 @@ class BetPage_Hljssc(BaseBetPage):
     黑龍江時時彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/hljssc'
         self.go_to()
         self.check_guide()
@@ -325,8 +391,8 @@ class BetPage_Shssl(BaseBetPage):
     上海時時樂彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/shssl'
         self.go_to()
         self.check_prize_select_popup()
@@ -338,8 +404,8 @@ class BetPage_Tjssc(BaseBetPage):
     天津時時彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/tjssc'
         self.go_to()
         self.check_prize_select_popup()
@@ -351,8 +417,8 @@ class BetPage_Txffc(BaseBetPage):
     騰訊分分彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/txffc'
         self.go_to()
         self.check_prize_select_popup()
@@ -364,8 +430,8 @@ class BetPage_Fhjlssc(BaseBetPage):
     吉利時時彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/fhjlssc'
         self.go_to()
         self.check_guide()
@@ -385,8 +451,8 @@ class BetPage_Fhcqc(BaseBetPage):
     重慶全球彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/fhcqc'
         self.go_to()
         self.check_guide()
@@ -406,8 +472,8 @@ class BetPage_Fhxjc(BaseBetPage):
     新疆全球彩彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/fhxjc'
         self.go_to()
         self.check_prize_select_popup()
@@ -419,8 +485,8 @@ class BetPage_3605fc(BaseBetPage):
     360五分彩彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/3605fc'
         self.go_to()
         self.check_prize_select_popup()
@@ -432,9 +498,9 @@ class BetPage_V3d(BaseBetPage):
     勝利3D投注頁
     """
 
-    def __init__(self, env, driver):
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.currentMethodsXpath = "//*[@id='change']/ul[2]/li"
-        super().__init__(env, driver)
         self.link = '/gameBet/v3d'
         self.go_to()
         self.check_prize_select_popup()
@@ -445,8 +511,8 @@ class BetPage_Slmmc(BaseBetPage):
     順利秒秒彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/slmmc'
         self.go_to()
         self.check_prize_select_popup()
@@ -469,8 +535,8 @@ class BetPage_Btcffc(BaseBetPage):
     比特幣分分彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/btcffc'
         self.go_to()
         self.check_prize_select_popup()
@@ -482,8 +548,8 @@ class BetPage_Llssc(BaseBetPage):
     樂利時時彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/llssc'
         self.go_to()
         self.check_prize_select_popup()
@@ -495,8 +561,8 @@ class BetPage_360ffc(BaseBetPage):
     360分分彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/360ffc'
         self.go_to()
         self.check_prize_select_popup()
@@ -508,8 +574,8 @@ class BetPage_Jlffc(BaseBetPage):
     吉利分分彩投注頁
     """
 
-    def __init__(self, env, driver):
-        super().__init__(env, driver)
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
         self.link = '/gameBet/jlffc'
         self.go_to()
         self.check_prize_select_popup()
@@ -527,16 +593,53 @@ class LoginPage(BasePage):
     id_button_save_login = 'safeLogin'
     xpath_button_forget_password = '//*[@id="J-button-submitDev"]/li[1]/a'
 
-    def __init__(self, env):
-        super().__init__(env)
+    def __init__(self, env_domain):
+        super().__init__(env_domain)
         self.link = "/login"
         self.go_to()
 
-    def login(self, account, password):
-        self.driver.find_element_by_id(self.id_input_account).send_keys(account)
+    def login(self, user, password):
+        self.user = user
+        self.password = password
+        self.driver.find_element_by_id(self.id_input_account).send_keys(user)
         self.driver.find_element_by_id(self.id_input_password).send_keys(password)
         self.driver.find_element_by_id(self.id_button_login).click()
         sleep(3)
+        return MainPage(self)
 
     def to_game_page(self):
-        return BetPage_Cqssc(self.envConfig, self.driver)
+        return BetPage_Cqssc(self)
+
+
+class MainPage(BasePage):
+    """首頁"""
+
+    i_user_header = 'headerUsername'
+
+    class buttons_personal(Enum):
+        bet_record = 'betRecord'
+        account_detail = 'accountDetail'
+        proxy_center = 'proxyCenter'
+        query_report = 'queryReport'
+        front_score_mall = 'frontScoreMall'
+        app_center = 'safeCenter'
+
+    def __init__(self, last_page):
+        super().__init__(last_page.envConfig, last_page.driver)
+        self.link = "/"
+
+    def jump_to(self, page):
+        """
+        點擊對應連結按鈕
+        :param page: self.Personal / self.Bet
+        :return: 對應頁面 Class
+        """
+        if page in self.buttons_personal:
+            ActionChains(self.driver).move_to_element(self.driver.find_element_by_id(self.i_user_header)).perform()
+            self.driver.find_element_by_id(page.value).click()
+            if page == self.buttons_personal.app_center:
+                return AppCenterPage(self)
+            else:
+                raise Exception('POM尚未建立')
+        else:
+            raise Exception('無對應對象')

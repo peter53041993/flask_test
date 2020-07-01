@@ -1,3 +1,4 @@
+import os
 import random
 import time
 
@@ -196,6 +197,18 @@ def get_conn(env):  # 連結數據庫 env 0: dev02 , 1:188
     conn = cx_Oracle.connect(username, oracle_['password'][env], oracle_['ip'][env] + ':1521/' +
                              oracle_['sid'][env] + service_name)
     return conn
+
+
+def get_sql_exec(env, sql):
+    cursor = get_conn(env).cursor()
+    cursor.execute(sql)
+    rows = cursor.fetchall()
+    result = []
+
+    for i in rows:
+        result.append(i[0])
+    cursor.close()
+    return result
 
 
 def select_user_id(conn, account_):
