@@ -9,29 +9,28 @@ import requests
 import time
 
 import utils.Config
-from utils import Config
-from utils import Logger
+from utils import Config, Logger
 from utils.Config import LotteryData, func_time
 
+logger = Logger.create_logger(r"\AutoTest")
 
 class ApiTestPC(unittest.TestCase):
     u"PC接口測試"
     envConfig = None
     user_g = None
     red_type = None
-    logger = None
 
     def setUp(self):
-        self.logger.info('ApiTestPC setUp')
+        logger.info('ApiTestPC setUp : {}'.format(self._testMethodName))
 
     def __init__(self, case, env, user, red_type):
         super().__init__(case)
-        if not self.logger:
-            self.logger = Logger.create_logger(r"\ApiTestPC")
+        # if not logger:
+        #     logger = Logger.create_logger(r"\ApiTestPC")
         self.envConfig = env
         self.user_g = user
         self.red_type = red_type
-        self.logger.info('ApiTestPC __init__.')
+        logger.info('ApiTestPC __init__.')
 
     def md(self, password, param):
         m = hashlib.md5()
@@ -386,7 +385,7 @@ class ApiTestPC(unittest.TestCase):
         return test_dicts[num][0], test_dicts[num][1], play_
 
     def req_post_submit(self, account, lottery, data_, moneyunit, awardmode, play_):
-        self.logger.info(
+        logger.info(
             'account: {}, lottery: {}, data_: {}, moneyunit: {}, awardmode: {}, play_ {}'.format(account, lottery,
                                                                                                  data_, moneyunit,
                                                                                                  awardmode, play_))
@@ -901,12 +900,12 @@ class ApiTestPC(unittest.TestCase):
         r = session.post(admin_url + '/redAdmin/redEnvelopeConfirm',  # 後台審核街口
                          data=json.dumps(data), headers=header)
         try:
-            self.logger.info('r.json() : {}'.format(r.json()))
+            logger.info('r.json() : {}'.format(r.json()))
             if r.json()['status'] == 0:
                 print('審核通過')
         except Exception as e:
             print(r.json()['errorMsg'])
-            self.logger.error(e)
+            logger.error(e)
         self.select_RedBal(utils.Config.get_conn(envs), user)
         print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
 

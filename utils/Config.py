@@ -16,7 +16,7 @@ log_folder_path = project_path + r"\logs"
 
 # ChromeDriver 設定參數
 chrome_options = Options()
-# chrome_options.add_argument("--headless")  # 背景執行
+chrome_options.add_argument("--headless")  # 背景執行
 chrome_options.add_argument("--start-maximized")  # 全螢幕
 
 
@@ -144,9 +144,9 @@ class EnvConfigApp(EnvConfig):
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains:
-            return "http://10.13.22.152:8199/"
+            return "http://10.13.22.152:8199"
         elif self.env_domain in self.joyDomains:
-            return "http://iphong.joy188.com/"
+            return "http://iphong.joy188.com"
         else:
             raise Exception('無對應網域參數，請至Config envConfigApp()新增')
 

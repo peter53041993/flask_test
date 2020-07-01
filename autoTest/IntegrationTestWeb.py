@@ -25,7 +25,7 @@ def date_time():  # 給查詢 獎期to_date時間用, 今天時間
     month = now.month
     day = now.day
     format_day = '{:02d}'.format(day)
-    today_time = '%s-%s-%s' % (year, month, format_day)
+    return '%s-%s-%s' % (year, month, format_day)
 
 
 def get_order_code_web(conn, user, lottery):  # webdriver頁面投注產生定單
@@ -61,18 +61,28 @@ def select_userUrl(conn, userid):
     return user_url
 
 
+logger = Logger.create_logger(r"\AutoTest")
+
+
 class IntegrationTestWeb(unittest.TestCase):
     u"瀏覽器功能測試"
     envConfig = None
     user = None
     red_type = None
-    logger = None
     dr = None
     password = None
     post_url = None
     em_url = None
 
     def setUp(self):
+        logger.info('IntegrationTestWeb setUp : {}'.format(self._testMethodName))
+        self.login()
+
+    def __init__(self, case, env, user, red_type):
+        super().__init__(case)
+        self.envConfig = env
+        self.user = user
+        self.red_type = red_type
         try:
             if 'ChromeDriver' in locals() or 'ChromeDriver' in globals():
                 self.dr = webdriver.Chrome(chrome_options=Config.chrome_options)
@@ -82,33 +92,24 @@ class IntegrationTestWeb(unittest.TestCase):
             from utils.TestTool import trace_log
             trace_log(e)
 
-    def __init__(self, case, env, user, red_type):
-        super().__init__(case)
-        if not self.logger:
-            self.logger = Logger.create_logger(r"\IntegrationTestWeb")
-        self.envConfig = env
-        self.user = user
-        self.red_type = red_type
-
     def login(self):
         self.password = self.envConfig.get_password()
         print(self.password)
         self.post_url = self.envConfig.get_post_url()
         self.em_url = self.envConfig.get_em_url()
-        env = self.envConfig.get_env_id()
 
-        self.dr.get(self.post_url)
+        self.dr.get(self.post_url + '/login/index')
 
-        print(u'登入環境: %s,登入帳號: %s' % (self.envConfig, self.user))
+        print(u'登入環境: {},登入帳號: {}'.format(self.envConfig, self.user))
         # sleep(100)
         self.dr.find_element_by_id('J-user-name').send_keys(self.user)
         self.dr.find_element_by_id('J-user-password').send_keys(self.password)
         self.dr.find_element_by_id('J-form-submit').click()
         sleep(1)
         if self.dr.current_url == self.post_url + '/index':  # 判斷是否登入成功
-            print('%s 登入成功' % self.user)
+            print('{} 登入成功'.format(self.user))
         else:
-            print('%s登入失敗' % self.user)
+            print('{} 登入失敗'.format(self.user))
 
     def ID(self, element):
         return self.dr.find_element_by_id(element)
@@ -134,7 +135,7 @@ class IntegrationTestWeb(unittest.TestCase):
             else:
                 self.ID(element1).click()
         except NoSuchElementException as e:
-            self.logger.error(e)
+            logger.error(e)
 
     def css_element(self, element1):  # 抓取css元素,判斷提示窗
         try:
@@ -146,9 +147,9 @@ class IntegrationTestWeb(unittest.TestCase):
             else:
                 self.CSS(element1).click()
         except NoSuchElementException as e:
-            self.logger.error(e)
+            logger.error(e)
         except AttributeError as e:
-            self.logger.error(e)
+            logger.error(e)
 
     def xpath_element(self, element1):  # 抓取xpath元素,判斷提示窗
 
@@ -160,7 +161,7 @@ class IntegrationTestWeb(unittest.TestCase):
             else:
                 self.XPATH(element1).click()
         except NoSuchElementException as e:
-            self.logger.error(e)
+            logger.error(e)
 
     def link_element(self, element1):  # 抓取link_text元素,判斷提示窗
         try:
@@ -171,7 +172,7 @@ class IntegrationTestWeb(unittest.TestCase):
             else:
                 self.LINK(element1).click()
         except NoSuchElementException as e:
-            self.logger.error(e)
+            logger.error(e)
 
     def normal_type(self, game):  # 普通玩法元素
         global game_list, game_list2
@@ -331,8 +332,11 @@ class IntegrationTestWeb(unittest.TestCase):
                     self.css_element('a#randomone.take-one')  # 隨機一住
 
     def mul_submit(self):  # 追號
-        if self.dr.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').is_selected():
-            self.dr.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').click()  # 取消紅包追號
+        try:
+            if self.dr.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').is_selected():
+                self.dr.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').click()  # 取消紅包追號
+        except:
+            pass
         self.id_element('randomone')  # 先隨機一住
         self.id_element('J-trace-switch')  # 追號
 
@@ -917,7 +921,7 @@ class IntegrationTestWeb(unittest.TestCase):
         self.dr.get(self.post_url + '/bindcard/bindcarddigitalwallet?bindcardType=2')
         print(self.dr.title)
         card = random.randint(1000, 1000000000)  # usdt數字綁卡,隨機生成
-        self.ID('walletAdself.dr').send_keys(str(card))
+        self.ID('walletAddr').send_keys(str(card))
         print(u'提現錢包地址: %s' % card)
         self.ID('securityPassword').send_keys(safe_pass)
         print(u'安全密碼: %s' % safe_pass)
@@ -929,5 +933,5 @@ class IntegrationTestWeb(unittest.TestCase):
         else:
             print(u"數字貨幣綁定失敗")
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         self.dr.quit()

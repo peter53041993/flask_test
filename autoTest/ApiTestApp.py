@@ -53,7 +53,8 @@ def get_order_code_iapi(conn, orderid):  # 從iapi投注的orderid對應出 orde
     return order_code
 
 
-loggerApiTest = Logger.create_logger(r"\ApiTestApp")
+logger = Logger.create_logger(r"\AutoTest")
+
 
 class ApiTestApp(unittest.TestCase):
     u'APP接口測試'
@@ -65,7 +66,7 @@ class ApiTestApp(unittest.TestCase):
     header = None
 
     def setUp(self):
-        loggerApiTest.info('ApiTestApp setUp : {}'.format(self._testMethodName))
+        logger.info('ApiTestApp setUp : {}'.format(self._testMethodName))
 
     def __init__(self, case_, env_, user_, red_type_):
         super().__init__(case_)
@@ -78,7 +79,7 @@ class ApiTestApp(unittest.TestCase):
             'User-Agent': self.userAgent,
             'Content-Type': 'application/json'
         }
-        loggerApiTest.info('ApiTestApp __init__.')
+        logger.info('ApiTestApp __init__.')
 
     @func_time
     def test_AppLogin(self):
@@ -121,7 +122,7 @@ class ApiTestApp(unittest.TestCase):
             print("Joy188Test3 Start")
             print(login_data)
             try:
-                r = requests.post(env_iapi + 'front/login', data=json.dumps(login_data), headers=self.header)
+                r = requests.post(env_iapi + '/front/login', data=json.dumps(login_data), headers=self.header)
                 # print(r.json())
                 token = r.json()['body']['result']['token']
                 userid = r.json()['body']['result']['userid']
@@ -836,11 +837,11 @@ class ApiTestApp(unittest.TestCase):
                      "lotterySeriesName": "\\u9ad8\\u9891\\u5f69\\u7cfb", "awardGroupId": 238,
                      "awardName": "\\u5956\\u91d1\\u7ec41800", "directLimitRet": 980}], "memo": "", "setUp": 1,
                           "needContact": "N", "authenCellphone": "N", "showRegisterBtn": "Y"}}}
-        loggerApiTest.info('link = {}'.format(self.envConfig.get_post_url() + '/information/doRetSetting'))
-        r = requests.post(self.envConfig.get_post_url() + '/information/doRetSetting', data=json.dumps(data_),
+        logger.info('link = {}'.format(env_iapi + '/information/doRetSetting'))
+        r = requests.post(env_iapi + '/information/doRetSetting', data=json.dumps(data_),
                           headers=self.header)  # 儲存連結反點,生成連結
         print(r.content)
-        loggerApiTest.info(r.content)
+        logger.info(r.content)
         if r.json()['head']['status'] == 0:
             print('開戶連結創立成功')
             data_ = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": "",
@@ -848,7 +849,7 @@ class ApiTestApp(unittest.TestCase):
                      "body": {"param": {"CGISESSID": token_[user], "app_id": "10", "come_from": "4",
                                         "appname": "1"}, "pager": {"startNo": "", "endNo": ""}}}
 
-            r = requests.post(self.envConfig.get_post_url() + 'information/openLinkList', data=json.dumps(data_),
+            r = requests.post(env_iapi + '/information/openLinkList', data=json.dumps(data_),
                               headers=self.header)  # 找出開戶連結后的註冊id,回傳註冊
             # print(r.json())
             result = r.json()['body']['result']['list'][0]
@@ -858,8 +859,8 @@ class ApiTestApp(unittest.TestCase):
             # print(token)
             exp = result['urlstring'].split('exp=')[1].split('&')[0]
             pid = result['urlstring'].split('pid=')[1].split('&')[0]
-            print('%s 的 開戶連結' % user)
-            print("註冊連結: %s, \n註冊碼: %s, 建置於: %s" % (result['urlstring'], result['regCode'], result['start']))
+            print('{} 的 開戶連結'.format(user))
+            print("註冊連結: {}, \n註冊碼: {}, 建置於: {}".format(result['urlstring'], result['regCode'], result['start']))
         else:
             print('創立失敗')
             raise Exception('創立失敗')
@@ -880,22 +881,22 @@ class ApiTestApp(unittest.TestCase):
         else:  # 歡樂棋牌
             data_['body']['param']['jointVenture'] = 2
 
-        r = requests.post(self.envConfig.get_post_url() + 'user/register', data=json.dumps(data_), headers=self.header)
+        r = requests.post(env_iapi + '/user/register', data=json.dumps(data_), headers=self.header)
         if r.json()['head']['status'] == 0:
             print('%s 註冊成功' % new_user)
         else:
             print('註冊失敗')
 
-    def amount_data(self, user):
+    def amount_data(self, _user):
         data = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": "",
-                         "sessionId": token_[user]},
-                "body": {"param": {"amount": 10, "CGISESSID": token_[user], "app_id": "9",
+                         "sessionId": token_[_user]},
+                "body": {"param": {"amount": 10, "CGISESSID": token_[_user], "app_id": "9",
                                    "come_from": "3", "appname": "1"}, "pager": {"startNo": "", "endNo": ""}}}
         return data
 
-    def balance_data(self, user):
+    def balance_data(self, _user):
         data = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "",
-                         "userAccount": "", "sessionId": token_[user]}, "body": {"param": {"CGISESSID": token_[user],
+                         "userAccount": "", "sessionId": token_[_user]}, "body": {"param": {"CGISESSID": token_[_user],
                                                                                            "loginIp": "61.220.138.45",
                                                                                            "app_id": "9",
                                                                                            "come_from": "3",
@@ -972,13 +973,13 @@ class ApiTestApp(unittest.TestCase):
         print('帳號: {}'.format(self.user))
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
         for third in third_list:
-            loggerApiTest.info('First.  for third in third_list:')
+            logger.info('First.  for third in third_list:')
             tran_url = 'Thirdly'  # gns規則不同
             if third == 'gns':
                 tran_url = 'Gns'
             response = requests.post(env_iapi + '/%s/transferTo%s' % (third, tran_url), data=json.dumps(data_),
                                      headers=self.header)
-            loggerApiTest.info('test_ApptransferIn third = {}, response = {}'.format(third, response.content))
+            logger.info('test_ApptransferIn third = {}, response = {}'.format(third, response.content))
             status = response.json()['body']['result']['status']
             if status == 'Y':
                 print('轉入{}金額 10'.format(third))
@@ -986,7 +987,6 @@ class ApiTestApp(unittest.TestCase):
                 raise Exception('{} 轉入失敗'.format(third))
 
         for third in third_list:
-            loggerApiTest.info('Second.  for third in third_list:')
             if third == 'sb':
                 third = 'shaba'
             tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=env_id, third=third), tran_type=0,
@@ -1012,7 +1012,7 @@ class ApiTestApp(unittest.TestCase):
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
         for third in third_list:  # PC 沙巴 是 shaba , iapi 是 sb
             response = requests.post(env_iapi + '/%s/transferToFF' % third, data=json.dumps(data_), headers=self.header)
-            loggerApiTest.info('test_ApptransferOut : third = {}, response = {}'.format(third, response.content))
+            logger.info('test_ApptransferOut : third = {}, response = {}'.format(third, response.content))
             status = response.json()['body']['result']['status']
             if status == 'Y':
                 print('{} 轉出金額 10'.format(third))
@@ -1029,7 +1029,7 @@ class ApiTestApp(unittest.TestCase):
                 tran_result = Config.thirdly_tran(Config.my_con(evn=env_id, third=third), tran_type=1,
                                                   third=third,
                                                   user=self.user)  #
-                loggerApiTest.info('tran_result : {}'.format(tran_result))
+                logger.info('tran_result : {}'.format(tran_result))
                 sleep(1)
                 count += 1
                 if count == 15:
