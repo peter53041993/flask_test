@@ -3,19 +3,18 @@
 {% block head %}
     {{ super() }}
     <style type="text/css">
-        #username, #env_type {
-            border-radius: 22px;
-            background-color: #ddd;
-        }
-
-        input[type="checkbox"] {
-            zoom: 150%;
-            cursor: pointer;
-            vertical-align: sub;
-        }
-
-        li {
-            list-style: none;
+        #username,#env_type{border-radius: 22px;background-color: #ddd;}
+        input[type="checkbox"]{zoom:150%;cursor:pointer;vertical-align:sub;}
+        li{list-style: none;}
+        #form1 > label:nth-child(7),#form1 > label:nth-child(10),#form1 > label:nth-child(13) {
+        font-size: 120%;
+        display: inline-block;
+        margin-bottom: .5rem;
+        color: #420fde;}
+        .PC_submit {
+        font-family: monospace;
+        color: #fd0e25;
+        font-size: x-large; }
         }
     </style>
 {% endblock %}
@@ -40,7 +39,8 @@
             } else if (driver_check > 3) {
                 alert('PC自動化案例暫停開放謝謝')
                 location.reload();
-            } else {
+            } 
+            else {
                 $.ajax({
                     url: "/autoTest",
                     type: 'POST',
@@ -50,14 +50,16 @@
                     data: $('#form1').serialize(),
                     success: function (data) {
 
-                        //console.log(data)
+                    var result = data;
+                    console.log(data)
                         //$("#content").append('<p>'+data+'</p>')
-                        if (data == '此環境沒有該用戶') {
-                            alert('此環境沒有該用戶')
-                            location.reload();
-                        } else {
-                            //$("#content").append('<p>'+data+'</p>')
-                            $(window).attr("location", "/report")
+                    if (data == '此環境沒有該用戶') {
+                        alert('此環境沒有該用戶')
+                        location.reload();
+                    } else {
+                        //$("#content").append('<p>'+data+'</p>')
+                        //console.log(data)
+                        $(window).attr("location", "/report")
                         }
                     }
                 })
@@ -147,6 +149,19 @@
                 <option value="no">否</option>
                 <option value="yes">是</option>
             </select>
+            <label class='PC_submit'>獎金玩法</label>
+            <select name='awardmode' id='awardmode'>
+                <option value='0'>預設</option>
+                <option value='1'>一般</option>
+                <option value='2'>高獎金</option>
+            </select>
+            <label class='PC_submit'>元角分</label>
+            <select name='moneymode' id='moneymode'>
+                <option value='1'>元</option>
+                <option value='2'>角</option>
+                <option value='0'>分</option>
+            </select>
+            </p>
         </div>
         <br>
         <input type='checkbox' id='AppChecked'>APP接口測試

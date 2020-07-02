@@ -8,38 +8,56 @@ import json
 import requests
 import time
 
-import utils.Config
-from utils import Config, Logger
-from utils.Config import LotteryData, func_time
+import Utils.Config
+from Utils import Config, Logger
+from Utils.Config import LotteryData, func_time
 
 logger = Logger.create_logger(r"\AutoTest", 'auto_test_pc')
 
+r
 class ApiTestPC(unittest.TestCase):
     u"PC接口測試"
     envConfig = None
-    user_g = None
+    user = None
     red_type = None
+    money_unit = None
 
     def setUp(self):
         logger.info('ApiTestPC setUp : {}'.format(self._testMethodName))
 
-    def __init__(self, case, env, user, red_type):
+    def __init__(self, case, _env, _user, _red_type, _money_unit):
         super().__init__(case)
         # if not logger:
         #     logger = Logger.create_logger(r"\ApiTestPC")
-        self.envConfig = env
-        self.user_g = user
-        self.red_type = red_type
+        self.envConfig = _env
+        self.user = _user
+        self.red_type = _red_type
+        self.money_unit = _money_unit
         logger.info('ApiTestPC __init__.')
 
-    def md(self, password, param):
+    def md(self, _password, _param):
         m = hashlib.md5()
-        m.update(password)
+        m.update(_password)
         sr = m.hexdigest()
         for i in range(3):
             sr = hashlib.md5(sr.encode()).hexdigest()
-        rx = hashlib.md5(sr.encode() + param).hexdigest()
+        rx = hashlib.md5(sr.encode() + _param).hexdigest()
         return rx
+
+    @staticmethod
+    def select_domain_url(conn, domain):  # 查詢 全局管理 後台設置的domain ,連結設置 (因為生產 沒權限,看不到)
+        with conn.cursor() as cursor:
+            sql = "select a.domain,a.agent,b.url,a.register_display,a.app_download_display,a.domain_type,a.status from  \
+            GLOBAL_DOMAIN_LIST a inner join user_url b \
+            on a.register_url_id = b.id  where a.domain like '%%%s%%' " % domain
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global domain_url
+            domain_url = {}
+            for num, url in enumerate(rows):
+                domain_url[num] = list(url)
+            # print(domain_url)
+        conn.close()
 
     def select_issue(self, conn, lotteryid):  # 查詢正在銷售的 期號
         # Joy188Test.date_time()
@@ -248,7 +266,7 @@ class ApiTestPC(unittest.TestCase):
 
     def plan_num(self, evn, lottery, plan_len):  # 追號生成
         plan_ = []  # 存放 多少 長度追號的 list
-        self.select_issue(utils.Config.get_conn(evn), LotteryData.lottery_dict[lottery][1])
+        self.select_issue(Utils.Config.get_conn(evn), LotteryData.lottery_dict[lottery][1])
         for i in range(plan_len):
             plan_.append({"number": issueName[i], "issueCode": issue[i], "multiple": 1})
         return plan_
@@ -258,32 +276,32 @@ class ApiTestPC(unittest.TestCase):
         global mul
         if test == 'wuxing':
 
-            ball = [str(utils.Config.random_mul(9)) for i in range(5)]  # 五星都是數值
-            mul = utils.Config.random_mul(2)
+            ball = [str(Utils.Config.random_mul(9)) for i in range(5)]  # 五星都是數值
+            mul = Utils.Config.random_mul(2)
         elif test == 'sixing':
-            ball = ['-' if i == 0 else str(utils.Config.random_mul(9)) for i in range(5)]  # 第一個為-
-            mul = utils.Config.random_mul(22)
+            ball = ['-' if i == 0 else str(Utils.Config.random_mul(9)) for i in range(5)]  # 第一個為-
+            mul = Utils.Config.random_mul(22)
         elif test == 'housan':
-            ball = ['-' if i in [0, 1] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第1和2為-
-            mul = utils.Config.random_mul(222)
+            ball = ['-' if i in [0, 1] else str(Utils.Config.random_mul(9)) for i in range(5)]  # 第1和2為-
+            mul = Utils.Config.random_mul(222)
         elif test == 'qiansan':
-            ball = ['-' if i in [3, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第4和5為-
-            mul = utils.Config.random_mul(222)
+            ball = ['-' if i in [3, 4] else str(Utils.Config.random_mul(9)) for i in range(5)]  # 第4和5為-
+            mul = Utils.Config.random_mul(222)
         elif test == 'zhongsan':
-            ball = ['-' if i in [0, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第2,3,4為-
-            mul = utils.Config.random_mul(222)
+            ball = ['-' if i in [0, 4] else str(Utils.Config.random_mul(9)) for i in range(5)]  # 第2,3,4為-
+            mul = Utils.Config.random_mul(222)
         elif test == 'houer':
-            ball = ['-' if i in [0, 1, 2] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第1,2,3為-
-            mul = utils.Config.random_mul(2222)
+            ball = ['-' if i in [0, 1, 2] else str(Utils.Config.random_mul(9)) for i in range(5)]  # 第1,2,3為-
+            mul = Utils.Config.random_mul(2222)
         elif test == 'qianer':
-            ball = ['-' if i in [2, 3, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第3,4,5為-
-            mul = utils.Config.random_mul(2222)
+            ball = ['-' if i in [2, 3, 4] else str(Utils.Config.random_mul(9)) for i in range(5)]  # 第3,4,5為-
+            mul = Utils.Config.random_mul(2222)
         elif test == 'yixing':  # 五個號碼,只有一個隨機數值
-            ran = utils.Config.random_mul(4)
-            ball = ['-' if i != ran else str(utils.Config.random_mul(9)) for i in range(5)]
-            mul = utils.Config.random_mul(2222)
+            ran = Utils.Config.random_mul(4)
+            ball = ['-' if i != ran else str(Utils.Config.random_mul(9)) for i in range(5)]
+            mul = Utils.Config.random_mul(2222)
         else:
-            mul = utils.Config.random_mul(1)
+            mul = Utils.Config.random_mul(1)
         a = (",".join(ball))
         return a
 
@@ -303,7 +321,7 @@ class ApiTestPC(unittest.TestCase):
             'renxuan7': u'任選7'
         }
 
-        group_ = utils.Config.play_type()  # 建立 個隨機的goup玩法 ex: wuxing,目前先給時彩系列使用
+        group_ = Utils.Config.play_type()  # 建立 個隨機的goup玩法 ex: wuxing,目前先給時彩系列使用
         # set_ = game_set.keys()[0]#ex: zhixuan
         # method_ = game_method.keys()[0]# ex: fushi
         play_ = ''
@@ -444,10 +462,10 @@ class ApiTestPC(unittest.TestCase):
                 break
         print(content_)
 
-    def test_PCLotterySubmit(self, moneyunit=1, plan=1):  # 彩種投注
-        u"投注測試"
+    def test_PCLotterySubmit(self, plan=1):  # 彩種投注
+        """投注測試"""
+        _money_unit = 1  # 初始元模式
 
-        account = self.user_g
         if self.red_type == 'yes':
             print('使用紅包投注')
         else:
@@ -455,31 +473,32 @@ class ApiTestPC(unittest.TestCase):
         while True:
             try:
                 for i in LotteryData.lottery_dict.keys():
-                    # for i in lottery_noRed:
-                    statu = 1
                     global mul_  # 傳回 投注出去的組合訊息 req_post_submit 的 content裡
                     global mul
                     ball_type_post = self.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
 
-                    awardmode = 1
-                    if i == 'btcctp':
-                        statu = 0
+                    award_mode = 1
 
-                        awardmode = 2
-                        moneyunit = 1
-                        mul = utils.Config.random_mul(1)  # 不支援倍數,所以random參數為1
+                    if self.money_unit == '1':  # 使用元模式
+                        _money_unit = 1
+                    elif self.money_unit == '2':  # 使用角模式
+                        _money_unit = 0.1
+
+                    if i == 'btcctp':
+                        award_mode = 2
+                        mul = Utils.Config.random_mul(1)  # 不支援倍數,所以random參數為1
                     elif i == 'bjkl8':
-                        mul = utils.Config.random_mul(5)  # 北京快樂8
+                        mul = Utils.Config.random_mul(5)  # 北京快樂8
                     elif i == 'p5':
-                        mul = utils.Config.random_mul(5)
+                        mul = Utils.Config.random_mul(5)
 
                     elif i in ['btcffc', 'xyft']:
-                        awardmode = 2
+                        award_mode = 2
                     elif i in LotteryData.lottery_sb:  # 骰寶只支援  元模式
-                        moneyunit = 1
+                        _money_unit = 1
 
                     mul_ = (u'選擇倍數: {}'.format(mul))
-                    amount = 2 * mul * moneyunit
+                    amount = 2 * mul * _money_unit
 
                     # 從DB抓取最新獎期.[1]為 99101類型select_issueselect_issue
 
@@ -495,7 +514,7 @@ class ApiTestPC(unittest.TestCase):
                         traceWinStop = 0
                         traceStopValue = -1
                     else:  # 追號
-                        plan_ = self.plan_num(envs, i, utils.Config.random_mul(30))  # 隨機生成 50期內的比數
+                        plan_ = self.plan_num(envs, i, Utils.Config.random_mul(30))  # 隨機生成 50期內的比數
                         print(u'追號, 期數:%s' % len(plan_))
                         isTrace = 1
                         traceWinStop = 1
@@ -507,10 +526,10 @@ class ApiTestPC(unittest.TestCase):
                     post_data = {"gameType": i, "isTrace": isTrace, "traceWinStop": traceWinStop,
                                  "traceStopValue": traceWinStop,
                                  "balls": [{"id": 1, "ball": ball_type_post[1], "type": ball_type_post[0],
-                                            "moneyunit": moneyunit, "multiple": mul, "awardMode": awardmode,
+                                            "moneyunit": _money_unit, "multiple": mul, "awardMode": award_mode,
                                             "num": 1}], "orders": plan_, "amount": len_ * amount}  # 不使用紅包
 
-                    post_data_lhc = {"balls": [{"id": 1, "moneyunit": moneyunit, "multiple": 1, "num": 1,
+                    post_data_lhc = {"balls": [{"id": 1, "moneyunit": _money_unit, "multiple": 1, "num": 1,
                                                 "type": ball_type_post[0], "amount": amount, "lotterys": "13",
                                                 "ball": ball_type_post[1], "odds": "7.5"}],
                                      "isTrace": 0, "orders": plan_,
@@ -519,23 +538,24 @@ class ApiTestPC(unittest.TestCase):
                     post_data_sb = {"gameType": i, "isTrace": 0, "multiple": 1, "trace": 1,
                                     "amount": amount,
                                     "balls": [{"ball": ball_type_post[1],
-                                               "id": 11, "moneyunit": moneyunit, "multiple": 1, "amount": amount,
+                                               "id": 11, "moneyunit": _money_unit, "multiple": 1, "amount": amount,
                                                "num": 1,
                                                "type": ball_type_post[0]}],
                                     "orders": plan_}
 
                     if i in 'lhc':
-                        self.req_post_submit(account, 'lhc', post_data_lhc, moneyunit, awardmode, ball_type_post[2])
+                        self.req_post_submit(self.user, 'lhc', post_data_lhc, _money_unit, award_mode,
+                                             ball_type_post[2])
 
                     elif i in LotteryData.lottery_sb:
-                        self.req_post_submit(account, i, post_data_sb, moneyunit, awardmode, ball_type_post[2])
+                        self.req_post_submit(self.user, i, post_data_sb, _money_unit, award_mode, ball_type_post[2])
                     else:
                         if self.red_type == 'yes':  # 紅包投注
                             post_data['redDiscountAmount'] = 2  # 增加紅包參數
-                            self.req_post_submit(account, i, post_data, moneyunit, awardmode, ball_type_post[2])
+                            self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
                         else:
-                            self.req_post_submit(account, i, post_data, moneyunit, awardmode, ball_type_post[2])
-                self.select_RedBal(utils.Config.get_conn(1), user)
+                            self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
+                self.select_RedBal(Utils.Config.get_conn(1), user)
                 print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
                 break
             except KeyError as e:
@@ -559,8 +579,8 @@ class ApiTestPC(unittest.TestCase):
         global third_list
         third_list = ['gns', 'shaba', 'im', 'ky', 'lc', 'city']
         cookies_ = {}
-        user = self.user_g
-        account_ = {self.user_g: '輸入的用戶名'}
+        user = self.user
+        account_ = {self.user: '輸入的用戶名'}
         em_url = self.envConfig.get_em_url()
         password = str.encode(self.envConfig.get_password())
         envs = self.envConfig.get_env_id()
@@ -797,11 +817,13 @@ class ApiTestPC(unittest.TestCase):
 
         for third in statu_dict.keys():
             if statu_dict[third] == True:  # 判斷轉帳的狀態, 才去要 單號
-                tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=envs, third=third), tran_type=0, third=third,
+                tran_result = Utils.Config.thirdly_tran(Utils.Config.my_con(evn=envs, third=third), tran_type=0,
+                                                        third=third,
                                                         user=user)  # tran_type 0為轉轉入
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=envs, third=third), tran_type=0, third=third,
+                    tran_result = Utils.Config.thirdly_tran(Utils.Config.my_con(evn=envs, third=third), tran_type=0,
+                                                            third=third,
                                                             user=user)  #
                     sleep(1.5)
                     count += 1
@@ -839,11 +861,13 @@ class ApiTestPC(unittest.TestCase):
 
         for third in statu_dict.keys():
             if statu_dict[third] == True:
-                tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=envs, third=third), tran_type=1, third=third,
+                tran_result = Utils.Config.thirdly_tran(Utils.Config.my_con(evn=envs, third=third), tran_type=1,
+                                                        third=third,
                                                         user=user)  # tran_type 1 是 轉出
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=envs, third=third), tran_type=0, third=third,
+                    tran_result = Utils.Config.thirdly_tran(Utils.Config.my_con(evn=envs, third=third), tran_type=0,
+                                                            third=third,
                                                             user=user)  #
                     sleep(1)
                     count += 1
@@ -872,12 +896,12 @@ class ApiTestPC(unittest.TestCase):
         print(r.text)
 
     def test_redEnvelope(self):  # 紅包加壁,審核用
-        user = self.user_g
+        user = self.user
         print('用戶: %s' % user)
         red_list = []  # 放交易訂單號id
 
         try:
-            self.select_RedBal(utils.Config.get_conn(envs), user)
+            self.select_RedBal(Utils.Config.get_conn(envs), user)
             print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
         except IndexError:
             print('紅包餘額為0')
@@ -892,7 +916,7 @@ class ApiTestPC(unittest.TestCase):
             print('紅包加幣100')
         else:
             print('失敗')
-        self.select_RedID(utils.Config.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
+        self.select_RedID(Utils.Config.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
         # print(red_id)
         red_list.append('%s' % red_id[0])
         # print(red_list)
@@ -906,7 +930,7 @@ class ApiTestPC(unittest.TestCase):
         except Exception as e:
             print(r.json()['errorMsg'])
             logger.error(e)
-        self.select_RedBal(utils.Config.get_conn(envs), user)
+        self.select_RedBal(Utils.Config.get_conn(envs), user)
         print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
 
     def tearDown(self) -> None:

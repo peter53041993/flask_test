@@ -7,9 +7,9 @@ import time
 from autoTest.ApiTestApp import ApiTestApp
 from autoTest.ApiTestPC import ApiTestPC
 from autoTest.IntegrationTestWeb import IntegrationTestWeb
-from utils import Config
-from utils.Logger import create_logger
-from utils.TestTool import trace_log
+from Utils import Config
+from Utils.Logger import create_logger
+from Utils.TestTool import trace_log
 
 os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'  # 避免抓出oracle中文 為問號
 
@@ -23,7 +23,7 @@ def date_time():  # 給查詢 獎期to_date時間用, 今天時間
     return '%s-%s-%s' % (year, month, format_day)
 
 
-def suite_test(test_cases, user_name, test_env, is_use_red):
+def suite_test(test_cases, user_name, test_env, is_use_red, money_unit):
     """
     autoTest 初始化
     :param test_cases: Array[][]; 測試項目，為二維矩陣。第一維區分測試類型（PC_API、APP_API、PC整合），二維紀錄測試method名稱
@@ -61,7 +61,7 @@ def suite_test(test_cases, user_name, test_env, is_use_red):
                         'test_redEnvelope']:  # PC 案例
                 logger.info('test_cases[0] : {}'.format(test_cases[0]))
                 logger.info('For loop[0] : {}'.format(case))
-                suite_list.append(ApiTestPC(case=case, env=env_config, user=user_name, red_type=is_use_red))
+                suite_list.append(ApiTestPC(case=case, env=env_config, user=user_name, red_type=is_use_red, money_unit=money_unit))
         for case in test_cases[1]:
             if case in ['test_AppLogin', 'test_AppSubmit', 'test_AppOpenLink', 'test_AppBalance', 'test_ApptransferIn',
                         'test_ApptransferOut']:  # APP案例

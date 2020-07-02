@@ -200,11 +200,11 @@ function showOutput(id, name) {
 --></script>
 <div class='heading'>
 <h1>測試報告</h1>
-<p class='attribute'><strong>Start Time:</strong> 2020-06-16 11:22:30</p>
-<p class='attribute'><strong>Duration:</strong> 0:00:40.336262</p>
-<p class='attribute'><strong>Status:</strong> Pass 1</p>
+<p class='attribute'><strong>Start Time:</strong> 2020-07-02 14:27:11</p>
+<p class='attribute'><strong>Duration:</strong> 0:00:34.954755</p>
+<p class='attribute'><strong>Status:</strong> Pass 4</p>
 
-<p class='description'>環境: &lt;Utils.Config.EnvConfig object at 0x00000215A94F5048&gt;,帳號: twen101</p>
+<p class='description'>環境: &lt;utils.Config.EnvConfig object at 0x000001DC17D46188&gt;,帳號: twen101</p>
 </div>
 <div style="float:left; margin-left: 10px; font-size:12px">
 	<p> Test Case Pie charts </p>
@@ -242,16 +242,16 @@ function showOutput(id, name) {
 </tr>
 
 <tr class='passClass'>
-    <td>AutoTest.Joy188Test2: 瀏覽器功能測試</td>
-    <td>1</td>
-    <td>1</td>
+    <td>autoTest.ApiTestPC.ApiTestPC: PC接口測試</td>
+    <td>4</td>
+    <td>4</td>
     <td>0</td>
     <td>0</td>
-    <td><a href="javascript:showClassDetail('c1',1)">Detail</a></td>
+    <td><a href="javascript:showClassDetail('c1',4)">Detail</a></td>
 </tr>
 
 <tr id='pt1.1' class='hiddenRow'>
-    <td class='none'><div class='testcase'>test_xjssc</div></td>
+    <td class='none'><div class='testcase'>test_PcLogin</div></td>
     <td colspan='5' align='center'>
     <!--css div popup start-->
     <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt1.1')" >
@@ -263,15 +263,129 @@ function showOutput(id, name) {
         </div>
         <pre>
         
-pt1.1: 新疆时时彩
-彩种：新疆时时彩
-期号：第 20200616-05  至  20200616-14   共  10  期
-详情：后三复式 -,-,4,7,8
-付款总金额：20.00元
-红包抵扣：&lt;#=redenvelopeDiscount#&gt;元
-实付金额：&lt;#=afterRedenvelopeDiscount#&gt;元
-付款帐号：twen101
-方案編號: DXJC200616055qd
+pt1.1: Enter test_PcLogin
+userAgent : Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36
+post_url : http://www2.joy188.com
+登錄帳號: twen101,現在時間:20200702 14:27:12
+{"errors":[],"data":[["temp value"]],"isSuccess":1}
+1
+用時: 0.8106040954589844秒
+
+
+        </pre>
+    </div>
+    <!--css div popup end-->
+    </td>
+</tr>
+
+<tr id='pt1.2' class='hiddenRow'>
+    <td class='none'><div class='testcase'>test_PcThirdBalance</div></td>
+    <td colspan='5' align='center'>
+    <!--css div popup start-->
+    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt1.2')" >
+        pass</a>
+    <div id='div_pt1.2' class="popup_window">
+        <div style='text-align: right; color:red;cursor:pointer'>
+        <a onfocus='this.blur();' onclick="document.getElementById('div_pt1.2').style.display = 'none' " >
+           [x]</a>
+        </div>
+        <pre>
+        
+pt1.2: 帳號: twen101
+4.0 餘額: 50,046,147.98
+im, 餘額: 11
+shaba, 餘額: 11.0
+gns, 餘額: 11
+ky, 餘額: 547.5
+lc, 餘額: 106.75
+city, 餘額: 21.00
+用時: 10.598190546035767秒
+
+
+        </pre>
+    </div>
+    <!--css div popup end-->
+    </td>
+</tr>
+
+<tr id='pt1.3' class='hiddenRow'>
+    <td class='none'><div class='testcase'>test_PcTransferin</div></td>
+    <td colspan='5' align='center'>
+    <!--css div popup start-->
+    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt1.3')" >
+        pass</a>
+    <div id='div_pt1.3' class="popup_window">
+        <div style='text-align: right; color:red;cursor:pointer'>
+        <a onfocus='this.blur();' onclick="document.getElementById('div_pt1.3').style.display = 'none' " >
+           [x]</a>
+        </div>
+        <pre>
+        
+pt1.3: 帳號 twen101 轉入 gns ,金額:1, 進行中
+帳號 twen101 轉入 shaba ,金額:1, 進行中
+帳號 twen101 轉入 im ,金額:1, 進行中
+帳號 twen101 轉入 ky ,金額:1, 進行中
+帳號 twen101 轉入 lc ,金額:1, 進行中
+帳號 twen101 轉入 city ,金額:1, 進行中
+狀態成功. gns ,sn 單號: TFTFTN5LC61UWCGJZEJI4pKpcZ
+狀態成功. shaba ,sn 單號: TFTTSB5LC61UWCGK5S204gLvYd
+狀態成功. im ,sn 單號: TFTFIM5LC61UWCGK5SAD4gzrZf
+狀態成功. ky ,sn 單號: TFTFTK5LC61UWCGK5SHP4glagl
+狀態成功. lc ,sn 單號: TFTFTL5LC61UWCGK5SQJ4g9i81
+狀態成功. city ,sn 單號: TFTITC5LC61UWCGK5SZP4fISYm
+帳號: twen101
+4.0 餘額: 50,046,141.98
+gns, 餘額: 12
+shaba, 餘額: 12.0
+im, 餘額: 12
+ky, 餘額: 548.5
+lc, 餘額: 107.75
+city, 餘額: 22.00
+用時: 0.4370152950286865秒
+用時: 18.309751987457275秒
+
+
+        </pre>
+    </div>
+    <!--css div popup end-->
+    </td>
+</tr>
+
+<tr id='pt1.4' class='hiddenRow'>
+    <td class='none'><div class='testcase'>test_PcTransferout</div></td>
+    <td colspan='5' align='center'>
+    <!--css div popup start-->
+    <a class="popup_link" onfocus='this.blur();' href="javascript:showTestDetail('div_pt1.4')" >
+        pass</a>
+    <div id='div_pt1.4' class="popup_window">
+        <div style='text-align: right; color:red;cursor:pointer'>
+        <a onfocus='this.blur();' onclick="document.getElementById('div_pt1.4').style.display = 'none' " >
+           [x]</a>
+        </div>
+        <pre>
+        
+pt1.4: 帳號 twen101, gns轉回4.0 ,金額:1, 進行中
+帳號 twen101, shaba轉回4.0 ,金額:1, 進行中
+帳號 twen101, im轉回4.0 ,金額:1, 進行中
+帳號 twen101, ky轉回4.0 ,金額:1, 進行中
+帳號 twen101, lc轉回4.0 ,金額:1, 進行中
+帳號 twen101, city轉回4.0 ,金額:1, 進行中
+狀態成功. gns ,sn 單號: FClHozBJZpTyXmG
+狀態成功. shaba ,sn 單號: TFTTSB5LC61UWCGK5S204gLvYd
+狀態成功. im ,sn 單號: TFTFIM5LC61UWCGK5SAD4gzrZf
+狀態成功. ky ,sn 單號: TFTKTM5LC61UWCGK5XWM4dk7kw
+狀態成功. lc ,sn 單號: TFTLTM5LC61UWCGK5XAN4d0X85
+狀態成功. city ,sn 單號: TFTCTM5LC61UWCGK5XYZ4dasTP
+帳號: twen101
+4.0 餘額: 50,046,145.98
+gns, 餘額: 11
+lc, 餘額: 106.75
+im, 餘額: 11
+shaba, 餘額: 11.0
+ky, 餘額: 547.5
+city, 餘額: 21.00
+用時: 0.45104002952575684秒
+用時: 5.233203887939453秒
 
 
         </pre>
@@ -282,8 +396,8 @@ pt1.1: 新疆时时彩
 
 <tr id='total_row'>
     <td>Total</td>
-    <td>1</td>
-    <td class="text text-success">1</td>
+    <td>4</td>
+    <td class="text text-success">4</td>
     <td class="text text-danger">0</td>
     <td class="text text-warning">0</td>
     <td>&nbsp;</td>
@@ -312,7 +426,7 @@ var data = [
 	},
 	{
 	    name : 'pass',
-		value : 1,
+		value : 4,
 		color : "#28B463",
 		label : "Pass",
 		labelColor: 'white',

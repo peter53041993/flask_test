@@ -1,0 +1,58 @@
+
+{% extends "base.html" %}
+{% block title %}衝直紅包活動{% endblock %}
+{%block head %}
+{{ super() }}
+<style type="text/css">
+#id{border-radius: 22px;}
+p{margin-top: 1%;}
+</style>
+{% endblock %}  
+{% block script %}
+<script type="text/javascript">
+    function check(){
+        if ($('.dataframe').length>0){
+            $("table").html("");//已經有了先清空
+        }
+        
+        alert('請稍後');
+        $.ajax({
+            url:"/fund_activity",
+            type:"POST",
+            //dataType: "json",
+            headers:{
+                    Accept:"application/json; charset=utf-8"
+                },
+            data:$("#form1").serialize(),
+            success:function(data){
+                if (data=='該環境沒有此用戶'){
+                    alert('該環境沒有此用戶');
+                    return flase;
+                }
+                console.log(data);
+                $("#user_detail").after(data)
+            }
+    
+            })
+        }   
+</script>
+
+{% endblock %}
+{% block main %}
+
+<form id='form1' method='POST'>
+    <label>環境: </label>
+    <select name='env_type' id='env_type'>
+        <option value= 0>dev02</option>
+        <option value= 1>joy188</option>
+        <option value= 2>ph158</option>
+    </select>
+    <br>
+    請輸入用戶名<input type="text" id="user" name="user"
+    size="16"  maxlength="16">
+    </p>
+    <p><input type="button" onclick="check()" value="查詢"></p>
+</form>
+<div id='user_detail'>
+</div> 
+{% endblock %}

@@ -17,8 +17,7 @@ log_folder_path = project_path + r"\logs"
 
 # ChromeDriver 設定參數
 chrome_options = Options()
-# chrome_options.add_argument("--headless"
-# )  # 背景執行
+chrome_options.add_argument("--headless")  # 背景執行
 chrome_options.add_argument("--start-maximized")  # 全螢幕
 
 
@@ -136,6 +135,29 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
+    def get_joint_venture(self, env, domain):
+        domain_urls = self.select_domain_url(get_conn(int(env)), domain)  # 先去全局 找是否有設定 該domain
+        # 查詢後台是否有設置
+        try:
+            domain_type = domain_urls[0][5]  # 判斷 該domain 再後台全局設定 的 joint_venture 是多少
+            print("後台設置: %s" % domain_type)
+            return domain_type
+        except KeyError:
+            print("全局後台沒設置 : {}".format(self.env_domain))
+
+    def select_domain_url(self, conn, domain):
+        with conn.cursor() as cursor:
+            sql = "select a.domain,a.agent,b.url,a.register_display,a.app_download_display,a.domain_type,a.status from  \
+                GLOBAL_DOMAIN_LIST a inner join user_url b \
+                on a.register_url_id = b.id  where a.domain like '%{}%'".format(domain)
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            domain_urls = []
+            for num, url in enumerate(rows):
+                domain_urls[num] = list(url)
+        conn.close()
+        return domain_urls
+
 
 class EnvConfigApp(EnvConfig):
     def __init__(self, domain):
@@ -213,9 +235,13 @@ def get_sql_exec(env, sql):
     return result
 
 
-def select_user_id(conn, account_):
+def select_user_id(conn, account_, joint_type=None):
     with conn.cursor() as cursor:
-        sql = "select id from user_customer where account = '{}'".format(account_)
+        if joint_type is None:
+            sql = "select id from user_customer where account = '{}'".format(account_)
+        else:
+            sql = "select id from user_customer where account = '{}' and joint_venture = 'P{'".format(account_,
+                                                                                                      joint_type)
         print('SQL : {}'.format(sql))
         cursor.execute(sql)
         rows = cursor.fetchall()

@@ -3,13 +3,13 @@ from time import sleep
 
 from selenium.webdriver import ActionChains
 
-from utils.Logger import create_logger
+from Utils.Logger import create_logger
 from selenium import webdriver
 from selenium.webdriver.remote.command import Command
 from enum import Enum
-from utils import Config
-from utils import TestTool
-from utils.TestTool import trace_log
+from Utils import Config
+from Utils import TestTool
+from Utils.TestTool import trace_log
 
 
 class BasePage:

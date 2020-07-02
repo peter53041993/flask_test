@@ -12,7 +12,7 @@ import json
 import image_test
 import os
 
-import utils.Config
+import Utils.Config
 from autoTest import AutoTest
 from time import sleep
 import threading
@@ -23,10 +23,10 @@ import logging
 from flask import current_app
 import urllib3
 from bs4 import BeautifulSoup
-import twstock, stock
+# import twstock, stock
 import pandas as pd
 import re
-from utils import Config
+from Utils import Config
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
@@ -278,9 +278,7 @@ def imageAdj():
     testInfo['image_name'] = image_name
     testInfo['height'] = height
     testInfo['width'] = width
-    image_test.image_(image_name, height, width)  # 將圖名, 長,寬 回傳給 image_test檔案下 image_的 func使用
-    msg = image_test.msg  # 宣告image_test方法裡 global msg變數
-    testInfo['msg'] = msg
+    testInfo['msg'] = image_test.image_resize(image_name, height, width)  # 將圖名, 長,寬 回傳給 image_test檔案下 image_的 func使用
 
     return json.dumps(testInfo['msg'])
 
@@ -300,10 +298,16 @@ def autoTest():
             integration_test_pc = request.form.getlist('integration_test_pc')  # 回傳 測試案例data內容
             env_config = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
             red = request.form.get('red_type')  # 紅包選擇
+            money_unit = request.form.get('moneymode')  # 金額模式
+            domain_url = env_config.get_post_url().split('://')[1]  # 後台全局 url 需把 http做切割
+
+            domain_type = env_config.get_joint_venture(env_config.get_env_id(), domain_url)  # 查詢 後台是否有設置 該url
+            # domain_type = Config.domain_type#後台 該url joint_venture 的 類型
+
             logger.debug("env_config.id: {},  red: {}".format(env_config.get_env_id(), red))
 
             # 查詢用戶 user_id,合營
-            user_id = utils.Config.select_user_id(utils.Config.get_conn(env_config.get_env_id()), user_name)
+            user_id = Utils.Config.select_user_id(Utils.Config.get_conn(env_config.get_env_id()), user_name, domain_type)
             # joint_venture = autoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
 
             test_cases.append(api_test_pc)
@@ -317,13 +321,13 @@ def autoTest():
                 logger.info(
                     "AutoTest.suite_test({}, {}, {}, {})".format(test_cases, user_name, env_config.get_domain(), red))
                 AutoTest.suite_test(test_cases, user_name, env_config.get_domain(),
-                                    red)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
+                                    red, money_unit)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
                 return redirect('report')
             else:
                 raise Exception('此環境沒有該用戶')
         # return redirect("/report")
     except Exception as e:
-        from utils.TestTool import trace_log
+        from Utils.TestTool import trace_log
         trace_log(e)
     return render_template('autoTest.html')
 
@@ -512,18 +516,77 @@ def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
 @app.route('/stock_search', methods=["GET", "POST"])
 def stock_search():
     stock_detail = {}
-
     try:
         if request.method == "POST":
             stock_num = request.form.get('stock_search')
-            print(stock_num)  # 股票號碼
-            stock.stock_select(stock.kerr_conn(), int(stock_num))  # 有股號後, 從mysql 抓出更多資訊
-            stock_detail = twstock.realtime.get(stock_num)  # 股票價位
-            print(stock_detail)
-            if len(stock.stock_detail2) == 0:  # 代表空的,正常是頁面輸入錯誤,或真的沒有
-                return "沒有該股票號碼: %s" % stock_num
+            stock_name = request.form.get('stock_search2')
+            print(stock_num,stock_name)#股票號碼,股票名稱
+            if stock_name not in  [None,'']:# 代表頁面 輸入名稱 , 先從DB 找 有沒有該名稱,在去yahoo找
+                stock.stock_selectname(stock.kerr_conn(),stock_name)#找出相關資訊
+                stock_detail2 = stock.stock_detail2
+                if len(stock_detail2) == 0:# 名稱營收db為空的, 就不列印營收資訊
+                    return('沒有該股票名稱: %s'%stock_name)
+                else:# DB有找到該名稱 ,
+                    stock_deatil2 = stock.stock_detail2
+                    print(stock_deatil2)
+                    stock_num = str(list(stock_deatil2.values())[0][1])#號碼
+                    stock.df_test(stock_num)
+                    stock.df_test2(stock_num)
+                    now = stock.now#查詢時間
+                    latest_close = stock.latest_close#最新收盤
+                    latest_open = stock.latest_open
+                    latest_high = stock.latest_high
+                    latest_low = stock.latest_low
+                    latest_volume = stock.latest_volume
+            else:# 輸入號碼 ,和頁面輸入名稱流程不同,  有號碼 先從yahoo直接去找
+                try:
+                    stock_name = twstock.codes[stock_num][2]
+                    stock.df_test(stock_num)
+                    stock.df_test2(stock_num)
+                    now = stock.now#查詢時間
+                    latest_close = stock.latest_close#最新收盤
+                    latest_open = stock.latest_open
+                    latest_high = stock.latest_high
+                    latest_low = stock.latest_low
+                    latest_volume = stock.latest_volume
+                except KeyError:
+                    return('沒有該股票號碼: %s'%stock_num)#yahoo沒有,DB正常就不會有
+                stock.stock_selectnum(stock.kerr_conn(),int(stock_num))# 有股號後, 從mysql 抓出更多資訊
+                stock_detail2 = stock.stock_detail2
+                if len(stock_detail2) == 0:# 營收db為空的,但 yahoo查詢是有該股的, 就不列印營收資訊 ,
+                    data ={"股票名稱":stock_name,'股票號碼':stock_num,"目前股價":latest_close,
+                    '開盤':latest_open,'高點': latest_high,'低點': latest_low,'成交量':latest_volume,
+                    "查詢時間":now
+                    }
+                    frame = pd.DataFrame(data,index=[0])
+                    print(frame)
+                    return(frame.to_html())
+                else:# yahoo有, DB也有, 就是多列印 營收
+                    pass# 走到下面  和輸入 名稱  共用  營收邏輯
+
+            # 有營收, 輸入號碼 和輸入 名稱 共用
+            stock_curMonRev = list(stock_detail2.values())[0][4]
+            stock_lastMonRev = list(stock_detail2.values())[0][5]
+            stock_lastYearMonRev=list(stock_detail2.values())[0][6]
+            stock_lastMonRate=list(stock_detail2.values())[0][7]
+            stock_lastYearMonRate=list(stock_detail2.values())[0][8]
+            stock_curYearRev=list(stock_detail2.values())[0][9]
+            stock_lastYearRev=list(stock_detail2.values())[0][10]
+            stock_lastYearRate=list(stock_detail2.values())[0][11]
+            stock_memo=list(stock_detail2.values())[0][12]
+            data ={"股票名稱":stock_name,'股票號碼':stock_num,"目前股價":latest_close,
+            '開盤':latest_open,'高點': latest_high,'低點': latest_low,'成交量':latest_volume,
+            "當月營收":stock_curMonRev,'上月營收':stock_lastMonRev,'去年當月': stock_lastYearMonRev,"上月營收增":stock_lastMonRate,
+            '去年同月營收增減':stock_lastYearMonRate,'今年營收':stock_curYearRev,'去年營收':stock_lastYearRev,'去年營收增減': stock_lastYearRate,'股票備注':stock_memo, "查詢時間":now
+            }
+            now_hour = datetime.datetime.now().hour #現在時間 :時
+            weekday = datetime.date.today().weekday()+1#現在時間 :周, 需加1 , 禮拜一為0
+            print('現在時數: %s,禮拜:%s'%(now_hour,weekday))
+            if now_hour > 14 or weekday in [6,7] :
+                print('大於最後成交時間或者六日,不再做更新股價')
             else:
                 print(stock.stock_detail2)  # mysql抓出來的 資訊
+                '''
                 stock_prize = (stock_detail['realtime']['latest_trade_price'])  # 股票 最新一筆成交價
                 print(stock_prize, type(stock_prize))  # 為一個 str ,需把 小數點  . 三和四 去除掉
                 if stock_prize == '-':  # 抓出來 是  "-"  就先不理會,給一個值0
@@ -532,18 +595,20 @@ def stock_search():
                     stock_prize = stock_prize[0:-2]  # 後面兩個00不用,   到小數電第四位即可
                 # stock_prize = stock_prize[0:-2]# 後面兩個00不用,   到小數電第四位即可
                 print(stock_prize)
+                '''
 
-                stock.stock_update(stock.kerr_conn(), float(stock_prize), int(stock_num))  # 將股價 Update進去 Mysql
+                stock.stock_update(stock.kerr_conn(), float(latest_close), int(stock_num))  # 將股價 Update進去 Mysql
 
-                data = {"股票名稱": stock_detail['info']['name'], "目前股價": stock_prize,
-                        "開盤": stock_detail['realtime']['open'],
+                '''
+                data = {"股票名稱": stock_detail['info']['name'], "目前股價": latest_close,
+                        "開盤": latest_open,
                         "高點": stock_detail['realtime']['high'], "低點": stock_detail['realtime']['low'],
                         "查詢時間": stock_detail['info']['time']}
-
-                frame = pd.DataFrame(data, index=[0])
-                print(frame)
-                # print(frame.to_html())
-                return frame.to_html()
+                '''
+            frame = pd.DataFrame(data, index=[0])
+            print(frame)
+            # print(frame.to_html())
+            return frame.to_html()
         return render_template('stock.html')
     except requests.exceptions.Timeout as e:
         print(e)
@@ -551,9 +616,9 @@ def stock_search():
 
 @app.route('/stock_search2', methods=["POST"])
 def stock_search2():
-    stock_type = request.form.get('Revenue')
+    stock_type = request.form.getlist('Revenue')
     print(stock_type)
-    stock.stock_select2(stock.kerr_conn())  # select 出來
+    stock.stock_select2(stock.kerr_conn(),stock_type)  # select 出來
     stock_detail3 = stock.stock_detail3
     stock_num, stock_name, stock_prize, stock_curMonRev, stock_lastMonRev, stock_lastYearMonRev, stock_lastMonRate, stock_lastYearMonRate, stock_curYearRev, stock_lastYearRev, stock_lastYearRate, stock_memo = [], [], [], [], [], [], [], [], [], [], [], []
 
@@ -613,6 +678,10 @@ def game_map():  # 玩法 和 說明 mapping
     else:
         game_explan = 'test'
     return game_explan
+@app.route('/stock_search3',methods=["POST"])
+def stock_search3():
+    stock.stock_search3(stock.kerr_conn())
+    stock_detail = stock.stock_detail3
 
 
 def status_style(val):  # 判斷狀態,來顯示顏色屬性 , 給 game_order 裡的order_status用
@@ -640,7 +709,7 @@ def game_result():
         else:
             envs = 1
         if game_code != '':  # game_code 不為空,代表前台 是輸入 訂單號
-            AutoTest.ApiTestPC.select_gameResult(utils.Config.get_conn(envs), game_code)  # 傳回此方法.找出相關 訂單細節
+            AutoTest.ApiTestPC.select_gameResult(Utils.Config.get_conn(envs), game_code)  # 傳回此方法.找出相關 訂單細節
             game_detail = AutoTest.game_detail  # 將 global  game_detail 宣告變數 遊戲訂單的 內容
             if len(game_detail[game_code]) == 0:
                 return "此環境沒有此訂單號"
@@ -750,7 +819,7 @@ def game_result():
                 print('輸入玩法 有空格需去除掉')
                 game_type = game_type.replace(' ', '')
             print(game_type)
-            AutoTest.ApiTestPC.select_gameorder(utils.Config.get_conn(envs), '%' + game_type + '%')
+            AutoTest.ApiTestPC.select_gameorder(Utils.Config.get_conn(envs), '%' + game_type + '%')
             game_order = AutoTest.game_order
             len_order = AutoTest.len_order
             # print(game_order)
@@ -797,6 +866,7 @@ def user_acitve():  # 驗證第三方有校用戶
     if request.method == "POST":
         user = request.form.get('user')
         env = request.form.get('env_type')
+        joint_type = request.form.get('joint_type')
         if env == 'dev02':
             envs = 0
         elif env == 'joy188':
@@ -832,8 +902,7 @@ def user_acitve():  # 驗證第三方有校用戶
                 active_submit = 0  # 有效投注
                 is_active = "否"  # 有效用戶值
 
-                # autoTest.Joy188Test.select_activeFund(autoTest.Joy188Test.get_conn(envs),user)#當月充值
-                if user_fund[0] == None:  # 確認沒充值
+                if user_fund[0] is None:  # 確認沒充值
                     real_charge = 0
                 else:
                     real_charge = float(user_fund[0]) / 10000  # 抓充值表, 顯示充值金額
@@ -897,6 +966,7 @@ def user_acitve():  # 驗證第三方有校用戶
 def app_bet():
     user = request.form.get('user')
     env = request.form.get('env_type')
+    joint = request.form.get('joint_type')
     if env == 'dev02':
         envs = 0
     elif env == 'joy188':
@@ -906,7 +976,6 @@ def app_bet():
     AutoTest.ApiTestPC.select_AppBet(AutoTest.ApiTestPC.get_conn(envs), user)  # APP代理中心,銷量/盈虧
     app_bet = AutoTest.app_bet  # 銷量/盈虧
     third_list = []  # 存放第三方列表
-    all_bet = []  # 總投注
     active_bet = []  # 第三方有效投注
     third_prize = []  # 第三方獎金
     third_report = []  # 第三方盈虧
@@ -914,29 +983,350 @@ def app_bet():
     user_list = []
     for third in app_bet.keys():
         third_list.append(third)
-        all_bet.append(app_bet[third][0])
-        active_bet.append(app_bet[third][1])  # 有效銷量 為列表 1
-        third_prize.append(app_bet[third][2])
-        third_report.append(0 - (app_bet[third][3]))
+        active_bet.append(app_bet[third][0])  # 有效銷量 為列表 1
+        third_prize.append(app_bet[third][1])
+        third_report.append(app_bet[third][2])
         if third == "ALL":
             user_list.append(user)
         else:
             user_list.append("")
         if third == "ALL":
-            third_memo.append("用戶盈虧: 總獎金-總投注,盈虧<0: 用戶輸錢")
+            third_memo.append("用戶盈虧: 總獎金-有效銷量")
         elif third == 'CITY':
             third_memo.append("#後台投注紀錄盈虧值 為用戶角度")
         elif third == 'BBIN':
-            third_memo.append('獎金>投注: 用戶贏   #獎金不會小於0')
+            third_memo.append('#獎金不會小於0')
         else:  # 待後續確認每個第三方 規則
             third_memo.append('')
     # print(user_list,active_bet,third_prize,third_report)
 
-    data = {"用戶名": user_list, "總投注": all_bet, "有效銷量": active_bet, "總獎金": third_prize, "用戶盈虧": third_report,
+    data = {"用戶名": user_list,"有效銷量": active_bet, "總獎金": third_prize, "用戶盈虧": third_report,
             "備註": third_memo}
     frame = pd.DataFrame(data, index=third_list)
     print(frame)
     return frame.to_html()
+
+
+@app.route('/url_token',methods=["POST","GET"])
+def url_token():
+    domain_keys ={ # url 為 keys,values 0 為預設連結, 1為 DB環境參數 , 2 為預設註冊按紐顯示
+        'www.dev02.com': ['id=18408686&exp=1867031785352&pid=13438191&token=5705',0,'否','一般'],
+        'www.fh82dev02.com': ['id=18416115&exp=1898836925873&pid=13518151&token=674d',0,'是','合營'],
+        'www.teny2020dev02.com': ['id=18416115&exp=1898836925873&pid=13518151&token=674d',0,'是','合營'],
+        'www.88hlqpdev02.com': ['id=18416447&exp=1900243129901&pid=13520850&token=c46d',0,'是','歡樂棋排'],
+        'www2.joy188.com':['id=23629565&exp=1870143471538&pid=14055451&token=e609',1,'否','一般'],
+        'www2.joy188.195353.com':['id=30402641&exp=1899103987027&pid=14083381&token=f2ae',1,'是','合營'],
+        'www2.joy188.maike2020.com':['id=30402641&exp=1899103987027&pid=14083381&token=f2ae',1,'是','合營'],
+        'www2.joy188.teny2020.com':['id=30402641&exp=1899103987027&pid=14083381&token=f2ae',1,'是','合營'],
+        'www2.joy188.88hlqp.com':['id=30402801&exp=1900315909746&pid=14084670&token=296f',1,'是','歡樂棋排'],
+        'www.88hlqp.com': ['id=12724515&exp=1900124358942&pid=23143290&token=60f9',2,'是','歡樂棋排'],
+        'www.maike2020.com':['id=12569709&exp=1900396646000&pid=23075061&token=f943',2,'是','合營'],
+        'www.maike2021.com':['id=12569709&exp=1900396646000&pid=23075061&token=f943',2,'是','合營'],
+        'www.maike2022.com':['id=12569709&exp=1900396646000&pid=23075061&token=f943',2,'是','合營'],
+        'www.maike2023.com':['id=12569709&exp=1900396646000&pid=23075061&token=f943',2,'是','合營'],
+        'www.teny2020.com':['id=12727731&exp=1900585598288&pid=23119541&token=60ac&qq=7769700',2,'是','合營'],
+        'www.fh82.com':['id=12464874&exp=1883450993237&pid=2163831&token=b12f&qq=1055108800',1,'是','一般'],
+        'www.fhhy2020.com':['',2,'待確認','合營'],
+        'www.fh888.bet':['',2,'待確認','合營'],
+        'www.fh666.bet':['',2,'待確認','合營']
+    }
+    if request.method == "POST":
+        token = request.form.get('token')
+        id_ = request.form.get('id')
+        user = request.form.get('user')
+        env = request.form.get('env_type')
+        joint_type = request.form.get('joint_type')
+        #print(env)
+        if env == '0':
+            env_type = '02'
+        elif env == '1':
+            env_type = '188'
+        else:
+            env_type = '生產'
+
+        #print(token,env,id_,joint_type,domain)
+        if token not in  ['',None] : #token 直不為空, 代表頁面輸入的是token
+            print('頁面輸入token')
+            AutoTest.Joy188Test.select_urltoken(AutoTest.Joy188Test.get_conn(int(env)),token,joint_type)
+            token_url = AutoTest.token_url
+            print(token_url)
+            user =[]
+            user_url = []
+            len_data = [] # 用註冊碼查, 長度可能會有多個
+            for i in token_url.keys():
+                user.append(token_url[i][0])
+                user_url.append(token_url[i][1])
+                len_data.append(i)
+            data = {'用戶名':user,'開戶連結':user_url}
+        elif id_ not in ['',None]:
+            print('頁面輸入id')
+            AutoTest.Joy188Test.select_urltoken(AutoTest.Joy188Test.get_conn(int(env)),id_,joint_type)
+            token_url = AutoTest.token_url
+            print(token_url)
+            user =[]
+            user_url = []
+            for i in token_url.keys():
+                user.append(token_url[i][0])
+                user_url.append(token_url[i][1])
+
+            data = {'用戶名':user,'開戶連結':user_url}
+            len_data = [0]#輸入ID 查 連結, ID 為唯一直
+        elif user not in ['',None]:# 頁面輸入 用戶名 查詢用戶從哪開出
+            print('頁面輸入用戶名')
+            AutoTest.Joy188Test.select_userUrl(AutoTest.Joy188Test.get_conn(int(env)),user,2,joint_type)
+            user_url =AutoTest.user_url
+            print(user_url)
+            if len(user_url) == 0:# user_url 有可能找不到 ,再從 user_customer 的refere去找
+                AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(int(env)),user,joint_type)# 檢查環境是否有這用戶
+                if len(AutoTest.userid) == 0:
+                    return('%s環境沒有該用戶: %s'%(env_type,user))
+
+                data = {'用戶名':user,'用戶從此連結開出':'被刪除'}
+                frame = pd.DataFrame(data,index=[0])
+                print(frame)
+                return frame.to_html()
+
+            elif user_url[0][4] != -1:# '失效'
+                print('連結失效,從referer找')
+                days= '是'# user_url 找不到的連結 ,一定失效或被刪除
+                AutoTest.Joy188Test.select_userUrl(AutoTest.Joy188Test.get_conn(int(env)),user,0)
+                user_url =AutoTest.user_url
+                print(user_url)
+            else:# 這邊代表  user_url 是有值,  在去從days 判斷是否失效
+                if user_url[0][4] == -1:
+                    days= '否'
+                else:# 不等於 -1 為失效
+                    days = '是'
+            data = {'用戶名':user,'用戶從此連結開出':user_url[0][1],'連結是否失效':days,
+            '用戶代理線':user_url[0][2],'裝置':user_url[0][3]}
+            len_data = [0]
+        else:# 輸入domain 查尋 預設連結
+            try:# 對頁面輸入的domain, 做格式化處理
+                domain = request.form.get('domain').strip()# 頁面網域名稱 . strip 避免有空格問題
+                '''
+                if 'joy188' in domain:# joy188 前面為www2
+                    if 'www2' in domain:
+                        pass
+                    else:
+                        domain = 'www2.%s.com'%domain
+                elif any(s in domain for s in ['com','www']):# 網域名稱 有帶 www /com 不用額外更動
+                    pass #  後續可以 對 開頭是否有 http ,尾不是 com  去做處理
+                else: # 沒有帶  www
+                    
+                    if any(s in domain for s in ['fh888','fh666']):
+                        domain = 'www.%s.bet'%domain
+                    else:
+                        domain = 'www.%s.com'%domain
+                '''
+                print(domain)
+                #env = domain_keys[domain][1]#  1 為環境 ,0 為預設連結
+            except KeyError:#
+                return('沒有該連結')
+            AutoTest.Joy188Test.select_domain_url(AutoTest.Joy188Test.get_conn(int(env)), domain)
+            domain_url = AutoTest.domain_url
+            print(domain_url)
+            if len(domain_url) != 0:# 代表該預名 在後台全局管理有做設置
+                domain_admin = '是'# 後台是否有設定 該domain
+                register_display = domain_url[0][3]# 前台註冊按紐 是否隱藏
+                if register_display == 0:
+                    register_display = '關閉'
+                else:
+                    register_display = '開啟'
+                app_display = domain_url[0][4]# 前台掃碼 是否隱藏
+                if app_display == 0:
+                    app_display = '關閉'
+                else:
+                    app_display = '開啟'
+                admin_url = domain_url[0][2]#url 是預設連結,或者後台的設置 代理聯結
+                agent = domain_url[0][1]
+                domain_type = domain_url[0][5]# 後台設置 環境組 的欄位
+                if domain_type == 0:#  0:一般,1:合營,2:歡樂期排
+                    domain_type = '一般'
+                elif domain_type == 1:
+                    domain_type = '合營'
+                else:
+                    domain_type = '歡樂期排'
+                env_type = domain_type+"/"+env_type#還台有設置 ,不能用damain_keys來看, 有可能 業務後台增加, damain_keys沒有
+
+                status = domain_url[0][6]
+                if status == 0:
+                    status = '上架'
+                else:
+                    status = '下架/導往百度'
+
+                data = {"網域名":domain,'環境':env_type,'後台是否有設置該網域':domain_admin,'後台設定連結': admin_url,
+                '後台設定待理': agent,'後台註冊開關':register_display, '後台掃碼開關':app_display,'後台設定狀態':status}
+            else:# 就走預設的設定
+                try:
+                    if domain_keys[domain][1] != int(env):
+                        return("該環境沒有此domain")
+                    domain_admin = '否'
+                    admin_url = '無'#後台沒設置
+                    url = domain_keys[domain][0]# 沒設定 ,為空, 走預設連結
+                    register_status = domain_keys[domain][2]
+                    env_type = domain_keys[domain][3] +"/"+env_type#後台沒設置, 就從domain_keys 原本 預設的規則走
+                except KeyError:
+                    return('沒有該連結')
+
+                data = {"網域名":domain,'環境':env_type,'後台是否有設置該網域':domain_admin,'預設連結':url,
+                '預設註冊按紐':register_status}
+            len_data = [0]# 查詢網域名 ,長度只會為 1
+        try:
+            frame = pd.DataFrame(data,index=len_data)
+            print(frame)
+            return frame.to_html()
+        except ValueError:
+            return('DATA有錯誤')
+    return render_template('url_token.html')
+@app.route('/sun_user2',methods=["POST"])
+def sun_user2():# 查詢太陽成 指定domain
+    if request.method == 'POST':
+        env = request.form.get('env_type')
+        domain = request.form.get('domain_type')
+        print(env,domain)
+        AutoTest.Joy188Test.select_sunuser(AutoTest.Joy188Test.get_conn(int(env)),'',2,domain)
+        sun_user = AutoTest.sun_user
+        print(sun_user)
+
+        data = {'域名':[sun_user[i][0] for i in sun_user.keys()],
+        '代理':[sun_user[i][1] for i in sun_user.keys()],
+        '連結':[sun_user[i][2] for i in sun_user.keys()],
+        '註冊顯示':['是' if sun_user[i][3] == 1 else "否" for i in sun_user.keys()],
+        '狀態':['下架' if sun_user[i][4] == 1 else '正常' for i in sun_user.keys()],
+        '備註':[sun_user[i][5] for i in sun_user.keys()],
+        '連結失效性':['失效' if sun_user[i][6]!= -1 else '正常' for i in sun_user.keys()],
+        '註冊數量':['0' if sun_user[i][7] == None else int(sun_user[i][7]) for i in sun_user.keys()]
+        }
+        frame = pd.DataFrame(data,index=[i for i in sun_user.keys()])
+        print(frame)
+        return frame.to_html()
+    else:
+        return('錯誤')
+@app.route('/sun_user',methods=["POST","GET"])
+def sun_user():# 太陽成用戶 找尋
+    if request.method =="POST":
+        user = request.form.get('user')
+        env = request.form.get('env_type')
+        domain = request.form.get('domain_type')
+        print(user,env,domain)
+        if env =='0' :
+            env_name = 'dev'
+        elif env == '1':
+            env_name = '188'
+        else:
+            print(env)
+            env_name = '生產'
+        if domain == '0':
+            domain_type = '太陽城'
+        else:
+            domain_type = '申博'# domain  = "1"
+        if user in [None,'']:
+            type_ = 1# 頁面查詢 轉移成功用戶,
+        else:
+            type_ = ''# 查詢 指定用戶
+        print(type_)
+        AutoTest.Joy188Test.select_sunuser(AutoTest.Joy188Test.get_conn(int(env)),user,type_,domain)# 太陽/申博用戶
+        sun_user = AutoTest.sun_user
+        print(sun_user)
+        if len(sun_user) == 0:
+            if type_ ==1:
+                return('目前還沒有成功轉移用戶')
+            return('%s沒有該用戶:%s'%(env_name+domain_type,user))
+        if type_!=1:# 指定用戶
+            user = sun_user[0][0]
+            phone = sun_user[0][1]
+            tran_statu = sun_user[0][4]
+            if tran_statu == 1:
+                tran_statu = '成功'
+            else:
+                tran_statu = '未完成'
+            tran_time = sun_user[0][5]
+            index_len = [0]
+            AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(int(env)),user,int(domain))# 4.0 資料庫
+            userid = AutoTest.userid
+            '''
+            if len(userid) == 0:# 代表該4.0環境沒有該用戶
+                FF_memo = '無'
+            else:
+                FF_memo = '有'
+            '''
+            data = {'環境/類型':env_name+domain_type,'用戶名':user,'電話號碼':phone,'轉移狀態':tran_statu,'轉移時間':tran_time,
+            #'4.0資料庫':FF_memo
+            }
+        else:# 找尋以轉移用戶, 資料會很多筆
+            user = []
+            phone = []
+            tran_statu = []
+            tran_time = []
+            index_len = []
+            for num in sun_user.keys():
+                user.append(sun_user[num][0])
+                phone.append(sun_user[num][1])
+                if sun_user[num][2] == 1:
+                    statu = '成功'
+                else:
+                    statu = '失敗'
+                tran_statu.append(statu)
+                tran_time.append(sun_user[num][3])
+                index_len.append(num)
+            data = {'環境/類型':env_name+domain_type,'用戶名':user,'電話號碼':phone,'轉移狀態':tran_statu,'轉移時間':tran_time}
+        frame = pd.DataFrame(data,index=index_len)
+        print(frame)
+        return frame.to_html()
+    return render_template('sun_user.html')
+@app.route('/fund_activity',methods=["POST","GEt"])
+def fund_activity():# 充值紅包 查詢
+    if request.method =="POST":
+        user = request.form.get('user')
+        env = request.form.get('env_type')
+        print(user,env)
+        AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(int(env)),user,'')# 查詢頁面上 該環境是否有這用戶
+        if len(AutoTest.userid) == 0:
+            return('該環境沒有此用戶')
+        AutoTest.Joy188Test.select_FundRed(AutoTest.Joy188Test.get_conn(int(env)),user,'')# 先確認 是否領取過紅包
+        red_able = AutoTest.fund_
+        print(red_able)
+
+        fund_list = []# 存放各充值表的 紀錄 ,總共四個表
+        for i in range(4):
+            AutoTest.Joy188Test.select_FundRed(AutoTest.Joy188Test.get_conn(int(env)),user,i)
+            fund_list.append(AutoTest.fund_)
+        #begin_mission = AutoTest.fund_# 新守任務表
+        print(fund_list)
+        data = {}
+        fund_log = 0# 紀錄 是否 四個表都沒有資料
+        for index,i in enumerate(fund_list):
+            if index == 0:
+                msg = '新守任務/BEGIN_MISSION'
+            elif index ==1:
+                msg = ('活動/ACTIVITY_FUND_OPEN_RECORD')
+            elif index ==2:
+                msg = ('資金明細/fund_change_log')
+            elif index==3:
+                msg = ('資金明細搬動/fund_change_log_hist')
+            if len(i) ==0:
+                msg2 = ('無紀錄')
+            else:
+                msg2 = ('%s'%i[0])
+                fund_log = fund_log+1#
+            print(msg,msg2)
+            data[msg] = msg2
+        if len(red_able) == 0:# 紅包還沒領取
+            red_able = '否'
+            if fund_log == 0:# 代表沒成功
+                activity_able = '符合資格'
+            else:
+                activity_able = "不符合資格"
+        else:# 代表已經領取過 紅包
+            red_able = float(red_able[0][0]/10000)
+            activity_able = "符合資格"
+        data['紅包是否領取'] = '紅包金:%s'%red_able
+        data['充直紅包活動'] = activity_able
+        print(data)
+        frame = pd.DataFrame(data,index=[0])
+        print(frame)
+        return frame.to_html()
+    return render_template('fund_activity.html')
 
 
 @app.route('/error')  # 錯誤處理
