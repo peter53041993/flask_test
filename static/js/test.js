@@ -19,6 +19,7 @@ document.writeln("        <div class=\'dropdown-menu\'>");
 document.writeln("          <a class=\'dropdown-item\' href=\'benefit\'>福利中心</a>");
 document.writeln("          <a class=\'dropdown-item\' href=\'report_APP\'>APP戰報</a>");
 document.writeln("          <a class=\'dropdown-item\' href=\'domain_list\'>域名列表</a>");
+document.writeln("          <a class=\'dropdown-item\' href=\'fund_activity\'>充直紅包活動</a>");
 document.writeln("        </div>");
 document.writeln("    </div>");
 document.writeln("    <div class=\'btn-group\'>");
