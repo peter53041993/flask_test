@@ -1107,6 +1107,7 @@ def url_token():
         else:# 輸入domain 查尋 預設連結
             try:# 對頁面輸入的domain, 做格式化處理
                 domain = request.form.get('domain').strip()# 頁面網域名稱 . strip 避免有空格問題
+                '''
                 if 'joy188' in domain:# joy188 前面為www2
                     if 'www2' in domain:
                         pass
@@ -1115,10 +1116,12 @@ def url_token():
                 elif any(s in domain for s in ['com','www']):# 網域名稱 有帶 www /com 不用額外更動
                     pass #  後續可以 對 開頭是否有 http ,尾不是 com  去做處理
                 else: # 沒有帶  www
+                    
                     if any(s in domain for s in ['fh888','fh666']):
                         domain = 'www.%s.bet'%domain
                     else:
                         domain = 'www.%s.com'%domain
+                '''    
                 print(domain)
                 #env = domain_keys[domain][1]#  1 為環境 ,0 為預設連結
             except KeyError:# 
