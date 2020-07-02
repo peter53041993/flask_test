@@ -2109,6 +2109,7 @@ class Joy188Test2(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         global dr, user, post_url, em_url, password, user, env
+        #print(Config.chromeDriver_Path)
         try:
             if 'ChromeDriver' in locals() or 'ChromeDriver' in globals():
                 cls.dr = webdriver.Chrome(chrome_options=Config.chrome_options)
@@ -3063,6 +3064,7 @@ def suite_test(testcase,username,env,red,awardmode,money):
         # print(content)
         print(suite)
         filename = Config.reportHtml_Path  # now + u'自動化測試' + '.html'
+        #print(filename)
         global fp
         fp = open(filename, 'wb')
         global runner
