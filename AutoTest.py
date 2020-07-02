@@ -277,13 +277,14 @@ class Joy188Test(unittest.TestCase):
     @staticmethod
     def select_userid(conn,account_,joint_type=0):
         with conn.cursor() as cursor:
-            sql = "select id from user_customer where account = '%s' and joint_venture = '%s'"%(account_,joint_type)
+            if joint_type == '':# user_customer 不加上 joint_venture 條件
+                sql = "select id from user_customer where account = '%s'"%account_
+            else:
+                sql = "select id from user_customer where account = '%s' and joint_venture = '%s'"%(account_,joint_type)
             cursor.execute(sql)
             rows = cursor.fetchall()
             global userid  # , joint_venture# joint_ventue 判斷合營  ,合營 等 上188 後 在加上
             userid = []
-            joint_venture = []
-
             for i in rows:
                 userid.append(i[0])
                 # joint_venture.append(i[1])
@@ -349,6 +350,36 @@ class Joy188Test(unittest.TestCase):
                 order_list.append(list(tuple_))  # 把tuple 轉乘list  ,然後放入  order_list
                 game_order[index] = order_list[index]  # 字典 index 為 key ,  order_list 為value
             # print(game_order)
+        conn.close()
+
+    @staticmethod
+    def select_FundRed(conn, user,type_):  #充值 紅包 查尋  各充值表
+        with conn.cursor() as cursor:
+            if type_ == 0:# 新守任務
+                sql = "select user_.account,new.cancel_reason from BEGIN_MISSION  new inner join user_customer user_ \
+                    on  new.user_id = user_.id  where user_.is_freeze = 0 and user_.account = '%s'"%user
+            elif type_ == 1:# 活動充值表
+                sql = "select user_.account, act.THE_DAY from ACTIVITY_FUND_OPEN_RECORD  act \
+                inner join user_customer user_ on act.user_id = user_.id \
+                where user_.account = '%s'"%user
+            elif type_ == 2:# 資金異動表'
+                sql = "select user_.account,fund.sn,fund.GMT_CREATED from fund_change_log fund \
+                inner join user_customer user_ on fund.user_id = user_.id \
+                where user_.account = '%s' and  fund.reason like '%%%s%%'" %(user,'ADAL')
+            elif type_ == 3: # 資金異動表 搬動
+                sql = "select user_.account,fund.sn,fund.GMT_CREATED from fund_change_log_hist fund \
+                inner join user_customer user_ on fund.user_id = user_.id \
+                where user_.account = '%s' and  fund.reason like '%%%s%%'"%(user,'ADAL')
+            else: # - 判斷 是否有領過 首充附言鼓励金
+                sql = "select red.amount from  RED_ENVELOPE_LIST  red inner join  user_customer user_ \
+                on red.user_id  = user_.id where user_.account = '%s' and note = '首充附言鼓励金'"%user
+            print(sql)
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global fund_
+            fund_ = {}
+            for index, tuple_ in enumerate(rows):
+                fund_[index] = list(tuple_)
         conn.close()
 
     @staticmethod
