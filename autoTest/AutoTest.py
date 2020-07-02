@@ -32,7 +32,7 @@ def suite_test(test_cases, user_name, test_env, is_use_red):
     :param is_use_red: String; yse or no; 目前未使用
     :return: 
     """
-    logger = create_logger(r'\AutoTest')
+    logger = create_logger(r'\AutoTest', 'auto_test')
     logger.info("suite_test 初始化")
     env_config = Config.EnvConfig(test_env)
     env_config_app = Config.EnvConfigApp(test_env)

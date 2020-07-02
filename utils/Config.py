@@ -17,7 +17,8 @@ log_folder_path = project_path + r"\logs"
 
 # ChromeDriver 設定參數
 chrome_options = Options()
-chrome_options.add_argument("--headless")  # 背景執行
+# chrome_options.add_argument("--headless"
+# )  # 背景執行
 chrome_options.add_argument("--start-maximized")  # 全螢幕
 
 
@@ -200,6 +201,7 @@ def get_conn(env):  # 連結數據庫 env 0: dev02 , 1:188
 
 
 def get_sql_exec(env, sql):
+    print('get_sql_exec : sql = {}'.format(sql))
     cursor = get_conn(env).cursor()
     cursor.execute(sql)
     rows = cursor.fetchall()

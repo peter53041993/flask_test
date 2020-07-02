@@ -48,7 +48,7 @@ def get_order_code_web(conn, user, lottery):  # webdriver頁面投注產生定�
     return order_code
 
 
-def select_userUrl(conn, userid):
+def select_user_url(conn, userid):
     with conn.cursor() as cursor:
         sql = "select url from user_url where url like '%{}%'".format(userid)
         cursor.execute(sql)
@@ -61,7 +61,7 @@ def select_userUrl(conn, userid):
     return user_url
 
 
-logger = Logger.create_logger(r"\AutoTest")
+logger = Logger.create_logger(r"\AutoTest", 'auto_test_integration')
 
 
 class IntegrationTestWeb(unittest.TestCase):
@@ -848,7 +848,7 @@ class IntegrationTestWeb(unittest.TestCase):
 
         userid = utils.Config.select_user_id(utils.Config.get_conn(self.envConfig.get_env_id()),
                                              self.user)  # 找出用戶 Userid  , 在回傳給開戶連結
-        user_url = select_userUrl(utils.Config.get_conn(self.envConfig.get_env_id()), userid[0])  # 找出 開戶連結
+        user_url = select_user_url(utils.Config.get_conn(self.envConfig.get_env_id()), userid[0])  # 找出 開戶連結
 
         self.dr.get(self.post_url + '/register/?{}'.format(user_url[0]))  # 動待找尋 輸入用戶名的  開戶連結
         print(self.dr.title)

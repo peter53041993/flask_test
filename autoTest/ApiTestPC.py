@@ -12,7 +12,7 @@ import utils.Config
 from utils import Config, Logger
 from utils.Config import LotteryData, func_time
 
-logger = Logger.create_logger(r"\AutoTest")
+logger = Logger.create_logger(r"\AutoTest", 'auto_test_pc')
 
 class ApiTestPC(unittest.TestCase):
     u"PC接口測試"

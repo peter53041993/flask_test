@@ -53,7 +53,7 @@ def get_order_code_iapi(conn, orderid):  # 從iapi投注的orderid對應出 orde
     return order_code
 
 
-logger = Logger.create_logger(r"\AutoTest")
+logger = Logger.create_logger(r"\AutoTest", 'auto_test_app')
 
 
 class ApiTestApp(unittest.TestCase):
