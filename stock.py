@@ -71,13 +71,13 @@ def stock_update(db,stock_prize,stock_num):# 找出對應號碼, update股價
     db.commit()
     print("%s update完成"%stock_num)
     cur.close()
-def stock_select2(db,name):#頁面勾選  前10的選項 
+def stock_select2(db,name):#頁面  營收 勾選
     cur = db.cursor()
     if len(name) ==1:# 頁面只有勾一個 
-        sql = "select * from STOCK_TEST where %s > 100 order by %s  desc  LIMIT 10 "%(name[0],name[0])
+        sql = "select * from STOCK_TEST where %s > 100 order by %s  desc"%(name[0],name[0])
     else:#先pass,後續 用 tuple方式  來加參數
         sql = "select * from STOCK_TEST where %s > 100 \
-        and STOCK_%s >100"%tuple(name)
+        and %s >100"%tuple(name)
     cur.execute(sql)
     rows = cur.fetchall()
     global stock_detail3
@@ -86,6 +86,27 @@ def stock_select2(db,name):#頁面勾選  前10的選項
         stock_detail3[num] = list(tuple_)
     print(stock_detail3)
     cur.close()
+def stock_search3(db):#法人篩選 ,- 法人 連續 買 
+    cur= db.cursor()
+    sql = "select  count(*),STOCK_TEST.STOCK_NAME,sum(STOCK_GOV.GOV_SELL) as sell \
+    ,STOCK_TEST.STOCK_LAST_MONRATE \
+    from STOCK_GOV inner join STOCK_TEST on STOCK_GOV.STOCK_NUM = STOCK_TEST.STOCK_NUM \
+    where STOCK_GOV.GOV_SELL > 0 \
+    group by STOCK_TEST.STOCK_NAME,STOCK_TEST.STOCK_LAST_MONRATE having count(*) >=5 \
+    order by count(*) desc ,sell desc"
+    cur.execute(sql)
+    rows = cur.fetchall()
+    global stock_detail3
+    stock_detail3 = {}
+    for num,tuple_ in enumerate(rows):
+        stock_detail3[num] = list(tuple_)
+    print(stock_detail3)
+    cur.close()
+
+
+
+
+
 
 def df_test(number):# 將股號傳回. 透過yahoo 回傳歷史股價, 並存圖
     plt.rcParams['font.sans-serif']=['Microsoft JhengHei'] #用来正常显示中文标签
