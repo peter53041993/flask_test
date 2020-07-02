@@ -12,7 +12,7 @@ import json
 import image_test
 import os
 
-import Utils.Config
+import utils.Config
 from autoTest import AutoTest
 from time import sleep
 import threading
@@ -26,7 +26,7 @@ from bs4 import BeautifulSoup
 # import twstock, stock
 import pandas as pd
 import re
-from Utils import Config
+from utils import Config
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
@@ -307,7 +307,7 @@ def autoTest():
             logger.debug("env_config.id: {},  red: {}".format(env_config.get_env_id(), red))
 
             # 查詢用戶 user_id,合營
-            user_id = Utils.Config.select_user_id(Utils.Config.get_conn(env_config.get_env_id()), user_name, domain_type)
+            user_id = utils.Config.select_user_id(utils.Config.get_conn(env_config.get_env_id()), user_name, domain_type)
             # joint_venture = autoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
 
             test_cases.append(api_test_pc)
@@ -327,7 +327,7 @@ def autoTest():
                 raise Exception('此環境沒有該用戶')
         # return redirect("/report")
     except Exception as e:
-        from Utils.TestTool import trace_log
+        from utils.TestTool import trace_log
         trace_log(e)
     return render_template('autoTest.html')
 
@@ -709,7 +709,7 @@ def game_result():
         else:
             envs = 1
         if game_code != '':  # game_code 不為空,代表前台 是輸入 訂單號
-            AutoTest.ApiTestPC.select_gameResult(Utils.Config.get_conn(envs), game_code)  # 傳回此方法.找出相關 訂單細節
+            AutoTest.ApiTestPC.select_gameResult(utils.Config.get_conn(envs), game_code)  # 傳回此方法.找出相關 訂單細節
             game_detail = AutoTest.game_detail  # 將 global  game_detail 宣告變數 遊戲訂單的 內容
             if len(game_detail[game_code]) == 0:
                 return "此環境沒有此訂單號"
@@ -819,7 +819,7 @@ def game_result():
                 print('輸入玩法 有空格需去除掉')
                 game_type = game_type.replace(' ', '')
             print(game_type)
-            AutoTest.ApiTestPC.select_gameorder(Utils.Config.get_conn(envs), '%' + game_type + '%')
+            AutoTest.ApiTestPC.select_gameorder(utils.Config.get_conn(envs), '%' + game_type + '%')
             game_order = AutoTest.game_order
             len_order = AutoTest.len_order
             # print(game_order)

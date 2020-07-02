@@ -6,8 +6,8 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 
 from page_objects import BasePages
-from Utils.Logger import create_logger
-from Utils.TestTool import trace_log
+from utils.Logger import create_logger
+from utils.TestTool import trace_log
 
 logger = create_logger(r'\AutoTest', 'base_bet_page')
 

@@ -14,9 +14,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 import random
 
-import Utils.Config
-from Utils import Config, Logger
-from Utils.Config import LotteryData
+import utils.Config
+from utils import Config, Logger
+from utils.Config import LotteryData
 
 
 def date_time():  # 給查詢 獎期to_date時間用, 今天時間
@@ -89,7 +89,7 @@ class IntegrationTestWeb(unittest.TestCase):
             else:
                 self.dr = webdriver.Chrome(Config.chromeDriver_Path, chrome_options=Config.chrome_options)
         except Exception as e:
-            from Utils.TestTool import trace_log
+            from utils.TestTool import trace_log
             trace_log(e)
 
     def login(self):
@@ -366,7 +366,7 @@ class IntegrationTestWeb(unittest.TestCase):
 
     def submit_message(self, lottery):  # 投注完的單號
         if '成功' in self.CLASS('pop-text').text:
-            order_code_web = get_order_code_web(Utils.Config.get_conn(1), self.user, lottery)
+            order_code_web = get_order_code_web(utils.Config.get_conn(1), self.user, lottery)
             print("方案編號: %s" % order_code_web[-1])
         else:
             print('失敗')
@@ -846,9 +846,9 @@ class IntegrationTestWeb(unittest.TestCase):
         else:
             raise Exception('無對應安全密碼，請至test_applycenter新增')
 
-        userid = Utils.Config.select_user_id(Utils.Config.get_conn(self.envConfig.get_env_id()),
+        userid = utils.Config.select_user_id(utils.Config.get_conn(self.envConfig.get_env_id()),
                                              self.user)  # 找出用戶 Userid  , 在回傳給開戶連結
-        user_url = select_user_url(Utils.Config.get_conn(self.envConfig.get_env_id()), userid[0])  # 找出 開戶連結
+        user_url = select_user_url(utils.Config.get_conn(self.envConfig.get_env_id()), userid[0])  # 找出 開戶連結
 
         self.dr.get(self.post_url + '/register/?{}'.format(user_url[0]))  # 動待找尋 輸入用戶名的  開戶連結
         print(self.dr.title)

@@ -7,9 +7,9 @@ import time
 from autoTest.ApiTestApp import ApiTestApp
 from autoTest.ApiTestPC import ApiTestPC
 from autoTest.IntegrationTestWeb import IntegrationTestWeb
-from Utils import Config
-from Utils.Logger import create_logger
-from Utils.TestTool import trace_log
+from utils import Config
+from utils.Logger import create_logger
+from utils.TestTool import trace_log
 
 os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'  # 避免抓出oracle中文 為問號
 

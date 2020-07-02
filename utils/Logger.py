@@ -1,5 +1,5 @@
 import logging
-from Utils import Config
+from utils import Config
 import os
 from datetime import datetime
 
