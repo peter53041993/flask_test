@@ -36,15 +36,15 @@
                     console.log(typeof(data))
                     if (data=='沒有該註冊碼'){
                         alert(data);
-                        location.reload()  
+                        //location.reload()  
                     }
                     else if (data=='DATA有錯誤'){
                         alert(data);
-                        location.reload();
+                        //location.reload();
                     }
                     else if (data.indexOf('環境沒有該用戶')>=0){
                         alert(data);
-                        location.reload();
+                        //location.reload();
                     }
                     else{
                     console.log(data);
@@ -78,11 +78,11 @@
                     console.log(typeof(data))
                     if (data=='沒有該連結'){
                         alert(data);
-                        location.reload(); 
+                        //location.reload(); 
                     }
                     else if (data=='DATA有錯誤'){
                         alert(data);
-                        location.reload();
+                        //location.reload();
                     }
                     else if (data.indexOf('環境沒有此domain')>0){
                         alert(data);
