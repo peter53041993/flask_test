@@ -298,8 +298,10 @@ def autoTest():
             username = request.form.get('username')
             test_case = request.form.getlist('test_Suite')  # 回傳 測試案例data內容
             envConfig = Config.EnvConfig(request.form.get('env_type'))  # 初始化
-            red = request.form.get('red_type')  # 紅包選擇
-            print(red)
+            awardmode = request.form.get('awardmode')# 頁面獎金玩法選擇
+            red = request.form.get('red_type')#紅包選擇
+            money = request.form.get('moneymode')#金額模式
+            print(red,awardmode)
             print(envConfig.get_post_url())# url
             domain_url = envConfig.get_post_url().split('http://')[1]# 後台全局 url 需把 http做切割
             
@@ -316,8 +318,7 @@ def autoTest():
                 testcase.append(test)
             print(testcase)
             if len(userid) > 0:  # userid 值為空,　代表該ＤＢ　環境　沒有此用戶名　，　就不用做接下來的事
-                AutoTest.suite_test(testcase, username, envConfig.get_domain(),
-                                    red)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
+                AutoTest.suite_test(testcase,username,envConfig.get_domain(),red,awardmode,money)# 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
                 return redirect('report')
             else:
                 # print(response_status)
@@ -332,7 +333,7 @@ def autoTest():
 
 @app.route("/report", methods=['GET'])
 def report():
-    return render_template('report.html'),'tst'
+    return render_template('report.html')
 
 
 @app.route('/progress')
@@ -514,7 +515,6 @@ def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
 @app.route('/stock_search', methods=["GET", "POST"])
 def stock_search():
     stock_detail = {}
-
     try:
         if request.method == "POST":
             stock_num = request.form.get('stock_search')
@@ -585,6 +585,7 @@ def stock_search():
                 print('大於最後成交時間或者六日,不再做更新股價')
             else:
                 print(stock.stock_detail2)  # mysql抓出來的 資訊
+                '''
                 stock_prize = (stock_detail['realtime']['latest_trade_price'])  # 股票 最新一筆成交價
                 print(stock_prize, type(stock_prize))  # 為一個 str ,需把 小數點  . 三和四 去除掉
                 if stock_prize == '-':  # 抓出來 是  "-"  就先不理會,給一個值0
@@ -593,14 +594,16 @@ def stock_search():
                     stock_prize = stock_prize[0:-2]  # 後面兩個00不用,   到小數電第四位即可
                 # stock_prize = stock_prize[0:-2]# 後面兩個00不用,   到小數電第四位即可
                 print(stock_prize)
+                '''
 
-                stock.stock_update(stock.kerr_conn(), float(stock_prize), int(stock_num))  # 將股價 Update進去 Mysql
+                stock.stock_update(stock.kerr_conn(), float(latest_close), int(stock_num))  # 將股價 Update進去 Mysql
 
-                data = {"股票名稱": stock_detail['info']['name'], "目前股價": stock_prize,
-                        "開盤": stock_detail['realtime']['open'],
+                '''
+                data = {"股票名稱": stock_detail['info']['name'], "目前股價": latest_close,
+                        "開盤": latest_open,
                         "高點": stock_detail['realtime']['high'], "低點": stock_detail['realtime']['low'],
                         "查詢時間": stock_detail['info']['time']}
-
+                '''
             frame = pd.DataFrame(data, index=[0])
             print(frame)
             # print(frame.to_html())
@@ -663,6 +666,7 @@ def stock_search2():
     return frame.to_html()
 
 
+
 def game_map():  # 玩法 和 說明 mapping
     global game_explan, game_playtype  # 說明, 玩法
     if '五星' in game_playtype:
@@ -674,6 +678,10 @@ def game_map():  # 玩法 和 說明 mapping
     else:
         game_explan = 'test'
     return game_explan
+@app.route('/stock_search3',methods=["POST"])    
+def stock_search3():
+    stock.stock_search3(stock.kerr_conn())
+    stock_detail = stock.stock_detail3
 
 
 def status_style(val):  # 判斷狀態,來顯示顏色屬性 , 給 game_order 裡的order_status用
@@ -1267,6 +1275,59 @@ def sun_user():# 太陽成用戶 找尋
         print(frame)
         return frame.to_html()
     return render_template('sun_user.html')
+@app.route('/fund_activity',methods=["POST","GEt"])
+def fund_activity():# 充值紅包 查詢
+    if request.method =="POST":
+        user = request.form.get('user')
+        env = request.form.get('env_type')
+        print(user,env)
+        AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(int(env)),user,'')# 查詢頁面上 該環境是否有這用戶
+        if len(AutoTest.userid) == 0:
+            return('該環境沒有此用戶')
+        AutoTest.Joy188Test.select_FundRed(AutoTest.Joy188Test.get_conn(int(env)),user,'')# 先確認 是否領取過紅包
+        red_able = AutoTest.fund_
+        print(red_able)
+         
+        fund_list = []# 存放各充值表的 紀錄 ,總共四個表
+        for i in range(4):
+            AutoTest.Joy188Test.select_FundRed(AutoTest.Joy188Test.get_conn(int(env)),user,i)
+            fund_list.append(AutoTest.fund_)
+        #begin_mission = AutoTest.fund_# 新守任務表
+        print(fund_list)
+        data = {}
+        fund_log = 0# 紀錄 是否 四個表都沒有資料
+        for index,i in enumerate(fund_list):
+            if index == 0:
+                msg = '新守任務/BEGIN_MISSION'
+            elif index ==1:
+                msg = ('活動/ACTIVITY_FUND_OPEN_RECORD')
+            elif index ==2:
+                msg = ('資金明細/fund_change_log')
+            elif index==3:
+                msg = ('資金明細搬動/fund_change_log_hist')
+            if len(i) ==0:
+                msg2 = ('無紀錄')
+            else:
+                msg2 = ('%s'%i[0])
+                fund_log = fund_log+1#
+            print(msg,msg2)
+            data[msg] = msg2
+        if len(red_able) == 0:# 紅包還沒領取
+            red_able = '否' 
+            if fund_log == 0:# 代表沒成功
+                activity_able = '符合資格'
+            else:
+                activity_able = "不符合資格"
+        else:# 代表已經領取過 紅包
+            red_able = float(red_able[0][0]/10000)
+            activity_able = "符合資格"
+        data['紅包是否領取'] = '紅包金:%s'%red_able
+        data['充直紅包活動'] = activity_able
+        print(data)
+        frame = pd.DataFrame(data,index=[0])
+        print(frame)
+        return frame.to_html()
+    return render_template('fund_activity.html')
 
 
 @app.route('/error')#錯誤處理
