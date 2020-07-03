@@ -377,8 +377,7 @@ class IntegrationTestWeb(unittest.TestCase):
             if '您选择的彩种目前属于休市期间' in Joy188Test2.XPATH("//h4[@class='pop-text']").text:# 休市彈窗
                 Joy188Test2.XPATH('/html/body/div[17]/div[1]/i').click()
             '''
-            element = WebDriverWait(self.dr, 5).until(
-                EC.presence_of_element_located((By.XPATH, "//p[@class='text-title']")))
+            WebDriverWait(self.dr, 5).until(EC.presence_of_element_located((By.XPATH, "//p[@class='text-title']")))
             if self.XPATH("//p[@class='text-title']").text == '请选择一个奖金组，便于您投注时使用。':  # 獎金詳情彈窗
                 self.XPATH("//input[@class='radio']").click()
                 self.LINK('确 认').click()
@@ -838,7 +837,8 @@ class IntegrationTestWeb(unittest.TestCase):
             pass
 
     def test_applycenter(self):
-        u'開戶中心/安全中心/綁卡'
+        """開戶中心/安全中心/綁卡"""
+
         if self.password == '123qwe':
             safe_pass = 'hsieh123'
         elif self.password == 'amberrd':
@@ -846,14 +846,13 @@ class IntegrationTestWeb(unittest.TestCase):
         else:
             raise Exception('無對應安全密碼，請至test_applycenter新增')
 
-        userid = utils.Config.select_user_id(utils.Config.get_conn(self.envConfig.get_env_id()),
-                                             self.user)  # 找出用戶 Userid  , 在回傳給開戶連結
-        user_url = select_user_url(utils.Config.get_conn(self.envConfig.get_env_id()), userid[0])  # 找出 開戶連結
+        user_id = utils.Config.get_user_id(utils.Config.get_conn(self.envConfig.get_env_id()),
+                                           self.user)  # 找出用戶 Userid  , 在回傳給開戶連結
+        user_url = select_user_url(utils.Config.get_conn(self.envConfig.get_env_id()), user_id[0])  # 找出 開戶連結
 
         self.dr.get(self.post_url + '/register/?{}'.format(user_url[0]))  # 動待找尋 輸入用戶名的  開戶連結
         print(self.dr.title)
-        print('註冊連結:%s' % user_url[0])
-        global user_random
+        print('註冊連結 : {}'.format(user_url[0]))
         user_random = random.randint(1, 100000)  # 隨機生成 kerr下面用戶名
         new_user = self.user + str(user_random)
         print(u'註冊用戶名: {}'.format(new_user))

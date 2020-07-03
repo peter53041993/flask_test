@@ -7,7 +7,6 @@ import pymysql
 from selenium.webdriver.chrome.options import Options
 from enum import Enum
 
-# 各檔路徑
 project_path = r"C:\Users\Wen\PycharmProjects\kerr_flask"  # 專案路徑
 # project_path = os.path.abspath('.')  # 專案路徑
 chromeDriver_Path = project_path + r'\Drivers\chromedriver_83.exe'  # ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
@@ -15,10 +14,15 @@ reportHtml_Path = project_path + r"\templates\report.html"  # report.html 絕對
 logging_config_path = project_path + r"\logs\logging_config.ini"
 log_folder_path = project_path + r"\logs"
 
+# 各檔路徑
+from utils import Logger
+
 # ChromeDriver 設定參數
 chrome_options = Options()
 chrome_options.add_argument("--headless")  # 背景執行
 chrome_options.add_argument("--start-maximized")  # 全螢幕
+
+logger = Logger.create_logger(r'\Config', 'config')
 
 
 class LotteryData:
@@ -136,7 +140,7 @@ class EnvConfig:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
     def get_joint_venture(self, env, domain):
-        domain_urls = self.select_domain_url(get_conn(int(env)), domain)  # 先去全局 找是否有設定 該domain
+        domain_urls = get_domain_default_url(get_conn(int(env)), domain)  # 先去全局 找是否有設定 該domain
         # 查詢後台是否有設置
         try:
             domain_type = domain_urls[0][5]  # 判斷 該domain 再後台全局設定 的 joint_venture 是多少
@@ -144,19 +148,6 @@ class EnvConfig:
             return domain_type
         except KeyError:
             print("全局後台沒設置 : {}".format(self.env_domain))
-
-    def select_domain_url(self, conn, domain):
-        with conn.cursor() as cursor:
-            sql = "select a.domain,a.agent,b.url,a.register_display,a.app_download_display,a.domain_type,a.status from  \
-                GLOBAL_DOMAIN_LIST a inner join user_url b \
-                on a.register_url_id = b.id  where a.domain like '%{}%'".format(domain)
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            domain_urls = []
-            for num, url in enumerate(rows):
-                domain_urls[num] = list(url)
-        conn.close()
-        return domain_urls
 
 
 class EnvConfigApp(EnvConfig):
@@ -235,23 +226,168 @@ def get_sql_exec(env, sql):
     return result
 
 
-def select_user_id(conn, account_, joint_type=None):
+def get_domain_default_url(conn, domain):
     with conn.cursor() as cursor:
-        if joint_type is None:
-            sql = "select id from user_customer where account = '{}'".format(account_)
-        else:
-            sql = "select id from user_customer where account = '{}' and joint_venture = 'P{'".format(account_,
-                                                                                                      joint_type)
-        print('SQL : {}'.format(sql))
+        sql = "select GDL.domain, GDL.agent, UU.url, GDL.register_display, GDL.app_download_display, GDL.domain_type, GDL.status " \
+              "from GLOBAL_DOMAIN_LIST GDL " \
+              "inner join user_url UU on GDL.register_url_id = UU.id " \
+              "where GDL.domain = '{}'".format(domain)
         cursor.execute(sql)
         rows = cursor.fetchall()
-        userid = []
+        domain_urls = []
+        for num, data in enumerate(rows):
+            domain_urls.append(list(data))
+        logger.info('get domain_urls = {}'.format(domain_urls))
+    conn.close()
+    return domain_urls
+
+
+def get_url_token(conn, token, joint_venture):  # 輸入 token 查詢 連結
+    with conn.cursor() as cursor:
+        if len(token) == 4:  # 代表是用 註冊碼  ,4位
+            sql = "select UC.account,UU.url " \
+                  "from user_customer UC " \
+                  "inner join user_url UU  on UC.id= UU.creator  " \
+                  "where UU.url like  '%token={}%' and UC.joint_venture = {}".format(token, joint_venture)
+        else:  # 使用id 去找 url
+            sql = "select UC.account,UU.url " \
+                  "from user_customer UC " \
+                  "inner join user_url UU  on UC.id= UU.creator " \
+                  "where UU.url like  '%id={}%' and UC.joint_venture = {}".format(token, joint_venture)
+        print(sql)
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        token_url = []
+        for num, user in enumerate(rows):
+            token_url.append(list(user))
+    conn.close()
+    return token_url
+
+
+def get_sun_user(conn, user, type_, domain):
+    if domain == '1':  # 申博
+        come_from = 'sunGame138'
+        note = '申博138'
+    elif domain == '0':  # 太陽城
+        come_from = 'sunGame'
+        note = '太阳城'
+    else:
+        raise Exception('get_sun_user 無對應domain')
+
+    with conn.cursor() as cursor:
+        if type_ == 1:  # 1 查詢轉移的用戶
+            sql = "select account, cellphone, transfer_status, transfer_date " \
+                  "from sun_game_user " \
+                  "where  transfer_status = 1 and come_from = '{}' " \
+                  "order by transfer_date desc".format(come_from)
+        elif type_ == 2:  # 查詢 指定domain flask_test. sun_user2()
+            sql = "select GDL.domain,GDL.agent,b.url,GDL.register_display,GDL.status,GDL.note,b.days,b.registers " \
+                  "from  GLOBAL_DOMAIN_LIST GDL " \
+                  "inner join user_url b on GDL.register_url_id = b.id " \
+                  "where note = '{}' " \
+                  "order by GDL.status asc,b.registers desc".format(note)
+        else:  # 查詢 指定用戶
+            sql = "select * " \
+                  "from sun_game_user " \
+                  "where account = '{}' and come_from = '{}'".format(user, come_from)
+        print('get_sun_user - > sql = {}'.format(sql))
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        sun_user = []
+        for num, tuple_ in enumerate(rows):  # i 生成tuple
+            sun_user[num] = list(tuple_)
+    conn.close()
+    return sun_user
+
+
+def get_user_url(conn, _user, _type=1, _joint_type=''):  # 用戶的 連結 ,type= 1 找用戶本身開戶連結, 0 找用戶的從哪個連結開出
+    with conn.cursor() as cursor:
+        user_url = []
+        if _type == 1:  # 這邊user參數 為 userid , test_applycenter()方法使用
+            sql = "select url " \
+                  "from user_url " \
+                  "where url like '%{}%' and days=-1".format(_user)
+        elif _type == 2:  # user 為用戶名,這個表如果沒有, 有可能是 上級開戶連結 刪除,導致空 ,再去做else 那段
+            sql = "select UC.account, UU.url, UC.user_chain, UC.device, UU.days " \
+                  "from user_customer UC " \
+                  "inner join  user_url UU on UC.url_id = UU.id " \
+                  "where UC.account = '{}' and joint_venture = '{}'".format(_user, _joint_type)
+        else:  # 最後才去用 user_customer. referer 去找, 這邊APP 開戶出來的會是null
+            sql = "select account, referer, user_chain, device " \
+                  "from user_customer " \
+                  "where account = '{}' and joint_venture = '{}'".format(_user, _joint_type)
+        logger.info('select_user_url -> sql : {}'.format(sql))
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        for num, url in enumerate(rows):
+            user_url.append(list(url))
+        # if isinstance(user_url, list) is True:  # 為list
+        #     for i in rows:
+        #         user_url.append(i[0])
+        # else:  # user_url 為dict
+        #     for num, _user in enumerate(rows):
+        #         user_url[num] = list(_user)
+    conn.close()
+    return user_url
+
+
+def get_user_id(conn, account_, joint_type=None):
+    with conn.cursor() as cursor:
+        if joint_type is None:
+            sql = "select id " \
+                  "from user_customer " \
+                  "where account = '{}'".format(account_)
+        else:
+            sql = "select id " \
+                  "from user_customer " \
+                  "where account = '{}' and joint_venture = '{}'".format(account_, joint_type)
+        print('get_user_id -> sql : {}'.format(sql))
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        user_id = []
 
         for i in rows:
             print('i : {}'.format(i))
-            userid.append(i[0])
+            user_id.append(i[0])
     conn.close()
-    return userid
+    return user_id
+
+
+def get_red_fund(conn, user, type_=None):  # 充值 紅包 查尋  各充值表
+    with conn.cursor() as cursor:
+        if type_ == 0:  # 新手任務
+            sql = "select UC.account,BM.cancel_reason " \
+                  "from BEGIN_MISSION BM " \
+                  "inner join user_customer UC on  BM.user_id = UC.id  " \
+                  "where UC.is_freeze = 0 and UC.account = '{}'".format(user)
+        elif type_ == 1:  # 活動充值表
+            sql = "select UC.account, AFOR.THE_DAY " \
+                  "from ACTIVITY_FUND_OPEN_RECORD  AFOR " \
+                  "inner join user_customer UC on AFOR.user_id = UC.id " \
+                  "where UC.account = '{}'".format(user)
+        elif type_ == 2:  # 資金異動表'
+            sql = "select UC.account,FCL.sn,FCL.GMT_CREATED " \
+                  "from fund_change_log FCL " \
+                  "inner join user_customer UC on FCL.user_id = UC.id " \
+                  "where UC.account = '{}' and  FCL.reason like '%{}%'".format(user, 'ADAL')
+        elif type_ == 3:  # 資金異動表 搬動
+            sql = "select UC.account,FCLH.sn,FCLH.GMT_CREATED " \
+                  "from fund_change_log_hist FCLH " \
+                  "inner join user_customer UC on FCLH.user_id = UC.id " \
+                  "where UC.account = '{}' and  FCLH.reason like '%{}%'".format(user, 'ADAL')
+        else:  # - 判斷 是否有領過 首充附言鼓励金
+            sql = "select REL.amount " \
+                  "from  RED_ENVELOPE_LIST  REL " \
+                  "inner join  user_customer UC on REL.user_id  = UC.id " \
+                  "where UC.account = '{}' and note = '首充附言鼓励金'".format(user)
+        logger.info('get_red_fund -> sql = {}'.format(sql))
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        fund_ = []
+        for index, data in enumerate(rows):
+            fund_.append(list(data))
+    conn.close()
+    return fund_
 
 
 def my_con(evn, third):  # 第三方  mysql連線

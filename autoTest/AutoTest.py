@@ -61,7 +61,8 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit):
                         'test_redEnvelope']:  # PC 案例
                 logger.info('test_cases[0] : {}'.format(test_cases[0]))
                 logger.info('For loop[0] : {}'.format(case))
-                suite_list.append(ApiTestPC(case=case, env=env_config, user=user_name, red_type=is_use_red, money_unit=money_unit))
+                suite_list.append(ApiTestPC(case=case, _env=env_config, _user=user_name, _red_type=is_use_red,
+                                            _money_unit=money_unit))
         for case in test_cases[1]:
             if case in ['test_AppLogin', 'test_AppSubmit', 'test_AppOpenLink', 'test_AppBalance', 'test_ApptransferIn',
                         'test_ApptransferOut']:  # APP案例

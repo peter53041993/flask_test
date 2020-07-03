@@ -14,7 +14,7 @@ from utils.Config import LotteryData, func_time
 
 logger = Logger.create_logger(r"\AutoTest", 'auto_test_pc')
 
-r
+
 class ApiTestPC(unittest.TestCase):
     u"PC接口測試"
     envConfig = None
