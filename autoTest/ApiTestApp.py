@@ -897,11 +897,12 @@ class ApiTestApp(unittest.TestCase):
     def balance_data(self, _user):
         data = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "",
                          "userAccount": "", "sessionId": token_[_user]}, "body": {"param": {"CGISESSID": token_[_user],
-                                                                                           "loginIp": "61.220.138.45",
-                                                                                           "app_id": "9",
-                                                                                           "come_from": "3",
-                                                                                           "appname": "1"},
-                                                                                 "pager": {"startNo": "", "endNo": ""}}}
+                                                                                            "loginIp": "61.220.138.45",
+                                                                                            "app_id": "9",
+                                                                                            "come_from": "3",
+                                                                                            "appname": "1"},
+                                                                                  "pager": {"startNo": "",
+                                                                                            "endNo": ""}}}
         return data
 
     def APP_SessionPost(self, third, url, post_data):  # 共用 session post方式 (Pc)
@@ -989,19 +990,22 @@ class ApiTestApp(unittest.TestCase):
         for third in third_list:
             if third == 'sb':
                 third = 'shaba'
-            tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=env_id, third=third), tran_type=0,
-                                                    third=third,
-                                                    user=self.user)  # 先確認資料轉帳狀態
-            count = 0
-            while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
+            try:
                 tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=env_id, third=third), tran_type=0,
                                                         third=third,
-                                                        user=self.user)  #
-                sleep(0.5)
-                count += 1
-                if count == 15:
-                    raise Exception('轉帳狀態失敗 : {}'.format(third))  # 如果跑道9次  需確認
-            print('{} ,sn 單號: {}'.format(third, tran_result[0]))
+                                                        user=self.user)  # 先確認資料轉帳狀態
+                count = 0
+                while tran_result[1] != '2':  # 確認轉帳狀態,  2為成功 ,最多做10次
+                    tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=env_id, third=third), tran_type=0,
+                                                            third=third,
+                                                            user=self.user)  #
+                    sleep(0.5)
+                    count += 1
+                    if count >= 10:
+                        raise Exception('轉帳狀態失敗 : {}'.format(third))  # 重試滿10次報錯
+                print('{} ,sn 單號: {}'.format(third, tran_result[0]))
+            except Exception as e:
+                logger.error(trace_log(e))
         self.test_AppBalance()
 
     @func_time
@@ -1021,21 +1025,23 @@ class ApiTestApp(unittest.TestCase):
         for third in third_list:
             if third == 'sb':
                 third = 'shaba'
-            tran_result = Config.thirdly_tran(Config.my_con(evn=env_id, third=third), tran_type=1,
-                                              third=third,
-                                              user=self.user)  # 先確認資料轉帳傳泰
-            count = 0
-            while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
+            try:
                 tran_result = Config.thirdly_tran(Config.my_con(evn=env_id, third=third), tran_type=1,
                                                   third=third,
-                                                  user=self.user)  #
-                logger.info('tran_result : {}'.format(tran_result))
-                sleep(1)
-                count += 1
-                if count == 15:
-                    raise Exception('轉帳狀態失敗')  # 驗證超出次數
-
-            print('{}, sn 單號: {}'.format(third, tran_result[0]))
+                                                  user=self.user)  # 先確認資料轉帳傳泰
+                count = 0
+                while tran_result[1] != '2':  # 確認轉帳狀態,  2為成功 ,最多做10次
+                    tran_result = Config.thirdly_tran(Config.my_con(evn=env_id, third=third), tran_type=1,
+                                                      third=third,
+                                                      user=self.user)  #
+                    logger.info('tran_result : {}'.format(tran_result))
+                    sleep(1)
+                    count += 1
+                    if count >= 10:
+                        raise Exception('轉帳狀態失敗 : {}'.format(third))  # 重試滿10次報錯
+                print('{}, sn 單號: {}'.format(third, tran_result[0]))
+            except Exception as e:
+                logger.error(trace_log(e))
         self.test_AppBalance()
 
     def tearDown(self) -> None:

@@ -1,9 +1,8 @@
 import logging
-from utils import Config
 import os
 from datetime import datetime
 
-dir_path = Config.log_folder_path
+dir_path = r"C:\Users\Wen\PycharmProjects\kerr_flask"  # 專案路徑
 filename = "{:%Y-%m-%d}".format(datetime.now()) + '.log'  # 設定檔名
 
 

@@ -270,7 +270,7 @@ def image_():  # 調整圖片大小
 
 
 @app.route('/imageAdj', methods=["POST"])
-def imageAdj():
+def image_adj():
     testInfo = {}  # 存放 圖名,長,寬 的資料
     image_name = request.form.get('image_name')
     height = request.form.get('height')
@@ -284,7 +284,7 @@ def imageAdj():
 
 
 @app.route('/autoTest', methods=["GET", "POST"])  # 自動化測試 頁面
-def autoTest():
+def auto_test():
     try:
         if request.method == "POST":
             logger.info('logged by app.module')
@@ -301,7 +301,7 @@ def autoTest():
             money_unit = request.form.get('moneymode')  # 金額模式
             domain_url = env_config.get_post_url().split('://')[1]  # 後台全局 url 需把 http做切割
 
-            domain_type = env_config.get_joint_venture(env_config.get_env_id(), domain_url)  # 查詢 後台是否有設置 該url
+            domain_type = env_config.get_domain_url(env_config.get_env_id(), domain_url)  # 查詢 後台是否有設置 該url
             # domain_type = Config.domain_type#後台 該url joint_venture 的 類型
 
             logger.debug("env_config.id: {},  red: {}".format(env_config.get_env_id(), red))

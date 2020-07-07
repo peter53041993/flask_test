@@ -6,6 +6,9 @@ import cx_Oracle
 import pymysql
 from selenium.webdriver.chrome.options import Options
 from enum import Enum
+# 各檔路徑
+from utils import Logger
+from utils.TestTool import trace_log
 
 project_path = r"C:\Users\Wen\PycharmProjects\kerr_flask"  # 專案路徑
 # project_path = os.path.abspath('.')  # 專案路徑
@@ -13,9 +16,6 @@ chromeDriver_Path = project_path + r'\Drivers\chromedriver_83.exe'  # ChromeDriv
 reportHtml_Path = project_path + r"\templates\report.html"  # report.html 絕對路徑
 logging_config_path = project_path + r"\logs\logging_config.ini"
 log_folder_path = project_path + r"\logs"
-
-# 各檔路徑
-from utils import Logger
 
 # ChromeDriver 設定參數
 chrome_options = Options()
@@ -139,7 +139,7 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
-    def get_joint_venture(self, env, domain):
+    def get_domain_url(self, env, domain):
         domain_urls = get_domain_default_url(get_conn(int(env)), domain)  # 先去全局 找是否有設定 該domain
         # 查詢後台是否有設置
         try:
@@ -404,23 +404,26 @@ def my_con(evn, third):  # 第三方  mysql連線
     elif evn == 1:  # 188
         ip = '10.6.32.147'
     else:
-        print('evn 錯誤')
+        raise Exception('No such env.')
 
     user_ = third_dict[third][0]
     db_ = third_dict[third][2]
 
-    if third == 'gns':  # gns只有一個 測試環境
-        passwd_ = third_dict[third][1]
-        ip = '10.6.32.147'  # gns Db 只有 188
-    else:
-        passwd_ = third_dict[third][1][evn]
+    try:
+        if third == 'gns':  # gns只有一個 測試環境
+            passwd_ = third_dict[third][1]
+            ip = '10.6.32.147'  # gns Db 只有 188
+        else:
+            passwd_ = third_dict[third][1][evn]
 
-    db = pymysql.connect(
-        host=ip,
-        user=user_,
-        passwd=passwd_,
-        db=db_)
-    return db
+        db = pymysql.connect(
+            host=ip,
+            user=user_,
+            passwd=passwd_,
+            db=db_)
+        return db
+    except Exception as e:
+        logger.error(trace_log(e))
 
 
 def thirdly_tran(db, tran_type, third, user):
@@ -439,10 +442,10 @@ def thirdly_tran(db, tran_type, third, user):
         else:
             trans_name = 'GNS_TO_FIREFROG'
     else:
-        print('第三方 名稱錯誤')
+        raise Exception('第三方 名稱錯誤')
 
-    sql = "SELECT SN,STATUS FROM %s WHERE FF_ACCOUNT = '%s'\
-    AND CREATE_DATE > DATE(NOW()) AND TRANS_NAME= '%s'" % (table_name, user, trans_name)
+    sql = "SELECT SN,STATUS FROM {} WHERE FF_ACCOUNT = '{}'\
+    AND CREATE_DATE > DATE(NOW()) AND TRANS_NAME= '{}'".format(table_name, user, trans_name)
 
     cur.execute(sql)
     for row in cur.fetchall():

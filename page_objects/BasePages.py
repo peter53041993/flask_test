@@ -119,6 +119,7 @@ class RegPage(BasePage):
 
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
+        print('self.envConfig.get_env_id() : {}'.format(self.envConfig.get_env_id()))
         user_id = Config.get_sql_exec(self.envConfig.get_env_id(),
                                       "select id from user_customer where account = '{}'".format(self.user))
         print("user_id = {}".format(user_id[0]))
