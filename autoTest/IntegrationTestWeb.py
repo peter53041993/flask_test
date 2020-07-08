@@ -1,4 +1,5 @@
 import datetime
+import os
 import unittest
 from time import sleep
 
@@ -80,6 +81,7 @@ class IntegrationTestWeb(unittest.TestCase):
 
     def setUp(self):
         logger.info('IntegrationTestWeb setUp : {}'.format(self._testMethodName))
+        self.login()
 
     def __init__(self, case, env_config, user, red_type):
         super().__init__(case)
@@ -101,6 +103,27 @@ class IntegrationTestWeb(unittest.TestCase):
     def test_xjssc(self):
         self.pageObject = LoginPage(env_config=self.env_config).login(user=self.user, password=self.password)
         self.pageObject = BetPage_Xjssc(self.pageObject).bet_all()
+        self.getImage()
+
+    def test_change_password(self):
+        """
+        修改密碼測試
+        :return: None
+        """
+
+    # def mul_submit(self):  # 追號
+    #     try:
+    #         if self.driver.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').is_selected():
+    #             self.driver.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').click()  # 取消紅包追號
+    #     except:
+    #         pass
+    #     self.id_element('randomone')  # 先隨機一住
+    #     self.id_element('J-trace-switch')  # 追號
+    #
+
+    def test_xjssc(self):
+        self.pageObject = LoginPage(env_config=self.env_config).login(user=self.user, password=self.password)
+        self.pageObject = BetPage_Xjssc(self.pageObject).bet_all()
 
     def test_change_password(self):
         """
@@ -108,7 +131,7 @@ class IntegrationTestWeb(unittest.TestCase):
         :return: None
         """
         try:
-            self.pageObject =  LoginPage(env_config=self.env_config) \
+            self.pageObject = LoginPage(env_config=self.env_config) \
                 .login(user=self.user, password=self.password) \
                 .jump_to(page=MainPage.buttons_personal.safe_center) \
                 .jump_to(button=Personal_AppCenterPage.buttons.b_change_password) \
@@ -119,6 +142,18 @@ class IntegrationTestWeb(unittest.TestCase):
             from utils.TestTool import trace_log
             logger.error(e)
             raise e
+        self.getImage()
+
+    def getImage(self):
+        """
+        截取图片,并保存在images文件夹
+        :return: 无
+        """
+        timestamp = datetime.time.strftime('%Y%m%d_%H.%M.%S')
+        imgPath = os.path.join(Config.project_path + '/autoTest/screenshot', '{}.png'.format(str(timestamp)))
+
+        self.pageObject.get_driver().save_screenshot(imgPath)
+        print('screenshot:{}.png'.format(timestamp))
 
     # def test_applycenter(self):
     #     """開戶中心/安全中心/綁卡"""
