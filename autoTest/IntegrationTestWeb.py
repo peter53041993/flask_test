@@ -135,7 +135,6 @@ class IntegrationTestWeb(unittest.TestCase):
         """
         timestamp = datetime.now().strftime('%Y%m%d_%H.%M.%S')
         imgPath = os.path.join(Config.project_path + r'\static\image\screenshot\{}.png'.format(str(timestamp)))
-        print('imgPath = {}'.format(imgPath))
         try:
             driver = self.pageObject.get_driver()
             driver.save_screenshot(imgPath)
