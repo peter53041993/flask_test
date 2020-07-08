@@ -19,7 +19,7 @@ from utils import Logger
 
 # ChromeDriver 設定參數
 chrome_options = Options()
-chrome_options.add_argument("--headless")  # 背景執行
+# chrome_options.add_argument("--headless")  # 背景執行
 chrome_options.add_argument("--start-maximized")  # 全螢幕
 
 logger = Logger.create_logger(r'\Config', 'config')

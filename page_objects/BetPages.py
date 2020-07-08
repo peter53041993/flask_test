@@ -54,7 +54,7 @@ class BaseBetPage(BasePages.BasePage):
         LLSSC = "LLSSC"
 
     def go_to(self):
-        self.driver.get(self.envConfig.get_em_url() + self.link)
+        self.driver.get(self.env_config.get_em_url() + self.link)
 
     def check_prize_select_popup(self):
         try:
@@ -97,10 +97,10 @@ class BaseBetPage(BasePages.BasePage):
 
     def bet_all(self, index_t=0, index_m=0, index_g=0):
         """
-        投注所有彩種，考量因跨期導致彈窗中段的可能，添加三個參數供接續測試
-        :param index_t: 起始type
-        :param index_m: 起始method
-        :param index_g: 起始game
+        投注所有彩種，考量因跨期導致彈窗中段的可能，添加三個參數供接續測試。
+        :param index_t: 起始type **呼叫時不需帶參**
+        :param index_m: 起始method　**呼叫時不需帶參**
+        :param index_g: 起始game　**呼叫時不需帶參**
         """
         _temp_t = index_t  # 紀錄當前type
         _temp_m = index_m  # 紀錄當前method

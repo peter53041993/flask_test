@@ -37,57 +37,44 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit):
     env_config = Config.EnvConfig(test_env)
     env_config_app = Config.EnvConfigApp(test_env)
     _env_app_config = Config.EnvConfigApp(test_env)
-    # pc = []
-    # app =[]test_PcLogin
-    # driver =[]
     suite_list = []
-    # threads =[]
     lottery_list = ['cqssc', 'hljssc', 'xjssc', 'fhcqc', 'fhxjc', 'btcffc', 'txffc', 'jlffc', 'bjkl8', 'jsdice', 'ahk3',
                     'pk10', 'xyft', 'v3d', 'fc3d', 'p5', 'ssq', 'slmmc', 'sl115']
     test_list = ['xjssc']
     logger.debug('autoTest test_cases : {}'.format(test_cases))
     try:
-        suite_api_pc = unittest.TestSuite()
-        suite_api_app = unittest.TestSuite()
-        suite_web_pc = unittest.TestSuite()
+        suite = unittest.TestSuite()
         now = time.strftime('%Y_%m_%d %H-%M-%S')
 
         logger.info('suite_test with test_cases : {}'.format(test_cases))
 
         for case in test_cases[0]:
-            if case in ['test_PcLogin', 'test_PcLotterySubmit', 'test_PcThirdHome', 'test_PcFFHome',
-                        'test_PcChart', 'test_PcThirdBalance', 'test_PcTransferin', 'test_PcTransferout',
-                        'test_PCLotterySubmit',
-                        'test_redEnvelope']:  # PC 案例
-                logger.info('test_cases[0] : {}'.format(test_cases[0]))
-                logger.info('For loop[0] : {}'.format(case))
-                suite_list.append(ApiTestPC(case=case, _env=env_config, _user=user_name, _red_type=is_use_red,
-                                            _money_unit=money_unit))
+            logger.info('test_cases[0] : {}'.format(test_cases[0]))
+            logger.info('For loop[0] : {}'.format(case))
+            suite_list.append(ApiTestPC(case=case, _env=env_config, _user=user_name, _red_type=is_use_red,
+                                        _money_unit=money_unit))
         for case in test_cases[1]:
-            if case in ['test_AppLogin', 'test_AppSubmit', 'test_AppOpenLink', 'test_AppBalance', 'test_ApptransferIn',
-                        'test_ApptransferOut']:  # APP案例
-                logger.info('test_cases[1] : {}'.format(test_cases[1]))
-                logger.info('For loop[1] : {}'.format(case))
-                suite_list.append(ApiTestApp(case_=case, env_=env_config_app, user_=user_name, red_type_=is_use_red))
+            logger.info('test_cases[1] : {}'.format(test_cases[1]))
+            logger.info('For loop[1] : {}'.format(case))
+            suite_list.append(ApiTestApp(case_=case, env_=env_config_app, user_=user_name, red_type_=is_use_red))
         for case in test_cases[2]:
-            if case in ['test_safepersonal', 'test_applycenter', 'test_plan']:  # 瀏覽器案例
-                if case == 'test_plan':
-                    for lottery in test_list:
-                        logger.info('test_cases[2] : {}'.format(test_cases[2]))
-                        logger.info('For loop[2] : {}'.format(case))
-                        suite_list.append(
-                            IntegrationTestWeb(case='test_{}'.format(lottery), env=env_config, user=user_name,
-                                               red_type=is_use_red))
-                else:
+            if case == 'test_plan':
+                for lottery in test_list:
                     logger.info('test_cases[2] : {}'.format(test_cases[2]))
                     logger.info('For loop[2] : {}'.format(case))
                     suite_list.append(
-                        IntegrationTestWeb(case=case, env=env_config, user=user_name, red_type=is_use_red))
+                        IntegrationTestWeb(case='test_{}'.format(lottery), env_config=env_config, user=user_name,
+                                           red_type=is_use_red))
+            else:
+                logger.info('test_cases[2] : {}'.format(test_cases[2]))
+                logger.info('For loop[2] : {}'.format(case))
+                suite_list.append(
+                    IntegrationTestWeb(case=case, env_config=env_config, user=user_name, red_type=is_use_red))
 
         logger.info("測試內容 suite_list : {}".format(suite_list))
 
-        suite_api_pc.addTests(suite_list)
-        logger.info("測試內容Suite suite_api_pc : {}".format(suite_api_pc))
+        suite.addTests(suite_list)
+        logger.info("測試內容Suite suite_api_pc : {}".format(suite))
 
         filename = Config.reportHtml_Path  # now + u'自動化測試' + '.html'
         fp = open(filename, 'wb')
@@ -97,7 +84,7 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit):
             description='環境: {env},帳號: {user}'.format(env=env_config, user=user_name),
         )
         logger.debug(">>>>>>>>Test Start.<<<<<<<<")
-        runner.run(suite_api_pc)
+        runner.run(suite)
         logger.debug(">>>>>>>>Test End.<<<<<<<<")
         fp.close()
     except Exception as e:
