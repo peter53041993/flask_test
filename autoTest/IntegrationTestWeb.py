@@ -1,30 +1,17 @@
-import datetime
+from datetime import datetime
 import os
 import unittest
-from time import sleep
 
-from bs4 import BeautifulSoup
-from faker import Factory
-from selenium import webdriver
-from selenium.common.exceptions import ElementClickInterceptedException
-from selenium.common.exceptions import NoSuchElementException
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-
-import random
-
-import utils.Config
 from page_objects.BasePages import LoginPage, MainPage
 from page_objects.BetPages import BetPage_Xjssc
 from page_objects.PersonalPages import Personal_AppCenterPage
 from utils import Config, Logger
 from utils.Config import LotteryData
+from utils.TestTool import trace_log
 
 
 def date_time():  # 給查詢 獎期to_date時間用, 今天時間
-    now = datetime.datetime.now()
+    now = datetime.now()
     year = now.year
     month = now.month
     day = now.day
@@ -81,7 +68,6 @@ class IntegrationTestWeb(unittest.TestCase):
 
     def setUp(self):
         logger.info('IntegrationTestWeb setUp : {}'.format(self._testMethodName))
-        self.login()
 
     def __init__(self, case, env_config, user, red_type):
         super().__init__(case)
@@ -100,17 +86,6 @@ class IntegrationTestWeb(unittest.TestCase):
     #     self.id_element('J-trace-switch')  # 追號
     #
 
-    def test_xjssc(self):
-        self.pageObject = LoginPage(env_config=self.env_config).login(user=self.user, password=self.password)
-        self.pageObject = BetPage_Xjssc(self.pageObject).bet_all()
-        self.getImage()
-
-    def test_change_password(self):
-        """
-        修改密碼測試
-        :return: None
-        """
-
     # def mul_submit(self):  # 追號
     #     try:
     #         if self.driver.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').is_selected():
@@ -122,8 +97,15 @@ class IntegrationTestWeb(unittest.TestCase):
     #
 
     def test_xjssc(self):
-        self.pageObject = LoginPage(env_config=self.env_config).login(user=self.user, password=self.password)
-        self.pageObject = BetPage_Xjssc(self.pageObject).bet_all()
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config).login(user=self.user, password=self.password)
+            self.getImage()
+            self.pageObject = BetPage_Xjssc(self.pageObject).bet_all()
+            self.getImage()
+        except Exception as e:
+            self.getImage()
+            logger.error(trace_log(e))
+            raise e
 
     def test_change_password(self):
         """
@@ -137,22 +119,28 @@ class IntegrationTestWeb(unittest.TestCase):
                 .jump_to(button=Personal_AppCenterPage.buttons.b_change_password) \
                 .change_password(password=self.password)
             url = self.pageObject.get_current_url()
+            self.getImage()
             assert '/login' in url
         except Exception as e:
             from utils.TestTool import trace_log
             logger.error(e)
+            self.getImage()
             raise e
-        self.getImage()
+
 
     def getImage(self):
         """
         截取图片,并保存在images文件夹
         :return: 无
         """
-        timestamp = datetime.time.strftime('%Y%m%d_%H.%M.%S')
-        imgPath = os.path.join(Config.project_path + '/autoTest/screenshot', '{}.png'.format(str(timestamp)))
-
-        self.pageObject.get_driver().save_screenshot(imgPath)
+        timestamp = datetime.now().strftime('%Y%m%d_%H.%M.%S')
+        imgPath = os.path.join(Config.project_path + r'\static\image\screenshot\{}.png'.format(str(timestamp)))
+        print('imgPath = {}'.format(imgPath))
+        try:
+            driver = self.pageObject.get_driver()
+            driver.save_screenshot(imgPath)
+        except Exception as e:
+            trace_log(e)
         print('screenshot:{}.png'.format(timestamp))
 
     # def test_applycenter(self):
@@ -252,6 +240,4 @@ class IntegrationTestWeb(unittest.TestCase):
     #         print(u"數字貨幣綁定失敗")
 
     def tearDown(self) -> None:
-        if self.pageObject:
-            driver = self.pageObject.get_driver()
-            driver.quit()
+        self.pageObject.get_driver().quit()

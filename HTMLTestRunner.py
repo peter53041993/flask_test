@@ -903,7 +903,7 @@ class HTMLTestRunner(Template_mixin):
         if ((uo or ue) and unum !=-1):
             hidde_status = ''
             unum=str(uo).rfind('screenshot:')
-            image_url = './images/'+str(uo)[unum+11:unum+34].replace(' ', '')
+            image_url = '/static/image/screenshot/'+str(uo)[unum+11:unum+34].replace(' ', '')
 
         else:
             hidde_status = '''hidden="hidden"'''

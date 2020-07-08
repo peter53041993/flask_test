@@ -1,4 +1,5 @@
 import os
+import pathlib
 import random
 import time
 
@@ -7,7 +8,7 @@ import pymysql
 from selenium.webdriver.chrome.options import Options
 from enum import Enum
 
-project_path = r"C:\Users\Wen\PycharmProjects\kerr_flask"  # 專案路徑
+project_path = str(pathlib.Path(__file__).parent.parent.absolute())  # 專案路徑
 # project_path = os.path.abspath('.')  # 專案路徑
 chromeDriver_Path = project_path + r'\Drivers\chromedriver_83.exe'  # ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
 reportHtml_Path = project_path + r"\templates\report.html"  # report.html 絕對路徑
