@@ -529,14 +529,16 @@ class Joy188Test(unittest.TestCase):
             'User-Agent': userAgent,
             'Cookies': 'ANVOID=' + cookies_[user]
         }
-        r = session.get(em_url + '/gameBet/%s/lastNumber?_=%s' % (lottery, now_time), headers=header)
         global issuecode
         try:
-            issuecode = r.json()['issueCode']
-        except:
-            pass
-        if lottery == 'lhc':
-            pass
+            if lottery == 'lhc':
+                r = session.get(em_url+'/gameBet/lhc/dynamicConfig?_=%s'%(now_time),headers=header)
+                issuecode = r.json()['data']['issueCode']
+            else:
+                r = session.get(em_url+'/gameBet/%s/lastNumber?_=%s'%(lottery,now_time),headers=header)
+                issuecode = r.json()['issueCode']
+        except :
+            print("%s採種沒抓到 獎號"%lottery)
 
     @staticmethod
     def my_con(evn, third):  # 第三方  mysql連線
