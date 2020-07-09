@@ -132,7 +132,7 @@ class ApiTestApp(unittest.TestCase):
                 print("Token: %s" % token)
                 print("Userid: %s" % userid)
             except ValueError as e:
-                trace_log(e)
+                logger.error(trace_log(e))
                 raise Exception(u"登入失敗")
             # user_list.setdefault(userid,token)
         get_token(env_id, self.user)

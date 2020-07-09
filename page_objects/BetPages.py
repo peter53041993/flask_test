@@ -78,22 +78,23 @@ class BaseBetPage(BasePages.BasePage):
         try:
             self.driver.find_element_by_id(self.id_random_one).click()
         except Exception as e:
-            trace_log(e)
+            self.logger.error(trace_log(e))
 
     def add_random_bet_5(self):
         try:
             self.driver.find_element_by_id(self.id_random_five)
         except Exception as e:
-            trace_log(e)
+            self.logger.error(trace_log(e))
 
     def submit_bet(self):
+        self.driver.find_element_by_id(self.id_submit).click()
+        self.driver.find_element_by_xpath(self.xpath_submit_bet).click()
         try:
-            self.driver.find_element_by_id(self.id_submit).click()
-            self.driver.find_element_by_xpath(self.xpath_submit_bet).click()
             WebDriverWait(self.driver, 30).until(
                 expected_conditions.presence_of_element_located((By.XPATH, self.xpath_bet_success)))
         except Exception as e:
-            trace_log(e)
+            logger.info(trace_log(e))
+            print()
 
     def bet_all(self, index_t=0, index_m=0, index_g=0):
         """
@@ -117,7 +118,7 @@ class BaseBetPage(BasePages.BasePage):
                     index_m = 0  # 當本輪皆添加後需初始話避免後續短少
                 self.submit_bet()
             except Exception as e:
-                trace_log(e)
+                self.logger.error(trace_log(e))
                 self.check_period_popup()  # 排除臨時顯示彈窗
                 self.logger.warning("Retry bet all with type:%s, method:%s, game:%s" % (index_t, index_m, index_g))
                 self.bet_all(_temp_t, _temp_m, _temp_g)  # 從中斷點再次運行
@@ -126,7 +127,7 @@ class BaseBetPage(BasePages.BasePage):
                 self._bet_all(index_m, index_g)
                 self.submit_bet()
             except Exception as e:
-                trace_log(e)
+                self.logger.error(trace_log(e))
                 self.check_period_popup()  # 排除臨時顯示彈窗
                 self.logger.warning("Retry bet all with type:%s, method:%s, game:%s" % (index_t, index_m, index_g))
                 self.bet_all(_temp_t, _temp_m, _temp_g)  # 從中斷點再次運行
@@ -155,8 +156,7 @@ class BaseBetPage(BasePages.BasePage):
                     sleep(self._waitTime)
                 index_g = 0  # 當本輪皆添加後需初始話避免後續短少
         except Exception as e:
-            print(e)
-            trace_log(e)
+            self.logger.error(trace_log(e))
             self.check_period_popup()  # 排除臨時顯示彈窗
             self.logger.warning("Retry bet all with method:%s, game:%s" % (index_m, index_g))
             self._bet_all(_temp_m, _temp_g)  # 從中斷點再次運行

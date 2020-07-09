@@ -11,6 +11,6 @@ from page_objects.BasePages import *
 new_user = LoginPage('dev02') \
     .login('twen101', '123qwe') \
     .dir_jump_to(LoginPage.CustomPages.register) \
-    .register().user
+    .random_register().user
 
 print(new_user)

@@ -12,7 +12,6 @@ from selenium import webdriver
 from selenium.webdriver.remote.command import Command
 from enum import Enum
 from utils import Config
-from utils import TestTool
 from utils.TestTool import trace_log
 
 
@@ -61,7 +60,7 @@ class BasePage:
                 self.driver.implicitly_wait(10)
                 self.driver.set_page_load_timeout(120)
             except Exception as e:
-                TestTool.trace_log(e)
+                self.logger.error(trace_log(e))
         return self.driver
 
     def go_to(self):
@@ -72,7 +71,7 @@ class BasePage:
             self.driver.execute(Command.STATUS)
             return True
         except Exception as e:
-            trace_log(e)
+            self.logger.error(trace_log(e))
             return False
 
     def get_visibal_elements(self, elements):
@@ -214,7 +213,7 @@ class RegPage(BasePage):
         print("reg_url = {}".format(reg_url[0]))
         self.link = "/register?{url}".format(url=reg_url[0])
 
-    def register(self) -> BasePage:
+    def random_register(self) -> BasePage:
         self.go_to()
         _random = random.randint(1, 100000)
         new_user = self.user + str(_random)

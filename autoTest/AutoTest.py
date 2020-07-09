@@ -89,4 +89,4 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit):
         logger.debug(">>>>>>>>Test End.<<<<<<<<")
         fp.close()
     except Exception as e:
-        trace_log(e)
+        logger.error(trace_log(e))
