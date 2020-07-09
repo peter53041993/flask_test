@@ -96,7 +96,7 @@ def select_registerDate(conn,date,account_):
         for i in rows:
             bron_day.append(i[0])
     conn.close()
-def select_red(conn,date,account):
+def select_red(conn,date_start,date_end,account):
     with conn.cursor() as cursor:
         sql = "select \
         UC.ACCOUNT,\
@@ -121,10 +121,11 @@ def select_red(conn,date,account):
         SUM(nvl(CASE WHEN bet_type_code in ('43_37_79', '43_37_80') THEN ceil(a.TOTAL_RED_DISCOUNT) ELSE 0 END,0) ) AS dashiaw_red_discount\
         from GAME_ORDER_REPORT A \
         join USER_CUSTOMER_FOR_REPORT_TEMP B on A.USER_ID = B.O_ID\
-        where A.CREATE_TIME >= TO_DATE('%s000000','yyyyMMddHH24miss') and A.CREATE_TIME <= TO_DATE('%s235959','yyyyMMddHH24miss')\
+        where A.CREATE_TIME >= TO_DATE('%s000000','yyyy-MM-ddHH24miss') and A.CREATE_TIME <= TO_DATE('%s235959','yyyy-MM-ddHH24miss')\
         group by B.U_ID) REPORT JOIN USER_CUSTOMER UC ON REPORT.V7 = UC.ID\
-        WHERE (REPORT.V1 > 0 OR REPORT.V2 > 0 OR REPORT.V3 > 0) and uc.account ='%s'" %(date,date,account)
+        WHERE (REPORT.V1 > 0 OR REPORT.V2 > 0 OR REPORT.V3 > 0) and uc.account ='%s'" %(date_start,date_end,account)
         cursor.execute(sql)
+        print(sql)
         rows = cursor.fetchall()
         global red_dict
         red_dict = {}
@@ -153,8 +154,8 @@ def game_report_day(user,month,day,cookies,env):#盈虧報表數據,   日工資
         format_month = '{:02d}'.format(month)  #需對 月和日 做 格式化, 因為參數 無法帶 01  這種類型
         format_day = '{:02d}'.format(day) 
         Time = '%s-%s-%s'%(year,format_month,format_day)
-        Time2 = '%s%s%s'%(year,format_month,format_day)#給紅包使用的時間
-        print(Time,Time2)
+        #Time2 = '%s%s%s'%(year,format_month,format_day)#給紅包使用的時間
+        print(Time)
         
         
 
@@ -189,7 +190,7 @@ def game_report_day(user,month,day,cookies,env):#盈虧報表數據,   日工資
         result_data['bron_day'] = bron_day[0]
         result_data['time']=Time
 
-        select_red(get_conn(envs),Time2,user)#抓取紅包數據
+        select_red(get_conn(envs),Time,Time,user)#抓取紅包數據
         print(red_dict)# 
         
     
@@ -299,7 +300,7 @@ def game_report_day(user,month,day,cookies,env):#盈虧報表數據,   日工資
         print('---------------------')
 
         #日工資: award   = effectiveBet_day * 工資比例
-        if winLost_day < 0:# 輸額小於 0 ,代表 贏的比投的多d
+        if winLost_day < 0:# 輸額小於 0 ,代表 贏的比投的多
             print('你的輸額為負數,不符合活動資格')
             msg = '你的輸額為負數,不符合活動資格'
             award = 0
@@ -501,7 +502,6 @@ def game_report_month(user,month,day,cookies,env): #分紅
             envs = 2
             admin_url = 'http://admin.phl58.com'
 
-
         select_registerDate(get_conn(envs),startTime,user)#查詢上下半月第一天的註冊天數
         start_bronday = bron_day[0]
         select_registerDate(get_conn(envs),stopTime,user)#查詢上下半月最後一天的註冊天數
@@ -518,6 +518,9 @@ def game_report_month(user,month,day,cookies,env): #分紅
         result_data['month_type'] = month_type
         result_data['start_bronday'] = start_bronday
         result_data['stop_bronday'] = stop_bronday
+
+        select_red(get_conn(envs),startTime,stopTime,user)#抓取紅包數據
+        print(red_dict)#分紅紅包 只需要抓 超級2000 , 因為  分紅有效銷量  只差在總待盈虧的 總投注 -超級2000 額外 8折
 
         # 判斷如果在上半月或下半月中, 註冊天數有含到 90,91 或者  180,181的
         if 90 in Interval(start_bronday,stop_bronday):
@@ -549,22 +552,34 @@ def game_report_month(user,month,day,cookies,env): #分紅
             ret = 0
             activityGifts = 0
             totalRedDiscount = 0
-        else:
+        else:#後台有抓到
             #分紅 有效銷量 : 盈虧報表的  bet欄位
             bet = float(r.json()['text'][0]['bet'].replace(',',''))#4.0總投注額
-            super2kBet = float(r.json()['text'][0]['super2kBet'].replace(',',''))#超級2000金額
-            effectiveBet = bet-(super2kBet*0.2)#分紅超級2000 打8折, 所以拿全部投注額 - 超級2000的2折
+            super2kBet = float(r.json()['text'][0]['super2kBet'].replace(',',''))#超級2000金額 ,型態為str,是拿來判斷依據
+            totalRedDiscount = float(r.json()['text'][0]['totalRedDiscount'].replace(',',''))#總紅包
+            bet = round(bet -totalRedDiscount,4) #4.0總銷量 - 紅包
+            super2kRed = red_dict[0][4]/10000 #級2000 是否有投注 紅包
+            if super2kBet == 0:# 超級2000 如果是 0 的話,分紅總投注額 跟有效銷量 是一樣的 ,紅包也不會有 超級2000問題
+                print('超級2000投注為0,總投注額跟有效銷量是一致的')
+                effectiveBet = bet
+            else: # 有投注 超級2000 ,要在抓出 red_dict 裡  超級2000 是否有投注 紅包,
+                print('超級2000有投注, 有效銷量: 總投注需扣掉 超級2000的 2折')
+                if super2kRed == 0:# 超級2000 紅包為0
+                    print('超級2000紅包為0,有效消亮就可直接減去 super2kBet')
+                    effectiveBet = bet- (super2kBet*0.2)# 有效銷量  = 總投注 -(超級2000投注*0.2), 因為超級2000算 8折 
+                else:# 超級2000 紅包有值
+                    print('超級2000紅包有值, 需把 總待盈虧的超級2000-紅包超級2000')
+                    super2kBet = super2kBet - super2kRed#需把盈虧的 超級2000 - 紅包超級2000 ,為實際的 超級2000 投注
+                    print('實際超級2000投注額為:%s '%super2kBet)
+                    effectiveBet = bet- (super2kBet*0.2)
 
             win = float(r.json()['text'][0]['win'].replace(',',''))#中獎金額
             ret = float(r.json()['text'][0]['ret'].replace(',',''))#反點
             activityGifts = float(r.json()['text'][0]['activityGifts'].replace(',',''))#活動禮金
-            try:
-                totalRedDiscount = float(r.json()['text'][0]['totalRedDiscount'].replace(',',''))#紅包
-            except KeyError:
-                print('紅包未開放')
-                totalRedDiscount = 0
-        bet = bet -totalRedDiscount #4.0總銷量 - 紅包
-        effectiveBet = effectiveBet -totalRedDiscount #有效銷量 也需減
+        ''' 
+        bet = round(bet -totalRedDiscount,4) #4.0總銷量 - 紅包
+        effectiveBet = round(effectiveBet -totalRedDiscount,4) #有效銷量 也需減
+        '''
         header['Content-Type'] = 'application/json; charset=UTF-8'# 為了真人 加header
         #fhll 需加 content_type這段內容, 但4.0的盈虧不需要 (所以先做4.0,再做真人)
 
@@ -576,12 +591,12 @@ def game_report_month(user,month,day,cookies,env): #分紅
         fh_activityGifts = 0#真人活動禮金   都是0
 
 
-        Allbet_month = bet +trueBet-totalRedDiscount#總銷量 需扣掉 紅包
-        effectiveBet_month = effectiveBet+ trueBet-totalRedDiscount# 總有效銷量:  真人加上4.0  ,再扣掉紅包
-        averge =  round(effectiveBet_month/day_range,10)#四捨五入 第二位 ,總日均有效銷量
+        Allbet_month = bet +trueBet#4.0 + 真人
+        effectiveBet_month = effectiveBet+ trueBet# 總有效銷量:  真人加上4.0  ,
+        averge =  round(effectiveBet_month/day_range,5)#四捨五入 第二位 ,總日均有效銷量
 
         user_award = round(fh_win+fh_ret+fh_activityGifts+win+ret+activityGifts,4)#使用者全部中獎金額, 總獎金
-        winLost_month = round(Allbet_month- user_award,4)#分紅 輸額: 不是派發條件,是獎金依據
+        winLost_month = round(Allbet_month- user_award,5)#分紅 輸額: 不是派發條件,是獎金依據
 
         print('4.0總投注額: %f/總有效銷量: %f ,真人總投注額/總有效銷量: %f '
         %(bet,effectiveBet,trueBet))
@@ -606,6 +621,9 @@ def game_report_month(user,month,day,cookies,env): #分紅
         result_data['averge'] = averge
         result_data['winLost_month'] = winLost_month
         result_data['totalRedDiscount']=totalRedDiscount
+        result_data['super2kBet'] = super2kBet
+        result_data['super2kRed'] = super2kRed
+
 
 
         if winLost_month < 0:
@@ -698,7 +716,8 @@ def game_report_month(user,month,day,cookies,env): #分紅
     except requests.exceptions.ConnectionError:
         print('連線有問題,請稍等')
 
-    except ValueError:
+    except ValueError as e:
+        print(e)
         print('你輸入的日期或姓名不符,請再確認')
     except IndexError as e:
         #print(e)
