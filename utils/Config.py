@@ -2,6 +2,7 @@ import os
 import pathlib
 import random
 import time
+from typing import Dict
 
 import cx_Oracle
 import pymysql
@@ -76,7 +77,7 @@ class EnvConfig:
     def get_domain(self):
         return self.env_domain
 
-    def get_post_url(self):
+    def get_post_url(self) -> str:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains + self.hyDomains + self.productDomains:
@@ -88,7 +89,7 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
-    def get_em_url(self):
+    def get_em_url(self) -> str:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.joySunDomains:
@@ -98,7 +99,7 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
-    def get_password(self):
+    def get_password(self) -> str:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains:
@@ -110,7 +111,17 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
-    def get_env_id(self):
+    def get_safe_password(self) -> str:
+        if self.env_domain is None:
+            raise Exception('env 環境未初始化')
+        elif self.env_domain in self.devDomains + self.joyDomains + self.hyDomains + self.joySunDomains:
+            return "Amberrd"
+        elif self.env_domain in self.productDomains:
+            return "tsuta0425"
+        else:
+            raise Exception('無對應網域參數，請至Config envConfig()新增')
+
+    def get_env_id(self) -> int:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains:
@@ -120,7 +131,7 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
-    def get_admin_url(self):
+    def get_admin_url(self) -> str:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains:
@@ -130,7 +141,7 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
-    def get_admin_data(self):
+    def get_admin_data(self) -> Dict:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains:

@@ -213,7 +213,7 @@ class RegPage(BasePage):
         print("reg_url = {}".format(reg_url[0]))
         self.link = "/register?{url}".format(url=reg_url[0])
 
-    def random_register(self) -> BasePage:
+    def random_register(self) -> MainPage:
         self.go_to()
         _random = random.randint(1, 100000)
         new_user = self.user + str(_random)

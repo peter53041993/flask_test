@@ -23,7 +23,7 @@ import logging
 from flask import current_app
 import urllib3
 from bs4 import BeautifulSoup
-import twstock, stock
+# import twstock, stock
 import pandas as pd
 import re
 from utils import Config
@@ -329,7 +329,7 @@ def autoTest():
         # return redirect("/report")
     except Exception as e:
         from utils.TestTool import trace_log
-        trace_log(e)
+        print(trace_log(e))
     return render_template('autoTest.html')
 
 

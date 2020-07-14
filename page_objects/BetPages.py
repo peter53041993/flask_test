@@ -55,6 +55,7 @@ class BaseBetPage(BasePages.BasePage):
 
     def go_to(self):
         self.driver.get(self.env_config.get_em_url() + self.link)
+        return self
 
     def check_prize_select_popup(self):
         try:
@@ -212,7 +213,6 @@ class BetPage_Cqssc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/cqssc'
-        self.go_to()
         self.check_guide()
         self.check_prize_select_popup()
         self.get_types()
@@ -233,7 +233,6 @@ class BetPage_Xjssc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/xjssc'
-        self.go_to()
         self.check_guide()
         self.check_prize_select_popup()
         self.get_types()
@@ -254,7 +253,6 @@ class BetPage_Hljssc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/hljssc'
-        self.go_to()
         self.check_guide()
         self.check_prize_select_popup()
         self.get_types()
@@ -275,7 +273,6 @@ class BetPage_Shssl(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/shssl'
-        self.go_to()
         self.check_prize_select_popup()
         self.get_types()
 
@@ -288,7 +285,6 @@ class BetPage_Tjssc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/tjssc'
-        self.go_to()
         self.check_prize_select_popup()
         self.get_types()
 
@@ -301,7 +297,6 @@ class BetPage_Txffc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/txffc'
-        self.go_to()
         self.check_prize_select_popup()
         self.get_types()
 
@@ -314,7 +309,6 @@ class BetPage_Fhjlssc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/fhjlssc'
-        self.go_to()
         self.check_guide()
         self.check_prize_select_popup()
         self.get_types()
@@ -335,7 +329,6 @@ class BetPage_Fhcqc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/fhcqc'
-        self.go_to()
         self.check_guide()
         self.check_prize_select_popup()
         self.get_types()
@@ -356,7 +349,6 @@ class BetPage_Fhxjc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/fhxjc'
-        self.go_to()
         self.check_prize_select_popup()
         self.get_types()
 
@@ -369,7 +361,6 @@ class BetPage_3605fc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/3605fc'
-        self.go_to()
         self.check_prize_select_popup()
         self.get_types()
 
@@ -383,7 +374,6 @@ class BetPage_V3d(BaseBetPage):
         super().__init__(last_page=last_page)
         self.currentMethodsXpath = "//*[@id='change']/ul[2]/li"
         self.link = '/gameBet/v3d'
-        self.go_to()
         self.check_prize_select_popup()
 
 
@@ -395,7 +385,6 @@ class BetPage_Slmmc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/slmmc'
-        self.go_to()
         self.check_prize_select_popup()
         self.get_types()
 
@@ -419,7 +408,6 @@ class BetPage_Btcffc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/btcffc'
-        self.go_to()
         self.check_prize_select_popup()
         self.get_types()
 
@@ -432,7 +420,6 @@ class BetPage_Llssc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/llssc'
-        self.go_to()
         self.check_prize_select_popup()
         self.get_types()
 
@@ -445,7 +432,6 @@ class BetPage_360ffc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/360ffc'
-        self.go_to()
         self.check_prize_select_popup()
         self.get_types()
 
@@ -458,7 +444,6 @@ class BetPage_Jlffc(BaseBetPage):
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/jlffc'
-        self.go_to()
         self.check_prize_select_popup()
         self.get_types()
         self.closePeriodPopupXpath = "//div[@class='j-ui-miniwindow pop w-9' and contains(@style,'display: " \

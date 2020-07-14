@@ -4,7 +4,7 @@ import unittest
 
 from page_objects.BasePages import LoginPage, MainPage, BasePage
 from page_objects.BetPages import BetPage_Xjssc
-from page_objects.PersonalPages import Personal_AppCenterPage
+from page_objects.PersonalPages import Personal_AppCenterPage, BasePersonal
 from utils import Config, Logger
 from utils.Config import LotteryData
 from utils.TestTool import trace_log
@@ -61,7 +61,6 @@ class IntegrationTestWeb(unittest.TestCase):
     user = None
     red_type = None
     driver = None
-    password = None
     post_url = None
     em_url = None
     pageObject = None
@@ -73,7 +72,6 @@ class IntegrationTestWeb(unittest.TestCase):
         super().__init__(case)
         self.env_config = env_config
         self.user = user
-        self.password = self.env_config.get_password()
         self.red_type = red_type
 
     # def mul_submit(self):  # 追號
@@ -98,10 +96,9 @@ class IntegrationTestWeb(unittest.TestCase):
 
     def test_xjssc(self):
         try:
-            self.pageObject = LoginPage(env_config=self.env_config).login(user=self.user, password=self.password)
-            self.getImage()
-            self.pageObject = BetPage_Xjssc(self.pageObject).bet_all()
-            self.getImage()
+            self.pageObject = LoginPage(env_config=self.env_config).login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_Xjssc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().bet_all()
         except Exception as e:
             self.getImage()
             logger.error(trace_log(e))
@@ -114,10 +111,10 @@ class IntegrationTestWeb(unittest.TestCase):
         """
         try:
             self.pageObject = LoginPage(env_config=self.env_config) \
-                .login(user=self.user, password=self.password) \
+                .login(user=self.user, password=self.env_config.get_password()) \
                 .jump_to(page=MainPage.buttons_personal.safe_center) \
-                .jump_to(button=Personal_AppCenterPage.buttons.b_change_password) \
-                .change_password(password=self.password)
+                .jump_to(button=Personal_AppCenterPage.buttons.id_change_password) \
+                .set_safe_password(password=self.env_config.get_password())
             url = self.pageObject.get_current_url()
             self.getImage()
             assert '/login' in url
@@ -139,60 +136,44 @@ class IntegrationTestWeb(unittest.TestCase):
             driver.save_screenshot(imgPath)
             print('screenshot:{}.png'.format(timestamp))
         except Exception as e:
-            logger.error(trace_log(e))
+            logger.error(e)
 
     def test_applycenter(self):
         """開戶中心/安全中心/綁卡"""
 
-        self.pageObject = LoginPage(self.env_config)\
-            .login(self.user, self.password)\
-            .dir_jump_to(BasePage.CustomPages.register)  # 跳轉註冊頁
-        self.pageObject = self.pageObject.random_register()  # 亂數註冊並返回首頁
-        # self.driver.get(self.post_url + '/register/?{}'.format(user_url[0]))  # 動待找尋 輸入用戶名的  開戶連結
-        # print(self.driver.title)
-        # print('註冊連結 : {}'.format(user_url[0]))
-        # user_random = random.randint(1, 100000)  # 隨機生成 kerr下面用戶名
-        # new_user = self.user + str(user_random)
-        # print(u'註冊用戶名: {}'.format(new_user))
-        # self.ID('J-input-username').send_keys(new_user)  # 用戶名
-        # self.ID('J-input-password').send_keys(self.password)  # 第一次密碼
-        # self.ID('J-input-password2').send_keys(self.password)  # 在一次確認密碼
-        # self.ID('J-button-submit').click()  # 提交註冊
-        # sleep(5)
-        # '''
-        # if self.dr.current_url == self.post_url + '/index':
-        #     (u'%s註冊成功'%new_user)
-        #     print(self.post_url)
-        #     print(u'%s登入成功'%new_user)
-        # else:
-        #     print(u'登入失敗')
-        # '''
-        # # u"安全中心"
-        # while self.driver.current_url == self.post_url + '/index':
-        #     break
-        #
-        # self.driver.get(self.post_url + '/safepersonal/safecodeset')  # 安全密碼連結
-        # print(self.driver.title)
-        # self.ID('J-safePassword').send_keys(safe_pass)
-        # self.ID('J-safePassword2').send_keys(safe_pass)
-        # print(u'設置安全密碼/確認安全密碼: %s' % safe_pass)
-        # self.ID('J-button-submit').click()
-        # if self.driver.current_url == self.post_url + '/safepersonal/safecodeset?act=smt':  # 安全密碼成功Url
-        #     print(u'恭喜%s安全密码设置成功！' % new_user)
-        # else:
-        #     print(u'安全密碼設置失敗')
-        # self.driver.get(self.post_url + '/safepersonal/safequestset')  # 安全問題
-        # print(self.driver.title)
-        # for i in range(1, 4, 1):  # J-answrer 1,2,3
-        #     self.ID('J-answer%s' % i).send_keys('kerr')  # 問題答案
-        # for i in range(1, 6, 2):  # i產生  1,3,5 li[i], 問題選擇
-        #     self.XPATH('//*[@id="J-safe-question-select"]/li[%s]/select/option[2]' % i).click()
-        # self.ID('J-button-submit').click()  # 設置按鈕
-        # self.ID('J-safequestion-submit').click()  # 確認
-        # if self.driver.current_url == self.post_url + '/safepersonal/safequestset?act=smt':  # 安全問題成功url
-        #     print(u'恭喜%s安全问题设置成功！' % new_user)
-        # else:
-        #     print(u'安全問題設置失敗')
+        try:
+            self.pageObject = LoginPage(self.env_config)\
+                .login(self.user, self.env_config.get_password())\
+                .dir_jump_to(BasePage.CustomPages.register)  # 初始化、登入並跳轉註冊頁
+            self.pageObject = self.pageObject.random_register()  # 亂數註冊並返回首頁
+            print('新用戶創建成功')
+        except Exception:
+            logger.error(Exception)
+            print('新用戶創建失敗')
+            raise Exception
+
+        try:
+            self.pageObject = self.pageObject\
+                .jump_to(MainPage.buttons_personal.safe_center)\
+                .jump_to(Personal_AppCenterPage.buttons.id_set_safe_password)  # 跳轉首頁>安全中心>設置安全密碼
+            self.pageObject.set_safe_password(self.env_config.get_safe_password())  # 完成設置
+            print('安全密碼設置成功')
+        except Exception:
+            logger.error(Exception)
+            print('安全密碼設置失敗')
+            raise Exception
+
+        try:
+            self.pageObject = self.pageObject\
+                .personal_jump_to(BasePersonal.personal_elements.save_center_button)\
+                .jump_to(Personal_AppCenterPage.buttons.id_set_question)  # 點側邊安全中心 > 設置安全問題
+            self.pageObject.set_question(self.env_config.get_safe_password)  # 設置安全問題 *暫同安全密碼
+            print('安全問題設置成功')
+        except Exception:
+            logger.error(Exception)
+            print('安全問題設置失敗')
+            raise Exception
+
         # # u"銀行卡綁定"
         # self.driver.get(self.post_url + '/bindcard/bindcardsecurityinfo/')
         # print(self.driver.title)
@@ -231,5 +212,6 @@ class IntegrationTestWeb(unittest.TestCase):
         #     print(u"數字貨幣綁定失敗")
 
     def tearDown(self) -> None:
+        self.getImage()
         driver = self.pageObject.get_driver()
         driver.quit()

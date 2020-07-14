@@ -1,11 +1,6 @@
 from enum import Enum
 
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.common.by import By
-
 from page_objects import BasePages
-from utils.TestTool import trace_log
-
 
 class BasePersonal(BasePages.BasePage):
     @staticmethod
@@ -31,14 +26,15 @@ class Personal_AppCenterPage(BasePersonal):
 
     @staticmethod
     class buttons(Enum):
-        b_change_password = 'changePWBtn'  # 修改密碼
-        b_change_safe_password = 'changeSafePW'  # 修改安全密碼
-        b_set_safe_password = 'setSafePW'  # 設置安全密碼
-        b_get_safe_password = 'getSafePW'  # 尋找密碼
-        b_set_safe_question = 'setSafeQuestion'  # 設置安全問題
-        b_change_safe_question = 'changeSafeQuestion'  # 修改安全問題
-        b_set_email = 'setEmail'  # 綁定信箱
-        b_change_email = 'changeEmail'  # 修改綁定信箱
+        id_change_password = 'changePWBtn'  # 修改密碼
+        id_change_safe_password = 'changeSafePW'  # 修改安全密碼
+        id_set_safe_password = 'setSafePW'  # 設置安全密碼
+        id_get_safe_password = 'getSafePW'  # 尋找密碼
+        id_set_safe_question = 'setSafeQuestion'  # 設置安全問題
+        id_change_question = 'changeSafeQuestion'  # 修改安全問題
+        id_set_question = 'setSafeQuestion'  # 修改安全問題
+        id_set_email = 'setEmail'  # 綁定信箱
+        id_change_email = 'changeEmail'  # 修改綁定信箱
 
     def __init__(self, last_page):
         super().__init__(last_page=last_page)
@@ -52,12 +48,15 @@ class Personal_AppCenterPage(BasePersonal):
         """
         self.logger.info('Personal_AppCenterPage.jump_to : {}'.format(button.value))
         if button in self.buttons:
-            if button == self.buttons.b_change_password:
-                self.driver.find_element_by_id(self.buttons.b_change_password.value).click()
+            if button == self.buttons.id_change_password:
+                self.driver.find_element_by_id(self.buttons.id_change_password.value).click()
                 return Personal_ChangePasswordPage(self)
-            elif button == self.buttons.b_change_safe_password:
-                self.driver.find_element_by_id(self.buttons.b_change_safe_password.value).click()
+            elif button == self.buttons.id_change_safe_password:
+                self.driver.find_element_by_id(self.buttons.id_change_safe_password.value).click()
                 return Personal_ChangeSavePasswordPage(self)
+            elif button == self.buttons.id_set_safe_password:
+                self.driver.find_element_by_id(self.buttons.id_set_safe_password.value).click()
+                return Personal_SetSafePasswordPage(self)
         else:
             raise Exception('無對應按鈕')
 
@@ -95,6 +94,86 @@ class Personal_ChangePasswordPage(BasePersonal):
         self.driver.find_element_by_id('closeTip1').click()
         from page_objects.BasePages import LoginPage
         return LoginPage(last_page=self)
+
+
+class Personal_SetSafePasswordPage(BasePersonal):
+    """
+    設置安全密碼頁
+    """
+
+    @staticmethod
+    class elements(Enum):
+        id_new_safe_password_input = 'J-safePassword'
+        id_confirm_safe_password_input = 'J-password-new2'
+        id_submit_button = 'J-button-submit-password'
+        xpath_result_text = "//div[@class='txt']/h4"
+
+    def __init__(self, last_page):
+        super().__init__(last_page=last_page)
+        self.link = '/safepersonal/safecodeset'
+
+    def set_safe_password(self, password: str):
+        """
+        設置安全密碼腳本，含結果文字驗證
+        :param: password: 新密碼
+        :return: 返還登入頁
+        """
+        self.logger.info('change_password(password = {})'.format(password))
+        expected = '恭喜您安全密码设置成功！'
+        self.driver.find_element_by_id(self.elements.id_new_safe_password_input.value).send_keys(password)
+        self.driver.find_element_by_id(self.elements.id_confirm_safe_password_input.value).send_keys(password)
+        self.driver.find_element_by_id(self.elements.id_submit_button.value).click()
+        pop_up_text = self.driver.find_element_by_xpath(self.elements.xpath_result_text.value).get_attribute(
+            'innerHTML')
+        try:
+            assert pop_up_text == expected
+            print('彈窗提示：{}'.format(pop_up_text))
+        except Exception:
+            print('設置安全密碼失敗')
+        self.logger.error(Exception)
+
+
+class Personal_SetQuestionPage(BasePersonal):
+    """
+    設置安全密碼頁
+    """
+
+    @staticmethod
+    class elements(Enum):
+        xpath_answer_input = '//*[@id="J-safe-question-select"]//input'
+        xpath_quest_select = '//*[@id="J-safe-question-select"]/li/select/option[2]'
+        id_submit_button = 'J-button-submit'
+        id_confirm_submit_button = "J-safequestion-submit"
+        xpath_result_text = "//div[@class='txt']/h4"
+
+    def __init__(self, last_page):
+        super().__init__(last_page=last_page)
+        self.link = '/safepersonal/safecodeset'
+
+    def set_questions(self, answer: str):
+        """
+        設置安全問題
+        :param: password: 問題答案
+        :return: 返還登入頁
+        """
+        self.logger.info('Personal_SetQuestionPage(password = {})'.format(answer))
+        expected = '恭喜您安全问题设置成功！'
+        elements = self.driver.find_elements_by_xpath(self.elements.xpath_quest_select)
+        for element in elements:
+            element.click()
+        elements = self.driver.find_elements_by_xpath(self.elements.xpath_answer_input)
+        for element in elements:
+            element.send_keys(answer)
+        self.driver.find_element_by_id(self.elements.id_submit_button).click()
+        self.driver.find_element_by_id(self.elements.id_confirm_submit_button).click()
+        pop_up_text = self.driver.find_element_by_xpath(self.elements.xpath_result_text.value).get_attribute(
+            'innerHTML')
+        try:
+            assert pop_up_text == expected
+            print('彈窗提示：{}'.format(pop_up_text))
+        except Exception:
+            print('設置安全問題失敗')
+        self.logger.error(Exception)
 
 
 class Personal_ChangeSavePasswordPage(BasePersonal):
