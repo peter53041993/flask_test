@@ -2,6 +2,7 @@ from enum import Enum
 
 from page_objects import BasePages
 
+
 class BasePersonal(BasePages.BasePage):
     @staticmethod
     class personal_elements(Enum):
@@ -19,6 +20,8 @@ class BasePersonal(BasePages.BasePage):
             self.driver.find_element_by_xpath(button_name.value).click()
             if button_name == self.personal_elements.save_center_button:
                 return Personal_AppCenterPage(self)
+            elif button_name == self.personal_elements.bind_card_button:
+                return Personal_BindCardPage(self)
 
 
 class Personal_AppCenterPage(BasePersonal):
@@ -174,6 +177,64 @@ class Personal_SetQuestionPage(BasePersonal):
         except Exception:
             print('設置安全問題失敗')
         self.logger.error(Exception)
+
+
+class Personal_BindCardPage(BasePersonal):
+    """
+    設置安全密碼頁
+    """
+
+    class elements(Enum):
+        xpath_bind_card_now = "//*[text()='立即绑定']"
+        xpath_bank_list = '//*[@id="bankid"]/option[{}]'
+        xpath_province_list = '//*[@id="province"]/option[{}]'
+        id_branchAddr = 'branchAddr'
+        id_bankAccount = 'bankAccount'
+        id_bankNumber = 'bankNumber'
+        id_bankNumber2 = 'bankNumber2'
+        id_securityPassword = 'securityPassword'
+        id_submit = 'J-Submit'
+        xpath_bind_result = "//div[@class='pop-success']/h4"
+        id_close_pop = 'CloseDiv2'
+
+        xpath_to_usdt = '//*[@id="J-form"]//li[text()="数字货币钱包管理"]'
+        id_usdt_walletAddr = 'walletAddr'
+
+    def __init__(self, last_page):
+        super().__init__(last_page=last_page)
+        self.link = '/bindcard'
+
+    def to_bind_first_card(self, branchAddr="測試支行", bankAccount='測試用戶', bankNumber='0000000000000000',
+                           securityPassword=None):
+        expected = '银行卡绑定成功！'
+        if securityPassword is None:
+            securityPassword = self.env_config.get_safe_password()
+        self.driver.find_element_by_xpath(self.elements.xpath_bind_card_now.value).click()
+        self.driver.find_element_by_xpath(self.elements.xpath_bank_list.value.format(2)).click()
+        self.driver.find_element_by_xpath(self.elements.xpath_province_list.value.format(2)).click()
+        self.driver.find_element_by_id(self.elements.id_branchAddr.value).send_keys(branchAddr)
+        self.driver.find_element_by_id(self.elements.id_bankAccount.value).send_keys(bankAccount)
+        self.driver.find_element_by_id(self.elements.id_bankNumber.value).send_keys(bankNumber)
+        self.driver.find_element_by_id(self.elements.id_bankNumber2.value).send_keys(bankNumber)
+        self.driver.find_element_by_id(self.elements.id_securityPassword.value).send_keys(securityPassword)
+        self.driver.find_element_by_id(self.elements.id_submit.value).click()
+        assert self.driver.find_element_by_xpath(self.elements.xpath_bind_result.value).get_attribute(
+            'innerHTML') == expected
+        self.driver.find_element_by_id(self.elements.id_close_pop.value).click()
+        return self
+
+    def to_bind_first_usdt_card(self, walletAddr='USDT測試地址', securityPassword=None):
+        expected = '数字货币钱包账户绑定成功！'
+        if securityPassword is None:
+            securityPassword = self.env_config.get_safe_password()
+        self.driver.find_element_by_xpath(self.elements.xpath_to_usdt.value).click()
+        self.driver.find_element_by_xpath(self.elements.xpath_bind_card_now.value).click()
+        self.driver.find_element_by_id(self.elements.id_usdt_walletAddr.value).send_keys(walletAddr)
+        self.driver.find_element_by_id(self.elements.id_securityPassword.value).send_keys(securityPassword)
+        self.driver.find_element_by_id(self.elements.id_submit.value).click()
+        assert self.driver.find_element_by_xpath(self.elements.xpath_bind_result.value).get_attribute(
+            'innerHTML') == expected
+        self.driver.find_element_by_xpath("//div[@class = 'pop-btn']/a[@class='btn btn-important']").click()
 
 
 class Personal_ChangeSavePasswordPage(BasePersonal):

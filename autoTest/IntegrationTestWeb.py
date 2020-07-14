@@ -1,6 +1,9 @@
+import random
 from datetime import datetime
 import os
 import unittest
+
+from faker import Factory
 
 from page_objects.BasePages import LoginPage, MainPage, BasePage
 from page_objects.BetPages import BetPage_Xjssc
@@ -96,7 +99,8 @@ class IntegrationTestWeb(unittest.TestCase):
 
     def test_xjssc(self):
         try:
-            self.pageObject = LoginPage(env_config=self.env_config).login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = LoginPage(env_config=self.env_config).login(user=self.user,
+                                                                          password=self.env_config.get_password())  # 初始化與登入
             self.pageObject = BetPage_Xjssc(self.pageObject)  # 前往新疆時時彩投注頁
             self.pageObject.go_to().bet_all()
         except Exception as e:
@@ -142,76 +146,69 @@ class IntegrationTestWeb(unittest.TestCase):
         """開戶中心/安全中心/綁卡"""
 
         try:
-            self.pageObject = LoginPage(self.env_config)\
-                .login(self.user, self.env_config.get_password())\
+            self.pageObject = LoginPage(self.env_config) \
+                .login(self.user, self.env_config.get_password()) \
                 .dir_jump_to(BasePage.CustomPages.register)  # 初始化、登入並跳轉註冊頁
             self.pageObject = self.pageObject.random_register()  # 亂數註冊並返回首頁
             print('新用戶創建成功')
+            self.getImage()
         except Exception:
             logger.error(Exception)
             print('新用戶創建失敗')
+            self.getImage()
             raise Exception
 
         try:
-            self.pageObject = self.pageObject\
-                .jump_to(MainPage.buttons_personal.safe_center)\
+            self.pageObject = self.pageObject \
+                .jump_to(MainPage.buttons_personal.safe_center) \
                 .jump_to(Personal_AppCenterPage.buttons.id_set_safe_password)  # 跳轉首頁>安全中心>設置安全密碼
             self.pageObject.set_safe_password(self.env_config.get_safe_password())  # 完成設置
             print('安全密碼設置成功')
+            self.getImage()
         except Exception:
             logger.error(Exception)
             print('安全密碼設置失敗')
+            self.getImage()
             raise Exception
 
         try:
-            self.pageObject = self.pageObject\
-                .personal_jump_to(BasePersonal.personal_elements.save_center_button)\
+            self.pageObject = self.pageObject \
+                .personal_jump_to(BasePersonal.personal_elements.save_center_button) \
                 .jump_to(Personal_AppCenterPage.buttons.id_set_question)  # 點側邊安全中心 > 設置安全問題
             self.pageObject.set_questions(self.env_config.get_safe_password())  # 設置安全問題 *暫同安全密碼
             print('安全問題設置成功')
+            self.getImage()
         except Exception:
             logger.error(Exception)
             print('安全問題設置失敗')
+            self.getImage()
             raise Exception
 
-        # # u"銀行卡綁定"
-        # self.driver.get(self.post_url + '/bindcard/bindcardsecurityinfo/')
-        # print(self.driver.title)
-        # fake = Factory.create()
-        # card = (fake.credit_card_number(card_type='visa16'))  # 產生一個16位的假卡號
-        #
-        # self.XPATH('//*[@id="bankid"]/option[2]').click()  # 開戶銀行選擇
-        # self.XPATH('//*[@id="province"]/option[2]').click()  # 所在城市  :北京
-        # self.ID('branchAddr').send_keys(u'內湖分行')  # 之行名稱
-        # self.ID('bankAccount').send_keys('kerr')  # 開戶人
-        # self.ID('bankNumber').send_keys(str(card))  # 銀行卡浩
-        # print(u'綁定銀行卡號: %s' % card)
-        # self.ID('bankNumber2').send_keys(str(card))  # 確認銀行卡浩
-        # self.ID('securityPassword').send_keys(safe_pass)  # 安全密碼
-        # self.ID('J-Submit').click()  # 提交
-        # sleep(3)
-        # if self.ID('div_ok').is_displayed():
-        #     print(u'%s银行卡绑定成功！' % new_user)
-        #     self.ID('CloseDiv2').click()  # 關閉
-        # else:
-        #     print(u'銀行卡綁定失敗')
-        # # u"數字貨幣綁卡"
-        # self.driver.get(self.post_url + '/bindcard/bindcarddigitalwallet?bindcardType=2')
-        # print(self.driver.title)
-        # card = random.randint(1000, 1000000000)  # usdt數字綁卡,隨機生成
-        # self.ID('walletAddr').send_keys(str(card))
-        # print(u'提現錢包地址: %s' % card)
-        # self.ID('securityPassword').send_keys(safe_pass)
-        # print(u'安全密碼: %s' % safe_pass)
-        # self.ID('J-Submit').click()  # 提交
-        # sleep(3)
-        # if self.ID('div_ok').is_displayed():  # 彈窗出現
-        #     print(u'%s数字货币钱包账户绑定成功！' % new_user)
-        #     self.ID('CloseDiv2').click()
-        # else:
-        #     print(u"數字貨幣綁定失敗")
+        try:
+            fake = Factory.create()
+            self.pageObject = self.pageObject.personal_jump_to(
+                BasePersonal.personal_elements.bind_card_button)  # 跳轉銀行卡頁
+            self.pageObject.to_bind_first_card(bankNumber=fake.credit_card_number(card_type='visa16'),
+                                               securityPassword=self.env_config.get_safe_password())
+            print('銀行卡綁定成功')
+            self.getImage()
+        except Exception:
+            logger.error(Exception)
+            print('銀行卡綁定失敗')
+            self.getImage()
+            raise Exception
+
+        try:
+            self.pageObject.to_bind_first_usdt_card(walletAddr=random.randint(1000, 1000000000),
+                                                    securityPassword=self.env_config.get_safe_password())
+            print('USDT銀行卡綁定成功')
+            self.getImage()
+        except Exception:
+            logger.error(Exception)
+            print('USDT銀行卡綁定失敗')
+            self.getImage()
+            raise Exception
 
     def tearDown(self) -> None:
-        self.getImage()
         driver = self.pageObject.get_driver()
         driver.quit()
