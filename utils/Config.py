@@ -153,7 +153,8 @@ class EnvConfig:
 
     def get_joint_venture(self, env, domain):
         domain_urls = get_domain_default_url(get_conn(int(env)), domain)  # 先去全局 找是否有設定 該domain
-        # 查詢後台是否有設置
+        if not domain_urls:  # 若無對應domain_url, default domain type = 0 ?
+            return 0
         try:
             domain_type = domain_urls[0][5]  # 判斷 該domain 再後台全局設定 的 joint_venture 是多少
             print("後台設置: %s" % domain_type)
@@ -226,7 +227,7 @@ def get_conn(env):  # 連結數據庫 env 0: dev02 , 1:188
 
 
 def get_sql_exec(env, sql):
-    print('get_sql_exec : sql = {}'.format(sql))
+    logger.info('get_sql_exec : sql = {}'.format(sql))
     cursor = get_conn(env).cursor()
     cursor.execute(sql)
     rows = cursor.fetchall()
@@ -244,6 +245,7 @@ def get_domain_default_url(conn, domain):
               "from GLOBAL_DOMAIN_LIST GDL " \
               "inner join user_url UU on GDL.register_url_id = UU.id " \
               "where GDL.domain = '{}'".format(domain)
+        logger.info('get_domain_default_url sql = {}'.format(sql))
         cursor.execute(sql)
         rows = cursor.fetchall()
         domain_urls = []

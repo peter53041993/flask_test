@@ -48,15 +48,15 @@ class Personal_AppCenterPage(BasePersonal):
         """
         self.logger.info('Personal_AppCenterPage.jump_to : {}'.format(button.value))
         if button in self.buttons:
+            self.driver.find_element_by_id(button.value).click()
             if button == self.buttons.id_change_password:
-                self.driver.find_element_by_id(self.buttons.id_change_password.value).click()
                 return Personal_ChangePasswordPage(self)
             elif button == self.buttons.id_change_safe_password:
-                self.driver.find_element_by_id(self.buttons.id_change_safe_password.value).click()
                 return Personal_ChangeSavePasswordPage(self)
             elif button == self.buttons.id_set_safe_password:
-                self.driver.find_element_by_id(self.buttons.id_set_safe_password.value).click()
                 return Personal_SetSafePasswordPage(self)
+            elif button == self.buttons.id_set_question:
+                return Personal_SetQuestionPage(self)
         else:
             raise Exception('無對應按鈕')
 
@@ -104,8 +104,8 @@ class Personal_SetSafePasswordPage(BasePersonal):
     @staticmethod
     class elements(Enum):
         id_new_safe_password_input = 'J-safePassword'
-        id_confirm_safe_password_input = 'J-password-new2'
-        id_submit_button = 'J-button-submit-password'
+        id_confirm_safe_password_input = 'J-safePassword2'
+        id_submit_button = 'J-button-submit'
         xpath_result_text = "//div[@class='txt']/h4"
 
     def __init__(self, last_page):
@@ -140,8 +140,8 @@ class Personal_SetQuestionPage(BasePersonal):
 
     @staticmethod
     class elements(Enum):
-        xpath_answer_input = '//*[@id="J-safe-question-select"]//input'
-        xpath_quest_select = '//*[@id="J-safe-question-select"]/li/select/option[2]'
+        xpath_answer_input = '(//*[@id="J-safe-question-select"]//input)[{}]'
+        xpath_quest_select = '(//*[@id="J-safe-question-select"]/li/select/option[2])[{}]'
         id_submit_button = 'J-button-submit'
         id_confirm_submit_button = "J-safequestion-submit"
         xpath_result_text = "//div[@class='txt']/h4"
@@ -158,14 +158,14 @@ class Personal_SetQuestionPage(BasePersonal):
         """
         self.logger.info('Personal_SetQuestionPage(password = {})'.format(answer))
         expected = '恭喜您安全问题设置成功！'
-        elements = self.driver.find_elements_by_xpath(self.elements.xpath_quest_select)
-        for element in elements:
-            element.click()
-        elements = self.driver.find_elements_by_xpath(self.elements.xpath_answer_input)
-        for element in elements:
-            element.send_keys(answer)
-        self.driver.find_element_by_id(self.elements.id_submit_button).click()
-        self.driver.find_element_by_id(self.elements.id_confirm_submit_button).click()
+        self.driver.find_element_by_xpath(self.elements.xpath_quest_select.value.format(1)).click()
+        self.driver.find_element_by_xpath(self.elements.xpath_quest_select.value.format(2)).click()
+        self.driver.find_element_by_xpath(self.elements.xpath_quest_select.value.format(3)).click()
+        self.driver.find_element_by_xpath(self.elements.xpath_answer_input.value.format(1)).send_keys(answer)
+        self.driver.find_element_by_xpath(self.elements.xpath_answer_input.value.format(2)).send_keys(answer)
+        self.driver.find_element_by_xpath(self.elements.xpath_answer_input.value.format(3)).send_keys(answer)
+        self.driver.find_element_by_id(self.elements.id_submit_button.value).click()
+        self.driver.find_element_by_id(self.elements.id_confirm_submit_button.value).click()
         pop_up_text = self.driver.find_element_by_xpath(self.elements.xpath_result_text.value).get_attribute(
             'innerHTML')
         try:

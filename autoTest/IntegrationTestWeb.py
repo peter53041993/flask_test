@@ -167,7 +167,7 @@ class IntegrationTestWeb(unittest.TestCase):
             self.pageObject = self.pageObject\
                 .personal_jump_to(BasePersonal.personal_elements.save_center_button)\
                 .jump_to(Personal_AppCenterPage.buttons.id_set_question)  # 點側邊安全中心 > 設置安全問題
-            self.pageObject.set_question(self.env_config.get_safe_password)  # 設置安全問題 *暫同安全密碼
+            self.pageObject.set_questions(self.env_config.get_safe_password())  # 設置安全問題 *暫同安全密碼
             print('安全問題設置成功')
         except Exception:
             logger.error(Exception)

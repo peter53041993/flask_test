@@ -207,10 +207,10 @@ class RegPage(BasePage):
         super().__init__(last_page=last_page)
         user_id = Config.get_sql_exec(self.env_config.get_env_id(),
                                       "select id from user_customer where account = '{}'".format(self.user))
-        print("user_id = {}".format(user_id[0]))
+        self.logger.info("user_id = {}".format(user_id[0]))
         reg_url = Config.get_sql_exec(self.env_config.get_env_id(),
                                       "select url from user_url where days = -1 and creator = '{}'".format(user_id[0]))
-        print("reg_url = {}".format(reg_url[0]))
+        self.logger.info("reg_url = {}".format(reg_url[0]))
         self.link = "/register?{url}".format(url=reg_url[0])
 
     def random_register(self) -> MainPage:
