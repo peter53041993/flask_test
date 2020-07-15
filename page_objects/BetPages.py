@@ -24,13 +24,15 @@ class BaseBetPage(BasePages.BasePage):
     id_submit = "J-submit-order"
     id_random_one = "randomone"
     id_random_five = "randomfive"
+    id_trace_switch = "J-trace-switch"
 
-    xpath_get_types = "//*[@id='change']/ul[1]/li"  # 普通/超級2000/趣味玩法測標籤
+    xpath_get_types = "//*[@id='change']/ul[@style='display: block;'][1]/li"  # 普通/超級2000/趣味玩法測標籤
     xpath_current_methods = "//*[@id='change']/ul[2]/li[@style!='display: none;']"  # 五星/四星玩法組
     xpath_current_games = "//ul[@class='play-select-content clearfix']/li[contains(@class,'current')]//dd"  # 複式/和值等玩法
     xpath_visible_games = "//ul[@class='play-select-content clearfix']/li[contains(@class,'current')]//dd"  # 可點選遊戲清單
     xpath_submit_bet = "//a[@class='btn confirm' and @style!='display:none']"  # 確認按鈕
     xpath_bet_success = "//*[text()='恭喜您投注成功~!']"  # 投注結果訊息
+    xpath_use_red = '//*[@id="J-redenvelope-switch"]/label/input'  # 使用紅包開關
 
     xpath_close_period_popup = "//a[@class='btn closeTip' and @style != 'display:none']"  # 提示彈窗關閉鈕預設(時彩系列)
 
@@ -87,6 +89,12 @@ class BaseBetPage(BasePages.BasePage):
         except Exception as e:
             self.logger.error(trace_log(e))
 
+    def submit_trace(self):
+        if self.driver.find_element_by_xpath(self.xpath_use_red).is_selected():  # 若使用紅包為勾選
+            self.driver.find_element_by_xpath(self.xpath_use_red).click()  # 取消紅包追號
+        self.driver.find_element_by_id(self.id_trace_switch).click()
+        self.submit_bet()
+
     def submit_bet(self):
         self.driver.find_element_by_id(self.id_submit).click()
         self.driver.find_element_by_xpath(self.xpath_submit_bet).click()
@@ -97,7 +105,7 @@ class BaseBetPage(BasePages.BasePage):
             logger.info(trace_log(e))
             print()
 
-    def bet_all(self, index_t=0, index_m=0, index_g=0):
+    def add_all_random(self, index_t=0, index_m=0, index_g=0):
         """
         投注所有彩種，考量因跨期導致彈窗中段的可能，添加三個參數供接續測試。
         :param index_t: 起始type **呼叫時不需帶參**
@@ -107,52 +115,52 @@ class BaseBetPage(BasePages.BasePage):
         _temp_t = index_t  # 紀錄當前type
         _temp_m = index_m  # 紀錄當前method
         _temp_g = index_g  # 紀錄當前game
-        if self.game_types is not None:
+        self.get_types()
+        print('self.game_types = {}'.format(self.game_types))
+        if len(self.game_types) > 0:
             try:
                 self.logger.debug("len(self.gameTypes) : %s" % len(self.game_types))
                 for gType in range(index_t, len(self.game_types)):
                     _temp_t = gType
-                    self.logger.debug("_temp_t:%s" % _temp_t)
-                    self.logger.info(">>>>>%s" % self.game_types[gType].get_attribute('innerHTML'))
+                    # self.logger.debug("_temp_t:%s" % _temp_t)
+                    # self.logger.info(">>>>>%s" % self.game_types[gType].get_attribute('innerHTML'))
                     self.game_types[gType].click()
-                    self._bet_all(index_m, index_g)
+                    self._add_all_random(index_m, index_g)
                     index_m = 0  # 當本輪皆添加後需初始話避免後續短少
-                self.submit_bet()
             except Exception as e:
                 self.logger.error(trace_log(e))
                 self.check_period_popup()  # 排除臨時顯示彈窗
                 self.logger.warning("Retry bet all with type:%s, method:%s, game:%s" % (index_t, index_m, index_g))
-                self.bet_all(_temp_t, _temp_m, _temp_g)  # 從中斷點再次運行
+                self.add_all_random(_temp_t, _temp_m, _temp_g)  # 從中斷點再次運行
         else:
             try:
-                self._bet_all(index_m, index_g)
-                self.submit_bet()
+                self._add_all_random(index_m, index_g)
             except Exception as e:
                 self.logger.error(trace_log(e))
                 self.check_period_popup()  # 排除臨時顯示彈窗
                 self.logger.warning("Retry bet all with type:%s, method:%s, game:%s" % (index_t, index_m, index_g))
-                self.bet_all(_temp_t, _temp_m, _temp_g)  # 從中斷點再次運行
+                self.add_all_random(_temp_t, _temp_m, _temp_g)  # 從中斷點再次運行
 
-    def _bet_all(self, index_m=0, index_g=0):
+    def _add_all_random(self, index_m=0, index_g=0):
         _temp_m = index_m  # 紀錄當前method
         _temp_g = index_g  # 紀錄當前game
         try:
             methods = self.get_current_methods()
             for method in range(index_m, len(methods)):
                 _temp_m = method
-                self.logger.debug("_temp_m:%s" % _temp_m)
+                # self.logger.debug("_temp_m:%s" % _temp_m)
                 methods[method].click()
-                self.logger.info(">>>%s method clicked" % methods[method].get_attribute('innerHTML'))
+                # self.logger.info(">>>%s method clicked" % methods[method].get_attribute('innerHTML'))
                 sleep(self._waitTime)  # 供JS運行時間
                 games = self.get_current_games()
                 for game in range(index_g, len(games)):
                     _temp_g = game
-                    self.logger.debug("_temp_g:%s" % _temp_g)
+                    # self.logger.debug("_temp_g:%s" % _temp_g)
                     if self.link == '/gameBet/jlffc':
                         methods[method].click()  # 為配合吉利分分彩新增
                         self.logger.info(">>>%s method clicked." % methods[method].get_attribute('innerHTML'))
                     games[game].click()
-                    self.logger.info(">%s game clicked." % games[game].get_attribute('innerHTML'))
+                    # self.logger.info(">%s game clicked." % games[game].get_attribute('innerHTML'))
                     self.add_random_bet_1()
                     sleep(self._waitTime)
                 index_g = 0  # 當本輪皆添加後需初始話避免後續短少
@@ -160,7 +168,7 @@ class BaseBetPage(BasePages.BasePage):
             self.logger.error(trace_log(e))
             self.check_period_popup()  # 排除臨時顯示彈窗
             self.logger.warning("Retry bet all with method:%s, game:%s" % (index_m, index_g))
-            self._bet_all(_temp_m, _temp_g)  # 從中斷點再次運行
+            self._add_all_random(_temp_m, _temp_g)  # 從中斷點再次運行
 
     def check_period_popup(self):
         try:
@@ -215,7 +223,6 @@ class BetPage_Cqssc(BaseBetPage):
         self.link = '/gameBet/cqssc'
         self.check_guide()
         self.check_prize_select_popup()
-        self.get_types()
 
     def check_guide(self):
         try:
@@ -235,7 +242,6 @@ class BetPage_Xjssc(BaseBetPage):
         self.link = '/gameBet/xjssc'
         self.check_guide()
         self.check_prize_select_popup()
-        self.get_types()
 
     def check_guide(self):
         try:
@@ -255,7 +261,6 @@ class BetPage_Hljssc(BaseBetPage):
         self.link = '/gameBet/hljssc'
         self.check_guide()
         self.check_prize_select_popup()
-        self.get_types()
 
     def check_guide(self):
         try:
@@ -274,7 +279,6 @@ class BetPage_Shssl(BaseBetPage):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/shssl'
         self.check_prize_select_popup()
-        self.get_types()
 
 
 class BetPage_Tjssc(BaseBetPage):
@@ -286,7 +290,6 @@ class BetPage_Tjssc(BaseBetPage):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/tjssc'
         self.check_prize_select_popup()
-        self.get_types()
 
 
 class BetPage_Txffc(BaseBetPage):
@@ -298,7 +301,6 @@ class BetPage_Txffc(BaseBetPage):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/txffc'
         self.check_prize_select_popup()
-        self.get_types()
 
 
 class BetPage_Fhjlssc(BaseBetPage):
@@ -311,7 +313,6 @@ class BetPage_Fhjlssc(BaseBetPage):
         self.link = '/gameBet/fhjlssc'
         self.check_guide()
         self.check_prize_select_popup()
-        self.get_types()
 
     def check_guide(self):
         try:
@@ -331,7 +332,6 @@ class BetPage_Fhcqc(BaseBetPage):
         self.link = '/gameBet/fhcqc'
         self.check_guide()
         self.check_prize_select_popup()
-        self.get_types()
 
     def check_guide(self):
         try:
@@ -350,7 +350,6 @@ class BetPage_Fhxjc(BaseBetPage):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/fhxjc'
         self.check_prize_select_popup()
-        self.get_types()
 
 
 class BetPage_3605fc(BaseBetPage):
@@ -362,7 +361,6 @@ class BetPage_3605fc(BaseBetPage):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/3605fc'
         self.check_prize_select_popup()
-        self.get_types()
 
 
 class BetPage_V3d(BaseBetPage):
@@ -375,6 +373,7 @@ class BetPage_V3d(BaseBetPage):
         self.currentMethodsXpath = "//*[@id='change']/ul[2]/li"
         self.link = '/gameBet/v3d'
         self.check_prize_select_popup()
+        self.xpath_current_methods = "//*[@id='change']/ul[2]/li"
 
 
 class BetPage_Slmmc(BaseBetPage):
@@ -386,7 +385,6 @@ class BetPage_Slmmc(BaseBetPage):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/slmmc'
         self.check_prize_select_popup()
-        self.get_types()
 
     def check_guide(self):
         """
@@ -409,7 +407,6 @@ class BetPage_Btcffc(BaseBetPage):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/btcffc'
         self.check_prize_select_popup()
-        self.get_types()
 
 
 class BetPage_Llssc(BaseBetPage):
@@ -421,7 +418,6 @@ class BetPage_Llssc(BaseBetPage):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/llssc'
         self.check_prize_select_popup()
-        self.get_types()
 
 
 class BetPage_360ffc(BaseBetPage):
@@ -433,7 +429,6 @@ class BetPage_360ffc(BaseBetPage):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/360ffc'
         self.check_prize_select_popup()
-        self.get_types()
 
 
 class BetPage_Jlffc(BaseBetPage):
@@ -445,6 +440,5 @@ class BetPage_Jlffc(BaseBetPage):
         super().__init__(last_page=last_page)
         self.link = '/gameBet/jlffc'
         self.check_prize_select_popup()
-        self.get_types()
         self.closePeriodPopupXpath = "//div[@class='j-ui-miniwindow pop w-9' and contains(@style,'display: " \
                                      "block')]//a[@class='close closeBtn'] "

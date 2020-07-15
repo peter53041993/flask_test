@@ -39,9 +39,10 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit):
     env_config_app = Config.EnvConfigApp(test_env)
     _env_app_config = Config.EnvConfigApp(test_env)
     suite_list = []
-    lottery_list = ['cqssc', 'hljssc', 'xjssc', 'fhcqc', 'fhxjc', 'btcffc', 'txffc', 'jlffc', 'bjkl8', 'jsdice', 'ahk3',
-                    'pk10', 'xyft', 'v3d', 'fc3d', 'p5', 'ssq', 'slmmc', 'sl115']
-    test_list = ['xjssc']
+    test_list = ['cqssc', 'xjssc', 'hljssc', 'shssl', 'tjssc', 'txffc', 'fhjlssc', 'fhcqc', 'fhxjc', '3605fc', 'btcffc',
+                 'llssc', '360ffc', 'jlffc', 'v3d']
+    # test_list = ['slmmc']
+
     logger.debug('autoTest test_cases : {}'.format(test_cases))
     try:
         suite = unittest.TestSuite()
@@ -61,7 +62,7 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit):
         for case in test_cases[2]:
             if case == 'test_plan':
                 for lottery in test_list:
-                    logger.info('test_cases[2] : {}'.format(test_cases[2]))
+                    logger.info('test_cases[2] : {}'.format('test_{}'.format(lottery)))
                     logger.info('For loop[2] : {}'.format(case))
                     suite_list.append(
                         IntegrationTestWeb(case='test_{}'.format(lottery), env_config=env_config, user=user_name,

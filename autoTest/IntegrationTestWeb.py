@@ -6,7 +6,9 @@ import unittest
 from faker import Factory
 
 from page_objects.BasePages import LoginPage, MainPage, BasePage
-from page_objects.BetPages import BetPage_Xjssc
+from page_objects.BetPages import BetPage_Xjssc, BetPage_Cqssc, BetPage_Hljssc, BetPage_Shssl, BetPage_Tjssc, \
+    BetPage_Txffc, BetPage_Fhjlssc, BetPage_Fhcqc, BetPage_Fhxjc, BetPage_3605fc, BetPage_V3d, BetPage_Slmmc, \
+    BetPage_Btcffc, BetPage_Llssc, BetPage_360ffc, BetPage_Jlffc
 from page_objects.PersonalPages import Personal_AppCenterPage, BasePersonal
 from utils import Config, Logger
 from utils.Config import LotteryData
@@ -97,15 +99,228 @@ class IntegrationTestWeb(unittest.TestCase):
     #     self.id_element('J-trace-switch')  # 追號
     #
 
+    def test_cqssc(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_Cqssc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_hljssc(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_Hljssc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_shssl(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_Shssl(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_tjssc(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_Tjssc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_txffc(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_Txffc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_fhjlssc(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_Fhjlssc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_fhcqc(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_Fhcqc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_fhxjc(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_Fhxjc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_3605fc(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_3605fc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_v3d(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_V3d(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_slmmc(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_Slmmc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_btcffc(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_Btcffc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_llssc(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_Llssc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_360ffc(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_360ffc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
+    def test_jlffc(self):
+        try:
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = BetPage_Jlffc(self.pageObject)  # 前往新疆時時彩投注頁
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
+            self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
+            logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
+            raise e
+
     def test_xjssc(self):
         try:
-            self.pageObject = LoginPage(env_config=self.env_config).login(user=self.user,
-                                                                          password=self.env_config.get_password())  # 初始化與登入
+            self.pageObject = LoginPage(env_config=self.env_config) \
+                .login(user=self.user, password=self.env_config.get_password())  # 初始化與登入
             self.pageObject = BetPage_Xjssc(self.pageObject)  # 前往新疆時時彩投注頁
-            self.pageObject.go_to().bet_all()
-        except Exception as e:
+            self.pageObject.go_to().add_all_random()
+            self.pageObject.submit_trace()
             self.getImage()
+            print('新疆時時彩投注成功.')
+        except Exception as e:
             logger.error(trace_log(e))
+            print('新疆時時彩投注失敗.')
             raise e
 
     def test_change_password(self):

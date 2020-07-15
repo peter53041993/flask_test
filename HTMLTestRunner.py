@@ -512,7 +512,7 @@ table       { font-size: 100%; }
     </div>
     </td>
     <td align="right">
-        <a %(hidde)s href="%(image)s">
+        <a %(hidden)s href="%(image)s">
             <img   src="%(image)s" height="200px" width="400px"/>
         </a>
     </td>
@@ -527,7 +527,7 @@ table       { font-size: 100%; }
     <td class='%(style)s'><div class='testcase'>%(desc)s</div></td>
     <td colspan='5' align='center'><span class="label label-success success">%(status)s</span></td>
     <td align="right">
-        <a %(hidde)s href="%(image)s">
+        <a %(hidden)s href="%(image)s">
             <img   src="%(image)s" height="200" width="400"/>
         </a>
     </td>
@@ -852,7 +852,7 @@ class HTMLTestRunner(Template_mixin):
             style=n == 2 and 'errorCase' or (n == 1 and 'failCase' or 'passCase'),
             desc=desc,
             script=script,
-            hidde=hidden_status,
+            hidden=hidden_status,
             image=image_url,
             status=self.STATUS[n],
         )
