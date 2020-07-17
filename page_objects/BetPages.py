@@ -19,6 +19,8 @@ class BaseBetPage(BasePages.BasePage):
     game_types = None  # 普通 超級2000 趣味
     game_method = None  # 五星 四星 etc
 
+    _retry_times = 0
+    _max_retry = 10
     _waitTime = 0.2
 
     id_submit = "J-submit-order"
@@ -101,9 +103,11 @@ class BaseBetPage(BasePages.BasePage):
         try:
             WebDriverWait(self.driver, 30).until(
                 expected_conditions.presence_of_element_located((By.XPATH, self.xpath_bet_success)))
+            print('投注結果驗證通過')
         except Exception as e:
             logger.info(trace_log(e))
-            print()
+            print('取得投注結果失敗')
+            raise e
 
     def add_all_random(self, index_t=0, index_m=0, index_g=0):
         """
@@ -117,8 +121,8 @@ class BaseBetPage(BasePages.BasePage):
         _temp_g = index_g  # 紀錄當前game
         self.get_types()
         print('self.game_types = {}'.format(self.game_types))
-        if len(self.game_types) > 0:
-            try:
+        try:
+            if len(self.game_types) > 0:
                 self.logger.debug("len(self.gameTypes) : %s" % len(self.game_types))
                 for gType in range(index_t, len(self.game_types)):
                     _temp_t = gType
@@ -127,19 +131,17 @@ class BaseBetPage(BasePages.BasePage):
                     self.game_types[gType].click()
                     self._add_all_random(index_m, index_g)
                     index_m = 0  # 當本輪皆添加後需初始話避免後續短少
-            except Exception as e:
-                self.logger.error(trace_log(e))
-                self.check_period_popup()  # 排除臨時顯示彈窗
-                self.logger.warning("Retry bet all with type:%s, method:%s, game:%s" % (index_t, index_m, index_g))
-                self.add_all_random(_temp_t, _temp_m, _temp_g)  # 從中斷點再次運行
-        else:
-            try:
+            else:
                 self._add_all_random(index_m, index_g)
-            except Exception as e:
-                self.logger.error(trace_log(e))
-                self.check_period_popup()  # 排除臨時顯示彈窗
-                self.logger.warning("Retry bet all with type:%s, method:%s, game:%s" % (index_t, index_m, index_g))
+        except Exception as e:
+            self.logger.error(trace_log(e))
+            self.check_period_popup()  # 排除臨時顯示彈窗
+            self.logger.warning("Retry bet all with type:%s, method:%s, game:%s" % (index_t, index_m, index_g))
+            if self._retry_times < self._max_retry:
+                self._retry_times += 1
                 self.add_all_random(_temp_t, _temp_m, _temp_g)  # 從中斷點再次運行
+            else:
+                raise e
 
     def _add_all_random(self, index_m=0, index_g=0):
         _temp_m = index_m  # 紀錄當前method
@@ -148,19 +150,20 @@ class BaseBetPage(BasePages.BasePage):
             methods = self.get_current_methods()
             for method in range(index_m, len(methods)):
                 _temp_m = method
-                # self.logger.debug("_temp_m:%s" % _temp_m)
+                self.logger.debug("_temp_m:%s" % _temp_m)
                 methods[method].click()
-                # self.logger.info(">>>%s method clicked" % methods[method].get_attribute('innerHTML'))
+                self.logger.info(">>>%s method clicked" % methods[method].get_attribute('innerHTML'))
                 sleep(self._waitTime)  # 供JS運行時間
                 games = self.get_current_games()
                 for game in range(index_g, len(games)):
                     _temp_g = game
-                    # self.logger.debug("_temp_g:%s" % _temp_g)
+                    self.logger.debug("_temp_g:%s" % _temp_g)
                     if self.link == '/gameBet/jlffc':
                         methods[method].click()  # 為配合吉利分分彩新增
                         self.logger.info(">>>%s method clicked." % methods[method].get_attribute('innerHTML'))
                     games[game].click()
-                    # self.logger.info(">%s game clicked." % games[game].get_attribute('innerHTML'))
+                    self.logger.info(">%s game clicked." % games[game].get_attribute('innerHTML'))
+                    sleep(0.1)
                     self.add_random_bet_1()
                     sleep(self._waitTime)
                 index_g = 0  # 當本輪皆添加後需初始話避免後續短少
@@ -168,7 +171,11 @@ class BaseBetPage(BasePages.BasePage):
             self.logger.error(trace_log(e))
             self.check_period_popup()  # 排除臨時顯示彈窗
             self.logger.warning("Retry bet all with method:%s, game:%s" % (index_m, index_g))
-            self._add_all_random(_temp_m, _temp_g)  # 從中斷點再次運行
+            if self._retry_times < self._max_retry:
+                self._retry_times += 1
+                self._add_all_random(_temp_m, _temp_g)  # 從中斷點再次運行
+            else:
+                raise e
 
     def check_period_popup(self):
         try:
@@ -408,6 +415,11 @@ class BetPage_Btcffc(BaseBetPage):
         self.link = '/gameBet/btcffc'
         self.check_prize_select_popup()
 
+    def go_to(self):
+        super(BetPage_Btcffc, self).go_to()
+        js = "var aa=document.getElementsByClassName('countdown countdown-current')[0];aa.parentNode.removeChild(aa)"
+        self.driver.execute_script(js)  # 刪除倒數浮窗
+        return self
 
 class BetPage_Llssc(BaseBetPage):
     """
