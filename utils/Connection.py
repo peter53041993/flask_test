@@ -1,7 +1,9 @@
 import cx_Oracle
 import pymysql
 
-from utils.Config import logger
+from utils.Logger import create_logger
+
+logger = create_logger(log_folder='/logger', log_name='Connection')
 
 
 def get_conn(env):  # 連結數據庫 env 0: dev02 , 1:188

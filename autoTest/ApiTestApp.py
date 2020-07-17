@@ -9,9 +9,7 @@ import random
 import requests
 import time
 
-import utils.Config
-import utils.Connection
-from utils import Config, Logger
+from utils import Config, Logger, Connection
 from utils.TestTool import trace_log
 from utils.Config import LotteryData, func_time
 
@@ -163,14 +161,14 @@ class ApiTestApp(unittest.TestCase):
                 else:
                     lotteryid = LotteryData.lottery_dict[i][1]
 
-                    self.select_issue(utils.Connection.get_conn(env_id), lotteryid)  # 目前彩種的獎棋
+                    self.select_issue(Connection.get_conn(env_id), lotteryid)  # 目前彩種的獎棋
                     # print(issue,issueName)
                     now = int(time.time() * 1000)  # 時間戳
                     ball_type_post = self.game_type(i)  # 玩法和內容,0為玩法名稱, 1為投注內容
                     methodid = ball_type_post[0].replace('.', '')  # ex: housan.zhuiam.fushi , 把.去掉
 
                     # 找出對應的玩法id
-                    bet_type = self.select_betTypeCode(utils.Connection.get_conn(env_id), lotteryid, methodid)
+                    bet_type = self.select_betTypeCode(Connection.get_conn(env_id), lotteryid, methodid)
 
                     data_ = {"head":
                                  {"sessionId": token_[user]},
@@ -197,7 +195,7 @@ class ApiTestApp(unittest.TestCase):
                         print("投注金額 : {}, 投注倍數: {}".format(2 * mul, mul))  # mul 為game_type方法對甕倍數
                         # print(r.json())
                         orderid = (r.json()['body']['result']['orderId'])
-                        order_code = get_order_code_iapi(utils.Connection.get_conn(env_id), orderid)  # 找出對應ordercode
+                        order_code = get_order_code_iapi(Connection.get_conn(env_id), orderid)  # 找出對應ordercode
                         # print('orderid: %s'%orderid)
                         print(u'投注單號: {}'.format(order_code[-1]))
                         print('------------------------------')
@@ -240,32 +238,32 @@ class ApiTestApp(unittest.TestCase):
         global mul
         if test == 'wuxing':
 
-            ball = [str(utils.Config.random_mul(9)) for i in range(5)]  # 五星都是數值
-            mul = utils.Config.random_mul(2)
+            ball = [str(Config.random_mul(9)) for i in range(5)]  # 五星都是數值
+            mul = Config.random_mul(2)
         elif test == 'sixing':
-            ball = ['-' if i == 0 else str(utils.Config.random_mul(9)) for i in range(5)]  # 第一個為-
-            mul = utils.Config.random_mul(22)
+            ball = ['-' if i == 0 else str(Config.random_mul(9)) for i in range(5)]  # 第一個為-
+            mul = Config.random_mul(22)
         elif test == 'housan':
-            ball = ['-' if i in [0, 1] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第1和2為-
-            mul = utils.Config.random_mul(222)
+            ball = ['-' if i in [0, 1] else str(Config.random_mul(9)) for i in range(5)]  # 第1和2為-
+            mul = Config.random_mul(222)
         elif test == 'qiansan':
-            ball = ['-' if i in [3, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第4和5為-
-            mul = utils.Config.random_mul(222)
+            ball = ['-' if i in [3, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第4和5為-
+            mul = Config.random_mul(222)
         elif test == 'zhongsan':
-            ball = ['-' if i in [0, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第2,3,4為-
-            mul = utils.Config.random_mul(222)
+            ball = ['-' if i in [0, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第2,3,4為-
+            mul = Config.random_mul(222)
         elif test == 'houer':
-            ball = ['-' if i in [0, 1, 2] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第1,2,3為-
-            mul = utils.Config.random_mul(2222)
+            ball = ['-' if i in [0, 1, 2] else str(Config.random_mul(9)) for i in range(5)]  # 第1,2,3為-
+            mul = Config.random_mul(2222)
         elif test == 'qianer':
-            ball = ['-' if i in [2, 3, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第3,4,5為-
-            mul = utils.Config.random_mul(2222)
+            ball = ['-' if i in [2, 3, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第3,4,5為-
+            mul = Config.random_mul(2222)
         elif test == 'yixing':  # 五個號碼,只有一個隨機數值
-            ran = utils.Config.random_mul(4)
-            ball = ['-' if i != ran else str(utils.Config.random_mul(9)) for i in range(5)]
-            mul = utils.Config.random_mul(2222)
+            ran = Config.random_mul(4)
+            ball = ['-' if i != ran else str(Config.random_mul(9)) for i in range(5)]
+            mul = Config.random_mul(2222)
         else:
-            mul = utils.Config.random_mul(1)
+            mul = Config.random_mul(1)
         a = (",".join(ball))
         return a
 
@@ -285,7 +283,7 @@ class ApiTestApp(unittest.TestCase):
             'renxuan7': u'任選7'
         }
 
-        group_ = utils.Config.play_type()  # 建立 個隨機的goup玩法 ex: wuxing,目前先給時彩系列使用
+        group_ = Config.play_type()  # 建立 個隨機的goup玩法 ex: wuxing,目前先給時彩系列使用
         # set_ = game_set.keys()[0]#ex: zhixuan
         # method_ = game_method.keys()[0]# ex: fushi
         play_ = ''
@@ -990,12 +988,12 @@ class ApiTestApp(unittest.TestCase):
         for third in third_list:
             if third == 'sb':
                 third = 'shaba'
-            tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=env_id, third=third), tran_type=0,
+            tran_result = Connection.thirdly_tran(Connection.my_con(evn=env_id, third=third), tran_type=0,
                                                         third=third,
                                                         user=self.user)  # 先確認資料轉帳狀態
             count = 0
             while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=env_id, third=third), tran_type=0,
+                tran_result = Connection.thirdly_tran(Connection.my_con(evn=env_id, third=third), tran_type=0,
                                                             third=third,
                                                             user=self.user)  #
                 sleep(0.5)
@@ -1022,12 +1020,12 @@ class ApiTestApp(unittest.TestCase):
         for third in third_list:
             if third == 'sb':
                 third = 'shaba'
-            tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=env_id, third=third), tran_type=1,
+            tran_result = Connection.thirdly_tran(Connection.my_con(evn=env_id, third=third), tran_type=1,
                                                         third=third,
                                                         user=self.user)  # 先確認資料轉帳傳泰
             count = 0
             while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=env_id, third=third), tran_type=1,
+                tran_result = Connection.thirdly_tran(Connection.my_con(evn=env_id, third=third), tran_type=1,
                                                             third=third,
                                                             user=self.user)  #
                 logger.info('tran_result : {}'.format(tran_result))

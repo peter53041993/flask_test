@@ -1,9 +1,11 @@
 import logging
+import pathlib
+
 from utils import Config
 import os
 from datetime import datetime
 
-dir_path = Config.log_folder_path
+dir_path = project_path = str(pathlib.Path(__file__).parent.parent.absolute()) + r"\logs"
 filename = "{:%Y-%m-%d}".format(datetime.now()) + '.log'  # 設定檔名
 
 

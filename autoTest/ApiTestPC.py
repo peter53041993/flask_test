@@ -8,9 +8,7 @@ import json
 import requests
 import time
 
-import utils.Config
-import utils.Connection
-from utils import Config, Logger
+from utils import Config, Logger, Connection
 from utils.Config import LotteryData, func_time
 
 logger = Logger.create_logger(r"\AutoTest", 'auto_test_pc')
@@ -115,7 +113,7 @@ class ApiTestPC(unittest.TestCase):
 
     def plan_num(self, evn, lottery, plan_len):  # 追號生成
         plan_ = []  # 存放 多少 長度追號的 list
-        self.select_issue(utils.Connection.get_conn(evn), LotteryData.lottery_dict[lottery][1])
+        self.select_issue(Connection.get_conn(evn), LotteryData.lottery_dict[lottery][1])
         for i in range(plan_len):
             plan_.append({"number": issueName[i], "issueCode": issue[i], "multiple": 1})
         return plan_
@@ -125,32 +123,32 @@ class ApiTestPC(unittest.TestCase):
         global mul
         if test == 'wuxing':
 
-            ball = [str(utils.Config.random_mul(9)) for i in range(5)]  # 五星都是數值
-            mul = utils.Config.random_mul(2)
+            ball = [str(Config.random_mul(9)) for i in range(5)]  # 五星都是數值
+            mul = Config.random_mul(2)
         elif test == 'sixing':
-            ball = ['-' if i == 0 else str(utils.Config.random_mul(9)) for i in range(5)]  # 第一個為-
-            mul = utils.Config.random_mul(22)
+            ball = ['-' if i == 0 else str(Config.random_mul(9)) for i in range(5)]  # 第一個為-
+            mul = Config.random_mul(22)
         elif test == 'housan':
-            ball = ['-' if i in [0, 1] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第1和2為-
-            mul = utils.Config.random_mul(222)
+            ball = ['-' if i in [0, 1] else str(Config.random_mul(9)) for i in range(5)]  # 第1和2為-
+            mul = Config.random_mul(222)
         elif test == 'qiansan':
-            ball = ['-' if i in [3, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第4和5為-
-            mul = utils.Config.random_mul(222)
+            ball = ['-' if i in [3, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第4和5為-
+            mul = Config.random_mul(222)
         elif test == 'zhongsan':
-            ball = ['-' if i in [0, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第2,3,4為-
-            mul = utils.Config.random_mul(222)
+            ball = ['-' if i in [0, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第2,3,4為-
+            mul = Config.random_mul(222)
         elif test == 'houer':
-            ball = ['-' if i in [0, 1, 2] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第1,2,3為-
-            mul = utils.Config.random_mul(2222)
+            ball = ['-' if i in [0, 1, 2] else str(Config.random_mul(9)) for i in range(5)]  # 第1,2,3為-
+            mul = Config.random_mul(2222)
         elif test == 'qianer':
-            ball = ['-' if i in [2, 3, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第3,4,5為-
-            mul = utils.Config.random_mul(2222)
+            ball = ['-' if i in [2, 3, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第3,4,5為-
+            mul = Config.random_mul(2222)
         elif test == 'yixing':  # 五個號碼,只有一個隨機數值
-            ran = utils.Config.random_mul(4)
-            ball = ['-' if i != ran else str(utils.Config.random_mul(9)) for i in range(5)]
-            mul = utils.Config.random_mul(2222)
+            ran = Config.random_mul(4)
+            ball = ['-' if i != ran else str(Config.random_mul(9)) for i in range(5)]
+            mul = Config.random_mul(2222)
         else:
-            mul = utils.Config.random_mul(1)
+            mul = Config.random_mul(1)
         a = (",".join(ball))
         return a
 
@@ -170,7 +168,7 @@ class ApiTestPC(unittest.TestCase):
             'renxuan7': u'任選7'
         }
 
-        group_ = utils.Config.play_type()  # 建立 個隨機的goup玩法 ex: wuxing,目前先給時彩系列使用
+        group_ = Config.play_type()  # 建立 個隨機的goup玩法 ex: wuxing,目前先給時彩系列使用
         # set_ = game_set.keys()[0]#ex: zhixuan
         # method_ = game_method.keys()[0]# ex: fushi
         play_ = ''
@@ -335,11 +333,11 @@ class ApiTestPC(unittest.TestCase):
 
                     if i == 'btcctp':
                         award_mode = 2
-                        mul = utils.Config.random_mul(1)  # 不支援倍數,所以random參數為1
+                        mul = Config.random_mul(1)  # 不支援倍數,所以random參數為1
                     elif i == 'bjkl8':
-                        mul = utils.Config.random_mul(5)  # 北京快樂8
+                        mul = Config.random_mul(5)  # 北京快樂8
                     elif i == 'p5':
-                        mul = utils.Config.random_mul(5)
+                        mul = Config.random_mul(5)
 
                     elif i in ['btcffc', 'xyft']:
                         award_mode = 2
@@ -363,7 +361,7 @@ class ApiTestPC(unittest.TestCase):
                         traceWinStop = 0
                         traceStopValue = -1
                     else:  # 追號
-                        plan_ = self.plan_num(envs, i, utils.Config.random_mul(30))  # 隨機生成 50期內的比數
+                        plan_ = self.plan_num(envs, i, Config.random_mul(30))  # 隨機生成 50期內的比數
                         print(u'追號, 期數:%s' % len(plan_))
                         isTrace = 1
                         traceWinStop = 1
@@ -404,7 +402,7 @@ class ApiTestPC(unittest.TestCase):
                             self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
                         else:
                             self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
-                self.select_RedBal(utils.Connection.get_conn(1), user)
+                self.select_RedBal(Connection.get_conn(1), user)
                 print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
                 break
             except KeyError as e:
@@ -666,12 +664,12 @@ class ApiTestPC(unittest.TestCase):
 
         for third in statu_dict.keys():
             if statu_dict[third] == True:  # 判斷轉帳的狀態, 才去要 單號
-                tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=envs, third=third), tran_type=0,
+                tran_result = Connection.thirdly_tran(Connection.my_con(evn=envs, third=third), tran_type=0,
                                                             third=third,
                                                             user=user)  # tran_type 0為轉轉入
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=envs, third=third),
+                    tran_result = Connection.thirdly_tran(Connection.my_con(evn=envs, third=third),
                                                                 tran_type=0,
                                                                 third=third,
                                                                 user=user)  #
@@ -711,12 +709,12 @@ class ApiTestPC(unittest.TestCase):
 
         for third in statu_dict.keys():
             if statu_dict[third] == True:
-                tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=envs, third=third), tran_type=1,
+                tran_result = Connection.thirdly_tran(Connection.my_con(evn=envs, third=third), tran_type=1,
                                                             third=third,
                                                             user=user)  # tran_type 1 是 轉出
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=envs, third=third),
+                    tran_result = Connection.thirdly_tran(Connection.my_con(evn=envs, third=third),
                                                                 tran_type=0,
                                                                 third=third,
                                                                 user=user)  #
@@ -754,7 +752,7 @@ class ApiTestPC(unittest.TestCase):
         red_list = []  # 放交易訂單號id
 
         try:
-            self.select_RedBal(utils.Connection.get_conn(envs), user)
+            self.select_RedBal(Connection.get_conn(envs), user)
             print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
         except IndexError:
             print('紅包餘額為0')
@@ -769,7 +767,7 @@ class ApiTestPC(unittest.TestCase):
             print('紅包加幣100')
         else:
             print('失敗')
-        self.select_RedID(utils.Connection.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
+        self.select_RedID(Connection.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
         # print(red_id)
         red_list.append('%s' % red_id[0])
         # print(red_list)
@@ -783,7 +781,7 @@ class ApiTestPC(unittest.TestCase):
         except Exception as e:
             print(r.json()['errorMsg'])
             logger.error(e)
-        self.select_RedBal(utils.Connection.get_conn(envs), user)
+        self.select_RedBal(Connection.get_conn(envs), user)
         print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
 
     def tearDown(self) -> None:

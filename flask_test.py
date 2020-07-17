@@ -12,8 +12,6 @@ import json
 import image_test
 import os
 
-import utils.Config
-import utils.Connection
 from autoTest import AutoTest
 from time import sleep
 import threading
@@ -308,7 +306,7 @@ def autoTest():
             logger.debug("env_config.id: {},  red: {}".format(env_config.get_env_id(), red))
 
             # 查詢用戶 user_id,合營
-            user_id = utils.Connection.get_user_id(utils.Connection.get_conn(env_config.get_env_id()), user_name,
+            user_id = Connection.get_user_id(Connection.get_conn(env_config.get_env_id()), user_name,
                                                    domain_type)
             # joint_venture = autoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
 
@@ -1041,7 +1039,7 @@ def url_token():
         # print(token,env,id_,joint_type,domain)
         if token not in ['', None]:  # token 直不為空, 代表頁面輸入的是token
             print('頁面輸入token')
-            token_url = utils.Connection.get_url_token(utils.Connection.get_conn(int(env)), token, joint_type)
+            token_url = Connection.get_url_token(Connection.get_conn(int(env)), token, joint_type)
             print(token_url)
             user = []
             user_url = []
@@ -1053,7 +1051,7 @@ def url_token():
             data = {'用戶名': user, '開戶連結': user_url}
         elif id_ not in ['', None]:
             print('頁面輸入id')
-            token_url = utils.Connection.get_url_token(utils.Connection.get_conn(int(env)), id_, joint_type)
+            token_url = Connection.get_url_token(Connection.get_conn(int(env)), id_, joint_type)
             print(token_url)
             user = []
             user_url = []
@@ -1065,10 +1063,10 @@ def url_token():
             len_data = [0]  # 輸入ID 查 連結, ID 為唯一直
         elif user not in ['', None]:  # 頁面輸入 用戶名 查詢用戶從哪開出
             print('頁面輸入用戶名')
-            user_url = utils.Connection.get_user_url(utils.Connection.get_conn(int(env)), user, 2, joint_type)
+            user_url = Connection.get_user_url(Connection.get_conn(int(env)), user, 2, joint_type)
             print(user_url)
             if len(user_url) == 0:  # user_url 有可能找不到 ,再從 user_customer 的refere去找
-                user_url = utils.Connection.get_user_url(utils.Connection.get_conn(int(env)), user,
+                user_url = Connection.get_user_url(Connection.get_conn(int(env)), user,
                                                          joint_type)  # 檢查環境是否有這用戶
                 if not user_url:
                     raise Exception('{}環境沒有該用戶: {}'.format(env_type, user))
@@ -1081,7 +1079,7 @@ def url_token():
             elif user_url[0][4] != -1:  # '失效'
                 print('連結失效,從referer找')
                 days = '是'  # user_url 找不到的連結 ,一定失效或被刪除
-                user_url = utils.Connection.get_user_url(utils.Connection.get_conn(int(env)), user, 0)
+                user_url = Connection.get_user_url(Connection.get_conn(int(env)), user, 0)
                 print(user_url)
             else:  # 這邊代表  user_url 是有值,  在去從days 判斷是否失效
                 if user_url[0][4] == -1:
@@ -1113,7 +1111,7 @@ def url_token():
                 # env = domain_keys[domain][1]#  1 為環境 ,0 為預設連結
             except KeyError:  #
                 raise KeyError('沒有該連結')
-            domain_url = utils.Connection.get_domain_default_url(utils.Connection.get_conn(int(env)), domain)
+            domain_url = Connection.get_domain_default_url(Connection.get_conn(int(env)), domain)
             print(domain_url)
             if len(domain_url) != 0:  # 代表該預名 在後台全局管理有做設置
                 domain_admin = '是'  # 後台是否有設定 該domain
@@ -1176,7 +1174,7 @@ def sun_user2():  # 查詢太陽成 指定domain
         env = request.form.get('env_type')
         domain = request.form.get('domain_type')
         print(env, domain)
-        sun_user = utils.Connection.get_sun_user(utils.Connection.get_conn(int(env)), '', 2, domain)
+        sun_user = Connection.get_sun_user(Connection.get_conn(int(env)), '', 2, domain)
         print(sun_user)
 
         data = {'域名': [sun_user[i][0] for i in sun_user.keys()],
@@ -1218,7 +1216,7 @@ def sun_user():  # 太陽成用戶 找尋
         else:
             type_ = ''  # 查詢 指定用戶
         print(type_)
-        sun_user = utils.Connection.get_sun_user(utils.Connection.get_conn(int(env)), user, type_, domain)  # 太陽/申博用戶
+        sun_user = Connection.get_sun_user(Connection.get_conn(int(env)), user, type_, domain)  # 太陽/申博用戶
         print(sun_user)
         if len(sun_user) == 0:
             if type_ == 1:
@@ -1234,7 +1232,7 @@ def sun_user():  # 太陽成用戶 找尋
                 tran_status = '未完成'
             tran_time = sun_user[0][5]
             index_len = [0]
-            user_id = utils.Connection.get_user_id(utils.Connection.get_conn(int(env)), user, int(domain))  # 4.0 資料庫
+            user_id = Connection.get_user_id(Connection.get_conn(int(env)), user, int(domain))  # 4.0 資料庫
             '''
             if len(userid) == 0:# 代表該4.0環境沒有該用戶
                 FF_memo = '無'
@@ -1273,15 +1271,15 @@ def fund_activity():  # 充值紅包 查詢
         user = request.form.get('user')
         env = request.form.get('env_type')
         print(user, env)
-        user_id = utils.Connection.get_user_id(utils.Connection.get_conn(int(env)), user)  # 查詢頁面上 該環境是否有這用戶
+        user_id = Connection.get_user_id(Connection.get_conn(int(env)), user)  # 查詢頁面上 該環境是否有這用戶
         if len(user_id) == 0:
             raise Exception('該環境沒有此用戶')
-        red_able = utils.Connection.get_red_fund(utils.Connection.get_conn(int(env)), user)  # 先確認 是否領取過紅包
+        red_able = Connection.get_red_fund(Connection.get_conn(int(env)), user)  # 先確認 是否領取過紅包
         print(red_able)
 
         fund_list = []  # 存放各充值表的 紀錄 ,總共四個表
         for i in range(4):
-            red_able = utils.Connection.get_red_fund(utils.Connection.get_conn(int(env)), user, i)
+            red_able = Connection.get_red_fund(Connection.get_conn(int(env)), user, i)
             fund_list.append(red_able)
         # begin_mission = AutoTest.fund_# 新守任務表
         print(fund_list)

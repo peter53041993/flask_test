@@ -13,18 +13,11 @@ project_path = str(pathlib.Path(__file__).parent.parent.absolute())  # 專案路
 chromeDriver_Path = project_path + r'\Drivers\chromedriver_83.exe'  # ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
 reportHtml_Path = project_path + r"\templates\report.html"  # report.html 絕對路徑
 logging_config_path = project_path + r"\logs\logging_config.ini"
-log_folder_path = project_path + r"\logs"
-
-# 各檔路徑
-from utils.Logger import create_logger
-
 
 # ChromeDriver 設定參數
 chrome_options = Options()
 chrome_options.add_argument("--headless")  # 背景執行
 chrome_options.add_argument("--start-maximized")  # 全螢幕
-
-logger = create_logger(r'\Config', 'config')
 
 
 class LotteryData:

@@ -41,7 +41,7 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit):
     suite_list = []
     test_list = ['cqssc', 'xjssc', 'hljssc', 'shssl', 'tjssc', 'txffc', 'fhjlssc', 'fhcqc', 'fhxjc', '3605fc', 'btcffc',
                  'llssc', '360ffc', 'jlffc', 'v3d']
-    # test_list = ['slmmc']
+    # test_list = ['btcffc']
 
     logger.debug('autoTest test_cases : {}'.format(test_cases))
     try:
