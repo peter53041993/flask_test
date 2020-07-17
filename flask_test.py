@@ -13,6 +13,7 @@ import image_test
 import os
 
 import utils.Config
+import utils.Connection
 from autoTest import AutoTest
 from time import sleep
 import threading
@@ -26,7 +27,7 @@ from bs4 import BeautifulSoup
 # import twstock, stock
 import pandas as pd
 import re
-from utils import Config
+from utils import Config, Connection
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
@@ -307,8 +308,8 @@ def autoTest():
             logger.debug("env_config.id: {},  red: {}".format(env_config.get_env_id(), red))
 
             # 查詢用戶 user_id,合營
-            user_id = utils.Config.get_user_id(utils.Config.get_conn(env_config.get_env_id()), user_name,
-                                               domain_type)
+            user_id = utils.Connection.get_user_id(utils.Connection.get_conn(env_config.get_env_id()), user_name,
+                                                   domain_type)
             # joint_venture = autoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
 
             test_cases.append(api_test_pc)
@@ -690,12 +691,13 @@ def stock_search3():
 
 
 def status_style(val):  # 判斷狀態,來顯示顏色屬性 , 給 game_order 裡的order_status用
+    color = None
     if val == '中獎':
         color = 'blue'
     elif val == '未中獎':
         color = 'red'
     else:
-        pass
+        raise Exception('參數錯誤')
     return ('color:%s' % color)
 
 
@@ -706,20 +708,16 @@ def game_result():
     if request.method == "POST":
         game_code = request.form.get('game_code')  # 訂單號
         game_type = request.form.get('game_type')  # 玩法
-        env = request.form.get('env_type')  # 環境
+        env = Config.EnvConfig(request.form.get('env_type'))  # 環境
         cookies_ = request.cookies  # 瀏覽器上的cookie
         print(cookies_)
-        if env == 'dev02':  # 傳給DB 環境 get_conn(env)用
-            envs = 0
-        else:
-            envs = 1
         if game_code != '':  # game_code 不為空,代表前台 是輸入 訂單號
-            AutoTest.ApiTestPC.select_gameResult(utils.Config.get_conn(envs), game_code)  # 傳回此方法.找出相關 訂單細節
-            game_detail = AutoTest.game_detail  # 將 global  game_detail 宣告變數 遊戲訂單的 內容
-            if len(game_detail[game_code]) == 0:
+            game_detail = Connection.select_gameResult(conn=Connection.get_conn(env.get_env_id()),
+                                                               result=game_code)  # 傳回此方法.找出相關 訂單細節
+            if len(game_detail) == 0:
                 return "此環境沒有此訂單號"
             else:
-                game_status = game_detail[game_code][1]  # 需判斷  訂單狀態
+                game_status = game_detail[1]  # 需判斷  訂單狀態
                 if game_status == 1:
                     game_status = '等待開獎'
                 elif game_status == 2:
@@ -730,9 +728,9 @@ def game_result():
                     game_status = '撤銷'
                 else:
                     game_status = '待確認'
-                game_amount = float(game_detail[game_code][2] / 10000)  # 投注金額  需在除 1萬
-                game_retaward = float(game_detail[game_code][10] / 10000)  # 反點獎金 需除1萬
-                game_moneymode = game_detail[game_code][12]  # 元角分模式 , 1:元, 2: 角
+                game_amount = float(game_detail[2] / 10000)  # 投注金額  需在除 1萬
+                game_retaward = float(game_detail[10] / 10000)  # 反點獎金 需除1萬
+                game_moneymode = game_detail[12]  # 元角分模式 , 1:元, 2: 角
                 if game_moneymode == 1:
                     game_moneymode = '元'
                 elif game_moneymode == 2:
@@ -741,21 +739,25 @@ def game_result():
                     game_moneymode = '分'
 
                 # 遊戲玩法 : 後三 + 不定位+ 一碼不定位 , 並回傳給 game_map 來做 mapping
-                game_playtype = game_detail[game_code][4] + game_detail[game_code][5] + game_detail[game_code][6]
+                game_playtype = game_detail[4] + game_detail[5] + game_detail[6]
                 print("玩法: %s" % game_playtype)
 
-                game_award = float(game_detail[game_code][13] / 10000)  # 中獎獎金
-                AutoTest.return_env(envs)  # 呼叫環境變數, 傳給 登入後台用
-                print(AutoTest.env_)
+                game_award = float(game_detail[13] / 10000)  # 中獎獎金
 
+                header = None
+                session = None
+                lotteryid = None
+                award_id = None
                 if env not in cookies_.keys():
                     print("瀏覽器上 還沒有後台cookie,需登入")
-                    AutoTest.ApiTestPC.admin_login()
-                    award_id = game_detail[game_code][17]  # 獎金id, 傳后查詢尋是哪個獎金組
-                    lotteryid = game_detail[game_code][14]  # 採種Id 傳給 後台 查詢哪個彩種
+                    AutoTest.ApiTestPC.admin_login(env_config=env)
+                    award_id = game_detail[17]  # 獎金id, 傳后查詢尋是哪個獎金組
+                    lotteryid = game_detail[14]  # 採種Id 傳給 後台 查詢哪個彩種
                     session = requests.Session()
-                    header = AutoTest.header  # 後台 登入header
-                    cookie = AutoTest.cookies['ANVOAID']  # 後台登入 cookie
+                    header = {
+                        'User-Agent': Config.UserAgent.PC.value,
+                        'Content-Type': 'application/x-www-form-urlencoded'}  # 後台 登入header
+                    cookie = AutoTest.ApiTestPC.admin_login(env_config=env)['ANVOAID']  # 後台登入 cookie
 
                     res = redirect('game_result')
                     res.set_cookie(env, cookie)  # 存放cookie
@@ -766,29 +768,31 @@ def game_result():
                 else:
                     print("瀏覽器已經存在cookie,無須登入")
                     cookie = cookies_[env]
+                    """若進入else, header / session / lotteryid / award_id 如何初始化?"""
+
                 header['Cookie'] = 'ANVOAID=' + cookie  # 存放後台cookie
                 # header['Content-Type'] ='application/json'
-                r = session.get(AutoTest.admin_url + "/gameoa/queryGameAward?lotteryId=%s&awardId=%s&status=1" % (
+                r = session.get(env.get_admin_url() + "/gameoa/queryGameAward?lotteryId=%s&awardId=%s&status=1" % (
                     lotteryid, award_id)
                                 , headers=header)  # 登入後台 查詢 用戶獎金值
                 # print(r.text)
                 soup = BeautifulSoup(r.text, 'lxml')
-                if game_detail[game_code][16] == 0:  # 理論獎金為0, 代表一個完髮有可能有不同獎金
+                bonus = []
+                if game_detail[16] == 0:  # 理論獎金為0, 代表一個完髮有可能有不同獎金
                     print('有多獎金玩法')
-                    point_id = str(game_detail[game_code][15])
-                    bonus = []
+                    point_id = str(game_detail[15])
                     for i in soup.find_all('span', id=re.compile("^(%s)" % point_id)):
                         bonus.append(float(i.text))  # 有多個獎金
                     bonus = " ".join([str(x) for x in bonus])  # 原本bonus裡面裝 float  .需list裡轉成字元,
 
                     # bonus = "".join(bonus)# dataframe 不能支援list
                 else:
-                    point_id = str(game_detail[game_code][15]) + "_" + str(
-                        game_detail[game_code][16])  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
+                    point_id = str(game_detail[15]) + "_" + str(
+                        game_detail[16])  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
                     for i in soup.find_all('span', id=re.compile("^(%s)" % point_id)):  # {'id':point_id}):
                         bonus = float(i.text)
                 print(bonus, point_id)
-                game_awardmode = game_detail[game_code][9]  # 是否為高獎金
+                game_awardmode = game_detail[9]  # 是否為高獎金
                 if game_awardmode == 1:
                     game_awardmode = '否'
                 elif game_awardmode == 2:
@@ -796,11 +800,11 @@ def game_result():
                     bonus = game_retaward + bonus  # 高獎金的話, 獎金 模式 + 反點獎金
                 # print(bonus)
                 game_map()  # 呼叫玩法說明
-                data = {"遊戲訂單號": game_code, "訂單時間": game_detail[game_code][0], "中獎狀態": game_status,
-                        "投注金額": game_amount, "投注彩種": game_detail[game_code][3],
+                data = {"遊戲訂單號": game_code, "訂單時間": game_detail[0], "中獎狀態": game_status,
+                        "投注金額": game_amount, "投注彩種": game_detail[3],
                         "投注玩法": game_playtype,
-                        "投注內容": game_detail[game_code][7], "獎金組": game_detail[game_code][8], "獎金模式": bonus,
-                        "獎金模式狀態": game_awardmode, "反點獎金": game_retaward, "投注倍數": game_detail[game_code][11],
+                        "投注內容": game_detail[7], "獎金組": game_detail[8], "獎金模式": bonus,
+                        "獎金模式狀態": game_awardmode, "反點獎金": game_retaward, "投注倍數": game_detail[11],
                         "元角分模式": game_moneymode, "中獎獎金": game_award, "遊戲說明": game_explan
                         }
                 global frame
@@ -824,9 +828,9 @@ def game_result():
                 print('輸入玩法 有空格需去除掉')
                 game_type = game_type.replace(' ', '')
             print(game_type)
-            AutoTest.ApiTestPC.select_gameorder(utils.Config.get_conn(envs), '%' + game_type + '%')
-            game_order = AutoTest.game_order
-            len_order = AutoTest.len_order
+            temp = Connection.select_gameorder(Connection.get_conn(env.get_env_id()), '%' + game_type + '%')
+            game_order = temp[0]
+            len_order = temp[1]
             # print(game_order)
             order_list = []  # 因為可能有好幾個訂單,  傳入 dataframe 需為列表 ,訂單
             order_time = []  # 時間
@@ -870,36 +874,27 @@ def game_result():
 def user_acitve():  # 驗證第三方有校用戶
     if request.method == "POST":
         user = request.form.get('user')
-        env = request.form.get('env_type')
+        env = Config.EnvConfig(request.form.get('env_type'))
         joint_type = request.form.get('joint_type')
-        if env == 'dev02':
-            envs = 0
-        elif env == 'joy188':
-            envs = 1
-        else:
-            envs = 2
 
-        userid = AutoTest.ApiTestPC.select_user_id(AutoTest.ApiTestPC.get_conn(envs), user)
+        userid = Connection.get_user_id(Connection.get_conn(env.get_env_id()), user)
         # 查詢用戶 userid
         print(user, env)
         if len(userid) == 0:
-            return ("此環境沒有該用戶")
+            raise Exception("此環境沒有該用戶")
         else:
-            AutoTest.ApiTestPC.select_activeAPP(AutoTest.ApiTestPC.get_conn(envs), user)
+            active_app = Connection.select_activeAPP(Connection.get_conn(env.get_env_id()), user)
             # 查詢APP有效用戶 是否有值  ,沒值 代表 沒投注
 
-            active_app = AutoTest.active_app  # 呼叫 此變數
             # print(active_user)
             bind_card = []  # 綁卡列表.可能超過多張
             card_number = []  # 該綁卡,有被多少張數綁定,但段 是否為有效性
             # print(active_app)
 
-            AutoTest.ApiTestPC.select_activeFund(AutoTest.ApiTestPC.get_conn(envs), user)  # 當月充值
-            user_fund = AutoTest.user_fund
+            user_fund = Connection.select_activeFund(Connection.get_conn(env.get_env_id()), user)  # 當月充值
             print(user_fund)
 
-            AutoTest.ApiTestPC.select_activeCard(AutoTest.ApiTestPC.get_conn(envs), user, envs)  # 查詢綁卡數量
-            card_num = AutoTest.card_num  # 綁卡 和 該卡榜定幾張
+            card_num = Connection.select_activeCard(Connection.get_conn(env.get_env_id()), user, env.get_env_id())  # 查詢綁卡數量
 
             if len(active_app) == 0:  # 非有效用戶,也代表 APP 有效用戶表沒資料(舊式沒投注)
                 print("%s用戶 為非有效用戶" % user)
@@ -938,7 +933,7 @@ def user_acitve():  # 驗證第三方有校用戶
 
                 # autoTest.Joy188Test.select_activeFund(autoTest.Joy188Test.get_conn(envs),user)#當月充值
 
-                if user_fund[0] == None:  # 確認沒充值
+                if user_fund[0] is None:  # 確認沒充值
                     real_charge = 0
                 else:
                     real_charge = float(user_fund[0]) / 10000  # 抓充值表, 顯示充值金額
@@ -970,16 +965,10 @@ def user_acitve():  # 驗證第三方有校用戶
 @app.route('/app_bet', methods=["POST"])
 def app_bet():
     user = request.form.get('user')
-    env = request.form.get('env_type')
+    env = Config.EnvConfig(request.form.get('env_type'))
     joint = request.form.get('joint_type')
-    if env == 'dev02':
-        envs = 0
-    elif env == 'joy188':
-        envs = 1
-    else:
-        envs = 2
-    AutoTest.ApiTestPC.select_AppBet(AutoTest.ApiTestPC.get_conn(envs), user)  # APP代理中心,銷量/盈虧
-    app_bet = AutoTest.app_bet  # 銷量/盈虧
+
+    app_bet = Connection.select_AppBet(Connection.get_conn(env.get_env_id()), user)  # APP代理中心,銷量/盈虧
     third_list = []  # 存放第三方列表
     active_bet = []  # 第三方有效投注
     third_prize = []  # 第三方獎金
@@ -1052,7 +1041,7 @@ def url_token():
         # print(token,env,id_,joint_type,domain)
         if token not in ['', None]:  # token 直不為空, 代表頁面輸入的是token
             print('頁面輸入token')
-            token_url = Config.get_url_token(Config.get_conn(int(env)), token, joint_type)
+            token_url = utils.Connection.get_url_token(utils.Connection.get_conn(int(env)), token, joint_type)
             print(token_url)
             user = []
             user_url = []
@@ -1064,7 +1053,7 @@ def url_token():
             data = {'用戶名': user, '開戶連結': user_url}
         elif id_ not in ['', None]:
             print('頁面輸入id')
-            token_url = Config.get_url_token(Config.get_conn(int(env)), id_, joint_type)
+            token_url = utils.Connection.get_url_token(utils.Connection.get_conn(int(env)), id_, joint_type)
             print(token_url)
             user = []
             user_url = []
@@ -1076,10 +1065,11 @@ def url_token():
             len_data = [0]  # 輸入ID 查 連結, ID 為唯一直
         elif user not in ['', None]:  # 頁面輸入 用戶名 查詢用戶從哪開出
             print('頁面輸入用戶名')
-            user_url = Config.get_user_url(Config.get_conn(int(env)), user, 2, joint_type)
+            user_url = utils.Connection.get_user_url(utils.Connection.get_conn(int(env)), user, 2, joint_type)
             print(user_url)
             if len(user_url) == 0:  # user_url 有可能找不到 ,再從 user_customer 的refere去找
-                user_url = Config.get_user_url(Config.get_conn(int(env)), user, joint_type)  # 檢查環境是否有這用戶
+                user_url = utils.Connection.get_user_url(utils.Connection.get_conn(int(env)), user,
+                                                         joint_type)  # 檢查環境是否有這用戶
                 if not user_url:
                     raise Exception('{}環境沒有該用戶: {}'.format(env_type, user))
 
@@ -1091,7 +1081,7 @@ def url_token():
             elif user_url[0][4] != -1:  # '失效'
                 print('連結失效,從referer找')
                 days = '是'  # user_url 找不到的連結 ,一定失效或被刪除
-                user_url = Config.get_user_url(Config.get_conn(int(env)), user, 0)
+                user_url = utils.Connection.get_user_url(utils.Connection.get_conn(int(env)), user, 0)
                 print(user_url)
             else:  # 這邊代表  user_url 是有值,  在去從days 判斷是否失效
                 if user_url[0][4] == -1:
@@ -1122,8 +1112,8 @@ def url_token():
                 print(domain)
                 # env = domain_keys[domain][1]#  1 為環境 ,0 為預設連結
             except KeyError:  #
-                return ('沒有該連結')
-            domain_url = Config.get_domain_default_url(Config.get_conn(int(env)), domain)
+                raise KeyError('沒有該連結')
+            domain_url = utils.Connection.get_domain_default_url(utils.Connection.get_conn(int(env)), domain)
             print(domain_url)
             if len(domain_url) != 0:  # 代表該預名 在後台全局管理有做設置
                 domain_admin = '是'  # 後台是否有設定 該domain
@@ -1159,14 +1149,14 @@ def url_token():
             else:  # 就走預設的設定
                 try:
                     if domain_keys[domain][1] != int(env):
-                        return ("該環境沒有此domain")
+                        raise Exception("該環境沒有此domain")
                     domain_admin = '否'
                     admin_url = '無'  # 後台沒設置
                     url = domain_keys[domain][0]  # 沒設定 ,為空, 走預設連結
                     register_status = domain_keys[domain][2]
                     env_type = domain_keys[domain][3] + "/" + env_type  # 後台沒設置, 就從domain_keys 原本 預設的規則走
                 except KeyError:
-                    return ('沒有該連結')
+                    raise KeyError('沒有該連結')
 
                 data = {"網域名": domain, '環境': env_type, '後台是否有設置該網域': domain_admin, '預設連結': url,
                         '預設註冊按紐': register_status}
@@ -1176,7 +1166,7 @@ def url_token():
             print(frame)
             return frame.to_html()
         except ValueError:
-            return ('DATA有錯誤')
+            raise ValueError('DATA有錯誤')
     return render_template('url_token.html')
 
 
@@ -1186,7 +1176,7 @@ def sun_user2():  # 查詢太陽成 指定domain
         env = request.form.get('env_type')
         domain = request.form.get('domain_type')
         print(env, domain)
-        sun_user = Config.get_sun_user(Config.get_conn(int(env)), '', 2, domain)
+        sun_user = utils.Connection.get_sun_user(utils.Connection.get_conn(int(env)), '', 2, domain)
         print(sun_user)
 
         data = {'域名': [sun_user[i][0] for i in sun_user.keys()],
@@ -1196,7 +1186,7 @@ def sun_user2():  # 查詢太陽成 指定domain
                 '狀態': ['下架' if sun_user[i][4] == 1 else '正常' for i in sun_user.keys()],
                 '備註': [sun_user[i][5] for i in sun_user.keys()],
                 '連結失效性': ['失效' if sun_user[i][6] != -1 else '正常' for i in sun_user.keys()],
-                '註冊數量': ['0' if sun_user[i][7] == None else int(sun_user[i][7]) for i in sun_user.keys()]
+                '註冊數量': ['0' if sun_user[i][7] is None else int(sun_user[i][7]) for i in sun_user.keys()]
                 }
         frame = pd.DataFrame(data, index=[i for i in sun_user.keys()])
         print(frame)
@@ -1228,7 +1218,7 @@ def sun_user():  # 太陽成用戶 找尋
         else:
             type_ = ''  # 查詢 指定用戶
         print(type_)
-        sun_user = Config.get_sun_user(Config.get_conn(int(env)), user, type_, domain)  # 太陽/申博用戶
+        sun_user = utils.Connection.get_sun_user(utils.Connection.get_conn(int(env)), user, type_, domain)  # 太陽/申博用戶
         print(sun_user)
         if len(sun_user) == 0:
             if type_ == 1:
@@ -1244,7 +1234,7 @@ def sun_user():  # 太陽成用戶 找尋
                 tran_status = '未完成'
             tran_time = sun_user[0][5]
             index_len = [0]
-            user_id = Config.get_user_id(Config.get_conn(int(env)), user, int(domain))  # 4.0 資料庫
+            user_id = utils.Connection.get_user_id(utils.Connection.get_conn(int(env)), user, int(domain))  # 4.0 資料庫
             '''
             if len(userid) == 0:# 代表該4.0環境沒有該用戶
                 FF_memo = '無'
@@ -1283,15 +1273,15 @@ def fund_activity():  # 充值紅包 查詢
         user = request.form.get('user')
         env = request.form.get('env_type')
         print(user, env)
-        user_id = Config.get_user_id(Config.get_conn(int(env)), user)  # 查詢頁面上 該環境是否有這用戶
+        user_id = utils.Connection.get_user_id(utils.Connection.get_conn(int(env)), user)  # 查詢頁面上 該環境是否有這用戶
         if len(user_id) == 0:
             raise Exception('該環境沒有此用戶')
-        red_able = Config.get_red_fund(Config.get_conn(int(env)), user)  # 先確認 是否領取過紅包
+        red_able = utils.Connection.get_red_fund(utils.Connection.get_conn(int(env)), user)  # 先確認 是否領取過紅包
         print(red_able)
 
         fund_list = []  # 存放各充值表的 紀錄 ,總共四個表
         for i in range(4):
-            red_able = Config.get_red_fund(Config.get_conn(int(env)), user, i)
+            red_able = utils.Connection.get_red_fund(utils.Connection.get_conn(int(env)), user, i)
             fund_list.append(red_able)
         # begin_mission = AutoTest.fund_# 新守任務表
         print(fund_list)

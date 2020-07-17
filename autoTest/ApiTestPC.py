@@ -9,6 +9,7 @@ import requests
 import time
 
 import utils.Config
+import utils.Connection
 from utils import Config, Logger
 from utils.Config import LotteryData, func_time
 
@@ -44,20 +45,6 @@ class ApiTestPC(unittest.TestCase):
         rx = hashlib.md5(sr.encode() + _param).hexdigest()
         return rx
 
-    @staticmethod
-    def select_domain_url(conn, domain):  # 查詢 全局管理 後台設置的domain ,連結設置 (因為生產 沒權限,看不到)
-        with conn.cursor() as cursor:
-            sql = "select a.domain,a.agent,b.url,a.register_display,a.app_download_display,a.domain_type,a.status from  \
-            GLOBAL_DOMAIN_LIST a inner join user_url b \
-            on a.register_url_id = b.id  where a.domain like '%%%s%%' " % domain
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global domain_url
-            domain_url = {}
-            for num, url in enumerate(rows):
-                domain_url[num] = list(url)
-            # print(domain_url)
-        conn.close()
 
     def select_issue(self, conn, lotteryid):  # 查詢正在銷售的 期號
         # Joy188Test.date_time()
@@ -111,144 +98,6 @@ class ApiTestPC(unittest.TestCase):
                 red_id.append(i[0])
         conn.close()
 
-    def select_gameResult(self, conn, result):  # 查詢用戶訂單號, 回傳訂單各個資訊
-        with conn.cursor() as cursor:
-            sql = "select a.order_time,a.status,a.totamount,f.lottery_name,\
-            c.group_code_title,c.set_code_title,c.method_code_title,\
-            b.bet_detail,e.award_name,b.award_mode,b.ret_award,b.multiple,b.money_mode,b.evaluate_win\
-            ,a.lotteryid,b.bet_type_code,c.theory_bonus,a.award_group_id\
-            from(((\
-            (game_order a inner join game_slip b on\
-            a.id = b.orderid and a.userid=b.userid and a.lotteryid=b.lotteryid) inner join \
-            game_bettype_status c on \
-            a.lotteryid = c.lotteryid and b.bet_type_code=c.bet_type_code) inner join\
-            game_award_user_group d on\
-            a.lotteryid = d.lotteryid and a.userid=d.userid) inner join \
-            game_award_group e on \
-            a.award_group_id = e.id and a.lotteryid =e.lotteryid) \
-            inner join game_series f on  a.lotteryid = f.lotteryid where a.order_code = '%s' and d.bet_type=1" % result
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global game_detail
-            game_detail = {}
-            detail_list = []  # 存放各細節
-            # game_detail[result] = detail_list# 讓訂單為key,　value 為一個list 存放各訂單細節
-            for tuple_ in rows:
-                for i in tuple_:
-                    # print(i)
-                    detail_list.append(i)
-            game_detail[result] = detail_list
-        conn.close()
-
-    def select_gameorder(self, conn, play_type):  # 輸入玩法,找尋訂單
-        with conn.cursor() as cursor:
-            sql = "select f.lottery_name,a.order_time,a.order_code,\
-            c.group_code_title,c.set_code_title,c.method_code_title,a.status,g.account,b.bet_detail,h.number_record\
-            from((((((\
-            game_order a inner join  game_slip b on \
-            a.id = b.orderid and a.userid=b.userid and a.lotteryid=b.lotteryid) inner join game_bettype_status c on \
-            a.lotteryid = c.lotteryid and b.bet_type_code=c.bet_type_code) \
-            inner join game_award_user_group d on \
-            a.lotteryid = d.lotteryid and a.userid=d.userid) \
-            inner join game_award_group e on \
-            a.award_group_id = e.id and a.lotteryid =e.lotteryid) \
-            inner join game_series f on a.lotteryid = f.lotteryid) inner join user_customer g on\
-            a.userid = g.id and d.userid = g.id) inner join game_issue h on\
-            a.lotteryid = h.lotteryid and a.issue_code = h.issue_code\
-            where a.order_time >sysdate - interval '1' month and \
-            c.group_code_title||c.set_code_title||c.method_code_title like '%s' and d.bet_type=1  and a.status !=1 \
-            order by a.order_time desc" % play_type
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global game_order, len_order
-            game_order = {}
-            len_order = len(rows)  # 需傳回去長度
-            # print(rows,len(rows))#rows 為一個 list 包 tuple
-            order_list = []  # 存放指定玩法 產生 的多少訂單
-            for index, tuple_ in enumerate(rows):  # 取出 list長度 的各訂單 tuple
-                order_list.append(list(tuple_))  # 把tuple 轉乘list  ,然後放入  order_list
-                game_order[index] = order_list[index]  # 字典 index 為 key ,  order_list 為value
-            # print(game_order)
-        conn.close()
-
-    def select_activeAPP(self, conn, user):  # 查詢APP 是否為有效用戶表
-        with conn.cursor() as cursor:
-            sql = "select *  from USER_CENTER_THIRDLY_ACTIVE where \
-            create_date >=  trunc(sysdate,'mm') and user_id in \
-            ( select id from user_customer where account = '%s')" % (user)
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global active_app
-            active_app = []
-            for tuple_ in rows:
-                for i in tuple_:
-                    # print(i)
-                    active_app.append(i)
-            # print(active_app,len(active_app))
-        conn.close()
-
-    def select_AppBet(self, conn, user):  # 查詢APP 代理中心 銷量
-        with conn.cursor() as cursor:
-            global app_bet
-            app_bet = {}
-            for third in ['ALL', 'LC', 'KY', 'CITY', 'GNS', 'FHLL', 'BBIN', 'IM', 'SB', 'AG']:
-                if third == 'ALL':
-                    sql = "select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
-                    from V_THIRDLY_AGENT_CENTER where account = '%s' \
-                    and create_date > trunc(sysdate,'mm')" % user
-                else:
-                    sql = "select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
-                    from V_THIRDLY_AGENT_CENTER where account = '%s' \
-                    and create_date > trunc(sysdate,'mm') and plat='%s'" % (user, third)
-                cursor.execute(sql)
-                rows = cursor.fetchall()
-                new_ = []  # 存放新的列表內容
-                for tuple_ in rows:
-                    for i in tuple_:
-                        if i == None:  # 就是 0
-                            i = 0
-                        new_.append(i)
-                    app_bet[third] = new_
-
-            print(app_bet)
-        conn.close()
-
-    def select_activeCard(self, conn, user, envs):  # 查詢綁卡是否有重複綁
-        with conn.cursor() as cursor:
-            if envs == 2:  # 生產另外一張表
-                sql = "SELECT bank_number, count(id) FROM rd_view_user_bank \
-                WHERE bank_number in (SELECT bank_number FROM rd_view_user_bank WHERE account = '%s' \
-                ) group BY bank_number" % user
-            else:
-                sql = "SELECT BANK_NUMBER,count(user_id) FROM USER_BANK \
-                WHERE BANK_NUMBER in \
-                (SELECT BANK_NUMBER FROM USER_BANK WHERE USER_ID= \
-                (SELECT ID FROM USER_CUSTOMER WHERE ACCOUNT='%s')) \
-                group by bank_number" % user
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global card_num  # 綁卡的數量
-            card_num = {}
-            for index, tuple_ in enumerate(rows):
-                card_num[index] = list(tuple_)
-            # print(card_num)
-        conn.close()
-
-    def select_activeFund(self, conn, user):  # 查詢當月充值金額
-        with conn.cursor() as cursor:
-            sql = "select sum(real_charge_amt) from fund_charge where status=2 and apply_time > trunc(sysdate,'mm') \
-            and user_id in ( select id from user_customer where account = '%s')" % user
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global user_fund
-            user_fund = []  # 當月充值金額
-            print(rows)
-            for tuple_ in rows:
-                for i in tuple_:
-                    # print(i)
-                    user_fund.append(i)
-        conn.close()
-
     def web_issuecode(self, lottery):  # 頁面產生  獎期用法,  取代DB連線問題
         now_time = int(time.time())
         header = {
@@ -266,7 +115,7 @@ class ApiTestPC(unittest.TestCase):
 
     def plan_num(self, evn, lottery, plan_len):  # 追號生成
         plan_ = []  # 存放 多少 長度追號的 list
-        self.select_issue(utils.Config.get_conn(evn), LotteryData.lottery_dict[lottery][1])
+        self.select_issue(utils.Connection.get_conn(evn), LotteryData.lottery_dict[lottery][1])
         for i in range(plan_len):
             plan_.append({"number": issueName[i], "issueCode": issue[i], "multiple": 1})
         return plan_
@@ -555,7 +404,7 @@ class ApiTestPC(unittest.TestCase):
                             self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
                         else:
                             self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
-                self.select_RedBal(utils.Config.get_conn(1), user)
+                self.select_RedBal(utils.Connection.get_conn(1), user)
                 print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
                 break
             except KeyError as e:
@@ -817,14 +666,15 @@ class ApiTestPC(unittest.TestCase):
 
         for third in statu_dict.keys():
             if statu_dict[third] == True:  # 判斷轉帳的狀態, 才去要 單號
-                tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=envs, third=third), tran_type=0,
-                                                        third=third,
-                                                        user=user)  # tran_type 0為轉轉入
+                tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=envs, third=third), tran_type=0,
+                                                            third=third,
+                                                            user=user)  # tran_type 0為轉轉入
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=envs, third=third), tran_type=0,
-                                                            third=third,
-                                                            user=user)  #
+                    tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=envs, third=third),
+                                                                tran_type=0,
+                                                                third=third,
+                                                                user=user)  #
                     sleep(1.5)
                     count += 1
                     if count == 15:
@@ -861,14 +711,15 @@ class ApiTestPC(unittest.TestCase):
 
         for third in statu_dict.keys():
             if statu_dict[third] == True:
-                tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=envs, third=third), tran_type=1,
-                                                        third=third,
-                                                        user=user)  # tran_type 1 是 轉出
+                tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=envs, third=third), tran_type=1,
+                                                            third=third,
+                                                            user=user)  # tran_type 1 是 轉出
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=envs, third=third), tran_type=0,
-                                                            third=third,
-                                                            user=user)  #
+                    tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=envs, third=third),
+                                                                tran_type=0,
+                                                                third=third,
+                                                                user=user)  #
                     sleep(1)
                     count += 1
                     if count == 9:
@@ -879,14 +730,15 @@ class ApiTestPC(unittest.TestCase):
                 pass
         self.test_PcThirdBalance()
 
-    def admin_login(self):
+    @staticmethod
+    def admin_login(env_config):
         global admin_cookie, admin_url, header, cookies
         admin_cookie = {}
         header = {
             'User-Agent': Config.UserAgent.PC.value,
             'Content-Type': 'application/x-www-form-urlencoded'}
-        admin_data = self.envConfig.get_admin_data()
-        admin_url = self.envConfig.get_admin_url()
+        admin_data = env_config.get_admin_data()
+        admin_url = env_config.get_admin_url()
         session = requests.Session()
         r = session.post(admin_url + '/admin/login/login', data=admin_data, headers=header)
         cookies = r.cookies.get_dict()  # 獲得登入的cookies 字典
@@ -894,6 +746,7 @@ class ApiTestPC(unittest.TestCase):
         print(admin_cookie)
         print('登入後台 , 環境: %s' % admin_url)
         print(r.text)
+        return cookies
 
     def test_redEnvelope(self):  # 紅包加壁,審核用
         user = self.user
@@ -901,11 +754,11 @@ class ApiTestPC(unittest.TestCase):
         red_list = []  # 放交易訂單號id
 
         try:
-            self.select_RedBal(utils.Config.get_conn(envs), user)
+            self.select_RedBal(utils.Connection.get_conn(envs), user)
             print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
         except IndexError:
             print('紅包餘額為0')
-        self.admin_login()  # 登入後台
+        self.admin_login(env_config=self.envConfig)  # 登入後台
         data = {"receives": user, "blockType": "2", "lotteryType": "1", "lotteryCodes": "",
                 "amount": "100", "note": "test"}
         header['Cookie'] = 'ANVOAID=' + admin_cookie['admin_cookie']  # 存放後台cookie
@@ -916,7 +769,7 @@ class ApiTestPC(unittest.TestCase):
             print('紅包加幣100')
         else:
             print('失敗')
-        self.select_RedID(utils.Config.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
+        self.select_RedID(utils.Connection.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
         # print(red_id)
         red_list.append('%s' % red_id[0])
         # print(red_list)
@@ -930,8 +783,18 @@ class ApiTestPC(unittest.TestCase):
         except Exception as e:
             print(r.json()['errorMsg'])
             logger.error(e)
-        self.select_RedBal(utils.Config.get_conn(envs), user)
+        self.select_RedBal(utils.Connection.get_conn(envs), user)
         print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
 
     def tearDown(self) -> None:
+        pass
+
+
+class ApiTestYFT(unittest.TestCase):
+    """
+    YFT API測試
+    """
+
+    def __init__(self, case):
+        super().__init__(case)
         pass

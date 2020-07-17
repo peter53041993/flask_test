@@ -7,6 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
+import utils.Connection
 from utils.Logger import create_logger
 from selenium import webdriver
 from selenium.webdriver.remote.command import Command
@@ -58,7 +59,7 @@ class BasePage:
                 else:
                     self.driver = webdriver.Chrome(Config.chromeDriver_Path, chrome_options=Config.chrome_options)
                 self.driver.implicitly_wait(10)
-                self.driver.set_page_load_timeout(120)
+                self.driver.set_page_load_timeout(30)
             except Exception as e:
                 self.logger.error(trace_log(e))
         return self.driver
@@ -205,10 +206,10 @@ class RegPage(BasePage):
 
     def __init__(self, last_page: BasePage):
         super().__init__(last_page=last_page)
-        user_id = Config.get_sql_exec(self.env_config.get_env_id(),
+        user_id = utils.Connection.get_sql_exec(self.env_config.get_env_id(),
                                       "select id from user_customer where account = '{}'".format(self.user))
         self.logger.info("user_id = {}".format(user_id[0]))
-        reg_url = Config.get_sql_exec(self.env_config.get_env_id(),
+        reg_url = utils.Connection.get_sql_exec(self.env_config.get_env_id(),
                                       "select url from user_url where days = -1 and creator = '{}'".format(user_id[0]))
         self.logger.info("reg_url = {}".format(reg_url[0]))
         self.link = "/register?{url}".format(url=reg_url[0])

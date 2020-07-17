@@ -10,6 +10,7 @@ import requests
 import time
 
 import utils.Config
+import utils.Connection
 from utils import Config, Logger
 from utils.TestTool import trace_log
 from utils.Config import LotteryData, func_time
@@ -162,14 +163,14 @@ class ApiTestApp(unittest.TestCase):
                 else:
                     lotteryid = LotteryData.lottery_dict[i][1]
 
-                    self.select_issue(utils.Config.get_conn(env_id), lotteryid)  # 目前彩種的獎棋
+                    self.select_issue(utils.Connection.get_conn(env_id), lotteryid)  # 目前彩種的獎棋
                     # print(issue,issueName)
                     now = int(time.time() * 1000)  # 時間戳
                     ball_type_post = self.game_type(i)  # 玩法和內容,0為玩法名稱, 1為投注內容
                     methodid = ball_type_post[0].replace('.', '')  # ex: housan.zhuiam.fushi , 把.去掉
 
                     # 找出對應的玩法id
-                    bet_type = self.select_betTypeCode(utils.Config.get_conn(env_id), lotteryid, methodid)
+                    bet_type = self.select_betTypeCode(utils.Connection.get_conn(env_id), lotteryid, methodid)
 
                     data_ = {"head":
                                  {"sessionId": token_[user]},
@@ -196,7 +197,7 @@ class ApiTestApp(unittest.TestCase):
                         print("投注金額 : {}, 投注倍數: {}".format(2 * mul, mul))  # mul 為game_type方法對甕倍數
                         # print(r.json())
                         orderid = (r.json()['body']['result']['orderId'])
-                        order_code = get_order_code_iapi(utils.Config.get_conn(env_id), orderid)  # 找出對應ordercode
+                        order_code = get_order_code_iapi(utils.Connection.get_conn(env_id), orderid)  # 找出對應ordercode
                         # print('orderid: %s'%orderid)
                         print(u'投注單號: {}'.format(order_code[-1]))
                         print('------------------------------')
@@ -989,14 +990,14 @@ class ApiTestApp(unittest.TestCase):
         for third in third_list:
             if third == 'sb':
                 third = 'shaba'
-            tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=env_id, third=third), tran_type=0,
-                                                    third=third,
-                                                    user=self.user)  # 先確認資料轉帳狀態
+            tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=env_id, third=third), tran_type=0,
+                                                        third=third,
+                                                        user=self.user)  # 先確認資料轉帳狀態
             count = 0
             while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=env_id, third=third), tran_type=0,
-                                                        third=third,
-                                                        user=self.user)  #
+                tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=env_id, third=third), tran_type=0,
+                                                            third=third,
+                                                            user=self.user)  #
                 sleep(0.5)
                 count += 1
                 if count == 15:
@@ -1021,14 +1022,14 @@ class ApiTestApp(unittest.TestCase):
         for third in third_list:
             if third == 'sb':
                 third = 'shaba'
-            tran_result = Config.thirdly_tran(Config.my_con(evn=env_id, third=third), tran_type=1,
-                                              third=third,
-                                              user=self.user)  # 先確認資料轉帳傳泰
+            tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=env_id, third=third), tran_type=1,
+                                                        third=third,
+                                                        user=self.user)  # 先確認資料轉帳傳泰
             count = 0
             while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                tran_result = Config.thirdly_tran(Config.my_con(evn=env_id, third=third), tran_type=1,
-                                                  third=third,
-                                                  user=self.user)  #
+                tran_result = utils.Connection.thirdly_tran(utils.Connection.my_con(evn=env_id, third=third), tran_type=1,
+                                                            third=third,
+                                                            user=self.user)  #
                 logger.info('tran_result : {}'.format(tran_result))
                 sleep(1)
                 count += 1
