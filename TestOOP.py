@@ -3,7 +3,7 @@ from page_objects.BetPages import *
 
 page = LoginPage("dev02")
 page.login("twen103", "123qwe")
-page = BetPage_V3d(page)
+page = BetPage_Btcffc(page)
 page.go_to()
 page.add_all_random()
 page.submit_trace()
