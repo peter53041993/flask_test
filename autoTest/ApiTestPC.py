@@ -111,7 +111,7 @@ class ApiTestPC(unittest.TestCase):
 
     def plan_num(self, evn, lottery, plan_len):  # 追號生成
         plan_ = []  # 存放 多少 長度追號的 list
-        issue = self.select_issue(Connection.get_conn(evn), LotteryData.lottery_dict[lottery][1])
+        issue = self.select_issue(Connection.get_oracle_conn(evn), LotteryData.lottery_dict[lottery][1])
         for i in range(plan_len):
             plan_.append({"number": issue.get('issueName')[i], "issueCode": issue.get('issue')[i], "multiple": 1})
         return plan_
@@ -400,7 +400,7 @@ class ApiTestPC(unittest.TestCase):
                             self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
                         else:
                             self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
-                red_bal = self.select_red_bal(Connection.get_conn(1), user)
+                red_bal = self.select_red_bal(Connection.get_oracle_conn(1), user)
                 print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
                 break
             except KeyError as e:
@@ -662,12 +662,12 @@ class ApiTestPC(unittest.TestCase):
 
         for third in statu_dict.keys():
             if statu_dict[third] == True:  # 判斷轉帳的狀態, 才去要 單號
-                tran_result = Connection.thirdly_tran(Connection.my_con(evn=envs, third=third), tran_type=0,
+                tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=envs, third=third), tran_type=0,
                                                       third=third,
                                                       user=user)  # tran_type 0為轉轉入
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    tran_result = Connection.thirdly_tran(Connection.my_con(evn=envs, third=third),
+                    tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=envs, third=third),
                                                           tran_type=0,
                                                           third=third,
                                                           user=user)  #
@@ -707,12 +707,12 @@ class ApiTestPC(unittest.TestCase):
 
         for third in statu_dict.keys():
             if statu_dict[third] == True:
-                tran_result = Connection.thirdly_tran(Connection.my_con(evn=envs, third=third), tran_type=1,
+                tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=envs, third=third), tran_type=1,
                                                       third=third,
                                                       user=user)  # tran_type 1 是 轉出
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    tran_result = Connection.thirdly_tran(Connection.my_con(evn=envs, third=third),
+                    tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=envs, third=third),
                                                           tran_type=0,
                                                           third=third,
                                                           user=user)  #
@@ -750,7 +750,7 @@ class ApiTestPC(unittest.TestCase):
         red_list = []  # 放交易訂單號id
 
         try:
-            red_bal = self.select_red_bal(Connection.get_conn(envs), user)
+            red_bal = self.select_red_bal(Connection.get_oracle_conn(envs), user)
             print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
         except IndexError:
             print('紅包餘額為0')
@@ -765,7 +765,7 @@ class ApiTestPC(unittest.TestCase):
             print('紅包加幣100')
         else:
             print('失敗')
-        red_id = self.select_red_id(Connection.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
+        red_id = self.select_red_id(Connection.get_oracle_conn(envs), user)  # 查詢教地訂單號,回傳審核data
         # print(red_id)
         red_list.append('%s' % red_id[0])
         # print(red_list)
@@ -779,7 +779,7 @@ class ApiTestPC(unittest.TestCase):
         except Exception as e:
             print(r.json()['errorMsg'])
             logger.error(e)
-        red_bal = self.select_red_bal(Connection.get_conn(envs), user)
+        red_bal = self.select_red_bal(Connection.get_oracle_conn(envs), user)
         print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
 
     def tearDown(self) -> None:

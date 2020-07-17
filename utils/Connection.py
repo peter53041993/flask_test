@@ -8,7 +8,7 @@ from utils.Logger import create_logger
 logger = create_logger(log_folder='/logger', log_name='Connection')
 
 
-def get_conn(env):  # 連結數據庫 env 0: dev02 , 1:188
+def get_oracle_conn(env):  # 連結數據庫 env 0: dev02 , 1:188
     if env == 2:
         username = 'rdquery'
         service_name = 'gamenxsXDB'
@@ -25,7 +25,7 @@ def get_conn(env):  # 連結數據庫 env 0: dev02 , 1:188
 
 def get_sql_exec(env, sql):
     logger.info('get_sql_exec : sql = {}'.format(sql))
-    cursor = get_conn(env).cursor()
+    cursor = get_oracle_conn(env).cursor()
     cursor.execute(sql)
     rows = cursor.fetchall()
     result = []
@@ -201,7 +201,7 @@ def select_red_fund(conn, user, type_=None):  # 充值 紅包 查尋  各充值�
     return fund_
 
 
-def my_con(evn, third):  # 第三方  mysql連線
+def get_mysql_conn(evn, third):  # 第三方  mysql連線
     third_dict = {'lc': ['lcadmin', ['cA28yF#K=yx*RPHC', 'XyH]#xk76xY6e+bV'], 'ff_lc'],
                   'ky': ['kyadmin', ['ALtfN#F7Zj%AxXgs=dT9', 'kdT4W3#dEug3$pMM#z7q'], 'ff_ky'],
                   'city': ['761cityadmin', ['KDpTqUeRH7s-s#D*7]mY', 'bE%ytPX$5nU3c9#d'], 'ff_761city'],
