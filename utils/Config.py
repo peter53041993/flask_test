@@ -6,7 +6,7 @@ from typing import Dict
 from selenium.webdriver.chrome.options import Options
 from enum import Enum
 
-from utils.Connection import get_conn, get_domain_default_url
+from utils.Connection import get_conn, select_domain_default_url
 
 project_path = str(pathlib.Path(__file__).parent.parent.absolute())  # 專案路徑
 # project_path = os.path.abspath('.')  # 專案路徑
@@ -145,7 +145,7 @@ class EnvConfig:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
     def get_joint_venture(self, env, domain):
-        domain_urls = get_domain_default_url(get_conn(int(env)), domain)  # 先去全局 找是否有設定 該domain
+        domain_urls = select_domain_default_url(get_conn(int(env)), domain)  # 先去全局 找是否有設定 該domain
         if not domain_urls:  # 若無對應domain_url, default domain type = 0 ?
             return 0
         try:

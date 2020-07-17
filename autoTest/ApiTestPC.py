@@ -43,7 +43,6 @@ class ApiTestPC(unittest.TestCase):
         rx = hashlib.md5(sr.encode() + _param).hexdigest()
         return rx
 
-
     def select_issue(self, conn, lotteryid):  # 查詢正在銷售的 期號
         # Joy188Test.date_time()
         # today_time = '2019-06-10'#for 預售中 ,抓當天時間來比對,會沒獎期
@@ -55,10 +54,9 @@ class ApiTestPC(unittest.TestCase):
                 cursor.execute(sql)
                 rows = cursor.fetchall()
 
-                global issueName
-                global issue
                 issueName = []
                 issue = []
+
                 if lotteryid in ['99112', '99306']:  # 順利秒彩,順利11選5  不需 講期. 隨便塞
                     issueName.append('1')
                     issue.append('1')
@@ -67,34 +65,35 @@ class ApiTestPC(unittest.TestCase):
                         issueName.append(i[0])
                         issue.append(i[1])
             conn.close()
+            return {'issueName': issueName, 'issue': issue}
         except:
             pass
 
-    def select_RedBal(self, conn, user):
+    def select_red_bal(self, conn, user) -> list:
         with conn.cursor() as cursor:
             sql = "SELECT bal FROM RED_ENVELOPE WHERE \
             USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='%s')" % user
             cursor.execute(sql)
             rows = cursor.fetchall()
 
-            global red_bal
             red_bal = []
             for i in rows:  # i 生成tuple
                 red_bal.append(i[0])
         conn.close()
+        return red_bal
 
-    def select_RedID(self, conn, user):  # 紅包加壁  的訂單號查詢 ,用來審核用
+    def select_red_id(self, conn, user):  # 紅包加壁  的訂單號查詢 ,用來審核用
         with conn.cursor() as cursor:
             sql = "SELECT ID FROM RED_ENVELOPE_LIST WHERE status=1 and \
             USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='%s')" % user
             cursor.execute(sql)
             rows = cursor.fetchall()
 
-            global red_id
             red_id = []
             for i in rows:  # i 生成tuple
                 red_id.append(i[0])
         conn.close()
+        return red_id
 
     def web_issuecode(self, lottery):  # 頁面產生  獎期用法,  取代DB連線問題
         now_time = int(time.time())
@@ -103,9 +102,8 @@ class ApiTestPC(unittest.TestCase):
             'Cookies': 'ANVOID=' + cookies_[user]
         }
         r = session.get(em_url + '/gameBet/%s/lastNumber?_=%s' % (lottery, now_time), headers=header)
-        global issuecode
         try:
-            issuecode = r.json()['issueCode']
+            return r.json()['issueCode']
         except:
             pass
         if lottery == 'lhc':
@@ -113,9 +111,9 @@ class ApiTestPC(unittest.TestCase):
 
     def plan_num(self, evn, lottery, plan_len):  # 追號生成
         plan_ = []  # 存放 多少 長度追號的 list
-        self.select_issue(Connection.get_conn(evn), LotteryData.lottery_dict[lottery][1])
+        issue = self.select_issue(Connection.get_conn(evn), LotteryData.lottery_dict[lottery][1])
         for i in range(plan_len):
-            plan_.append({"number": issueName[i], "issueCode": issue[i], "multiple": 1})
+            plan_.append({"number": issue.get('issueName')[i], "issueCode": issue.get('issue')[i], "multiple": 1})
         return plan_
 
     def ball_type(self, test):  # 對應完法,產生對應最大倍數和 投注完法
@@ -354,7 +352,7 @@ class ApiTestPC(unittest.TestCase):
                         # Joy188Test.select_issue(Joy188Test.get_conn(1),lottery_dict[i][1])
                         # 從DB抓取最新獎期.[1]為 99101類型
                         # print(issueName,issue)
-                        self.web_issuecode(i)
+                        issuecode = self.web_issuecode(i)
                         plan_ = [{"number": '123', "issueCode": issuecode, "multiple": 1}]
                         print(u'一般投住')
                         isTrace = 0
@@ -402,7 +400,7 @@ class ApiTestPC(unittest.TestCase):
                             self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
                         else:
                             self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
-                self.select_RedBal(Connection.get_conn(1), user)
+                red_bal = self.select_red_bal(Connection.get_conn(1), user)
                 print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
                 break
             except KeyError as e:
@@ -665,14 +663,14 @@ class ApiTestPC(unittest.TestCase):
         for third in statu_dict.keys():
             if statu_dict[third] == True:  # 判斷轉帳的狀態, 才去要 單號
                 tran_result = Connection.thirdly_tran(Connection.my_con(evn=envs, third=third), tran_type=0,
-                                                            third=third,
-                                                            user=user)  # tran_type 0為轉轉入
+                                                      third=third,
+                                                      user=user)  # tran_type 0為轉轉入
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
                     tran_result = Connection.thirdly_tran(Connection.my_con(evn=envs, third=third),
-                                                                tran_type=0,
-                                                                third=third,
-                                                                user=user)  #
+                                                          tran_type=0,
+                                                          third=third,
+                                                          user=user)  #
                     sleep(1.5)
                     count += 1
                     if count == 15:
@@ -710,14 +708,14 @@ class ApiTestPC(unittest.TestCase):
         for third in statu_dict.keys():
             if statu_dict[third] == True:
                 tran_result = Connection.thirdly_tran(Connection.my_con(evn=envs, third=third), tran_type=1,
-                                                            third=third,
-                                                            user=user)  # tran_type 1 是 轉出
+                                                      third=third,
+                                                      user=user)  # tran_type 1 是 轉出
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
                     tran_result = Connection.thirdly_tran(Connection.my_con(evn=envs, third=third),
-                                                                tran_type=0,
-                                                                third=third,
-                                                                user=user)  #
+                                                          tran_type=0,
+                                                          third=third,
+                                                          user=user)  #
                     sleep(1)
                     count += 1
                     if count == 9:
@@ -752,7 +750,7 @@ class ApiTestPC(unittest.TestCase):
         red_list = []  # 放交易訂單號id
 
         try:
-            self.select_RedBal(Connection.get_conn(envs), user)
+            red_bal = self.select_red_bal(Connection.get_conn(envs), user)
             print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
         except IndexError:
             print('紅包餘額為0')
@@ -767,7 +765,7 @@ class ApiTestPC(unittest.TestCase):
             print('紅包加幣100')
         else:
             print('失敗')
-        self.select_RedID(Connection.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
+        red_id = self.select_red_id(Connection.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
         # print(red_id)
         red_list.append('%s' % red_id[0])
         # print(red_list)
@@ -781,7 +779,7 @@ class ApiTestPC(unittest.TestCase):
         except Exception as e:
             print(r.json()['errorMsg'])
             logger.error(e)
-        self.select_RedBal(Connection.get_conn(envs), user)
+        red_bal = self.select_red_bal(Connection.get_conn(envs), user)
         print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
 
     def tearDown(self) -> None:

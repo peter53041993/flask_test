@@ -1,3 +1,5 @@
+from typing import Dict
+
 import cx_Oracle
 import pymysql
 
@@ -34,7 +36,7 @@ def get_sql_exec(env, sql):
     return result
 
 
-def get_domain_default_url(conn, domain):
+def select_domain_default_url(conn, domain):
     with conn.cursor() as cursor:
         sql = "select GDL.domain, GDL.agent, UU.url, GDL.register_display, GDL.app_download_display, GDL.domain_type, GDL.status " \
               "from GLOBAL_DOMAIN_LIST GDL " \
@@ -51,7 +53,7 @@ def get_domain_default_url(conn, domain):
     return domain_urls
 
 
-def get_url_token(conn, token, joint_venture):  # 輸入 token 查詢 連結
+def select_url_token(conn, token, joint_venture):  # 輸入 token 查詢 連結
     with conn.cursor() as cursor:
         if len(token) == 4:  # 代表是用 註冊碼  ,4位
             sql = "select UC.account,UU.url " \
@@ -73,7 +75,7 @@ def get_url_token(conn, token, joint_venture):  # 輸入 token 查詢 連結
     return token_url
 
 
-def get_sun_user(conn, user, type_, domain):
+def select_sun_user(conn, user, type_, domain):
     if domain == '1':  # 申博
         come_from = 'sunGame138'
         note = '申博138'
@@ -109,7 +111,7 @@ def get_sun_user(conn, user, type_, domain):
     return sun_user
 
 
-def get_user_url(conn, _user, _type=1, _joint_type=''):  # 用戶的 連結 ,type= 1 找用戶本身開戶連結, 0 找用戶的從哪個連結開出
+def select_user_url(conn, _user, _type=1, _joint_type=''):  # 用戶的 連結 ,type= 1 找用戶本身開戶連結, 0 找用戶的從哪個連結開出
     with conn.cursor() as cursor:
         user_url = []
         if _type == 1:  # 這邊user參數 為 userid , test_applycenter()方法使用
@@ -140,7 +142,7 @@ def get_user_url(conn, _user, _type=1, _joint_type=''):  # 用戶的 連結 ,typ
     return user_url
 
 
-def get_user_id(conn, account_, joint_type=None):
+def select_user_id(conn, account_, joint_type=None):
     with conn.cursor() as cursor:
         if joint_type is None:
             sql = "select id " \
@@ -162,7 +164,7 @@ def get_user_id(conn, account_, joint_type=None):
     return user_id
 
 
-def get_red_fund(conn, user, type_=None):  # 充值 紅包 查尋  各充值表
+def select_red_fund(conn, user, type_=None):  # 充值 紅包 查尋  各充值表
     with conn.cursor() as cursor:
         if type_ == 0:  # 新手任務
             sql = "select UC.account,BM.cancel_reason " \
@@ -213,26 +215,26 @@ def my_con(evn, third):  # 第三方  mysql連線
     elif evn == 1:  # 188
         ip = '10.6.32.147'
     else:
-        print('evn 錯誤')
+        raise Exception('evn 錯誤')
 
     user_ = third_dict[third][0]
     db_ = third_dict[third][2]
 
     if third == 'gns':  # gns只有一個 測試環境
-        passwd_ = third_dict[third][1]
+        password_ = third_dict[third][1]
         ip = '10.6.32.147'  # gns Db 只有 188
     else:
-        passwd_ = third_dict[third][1][evn]
+        password_ = third_dict[third][1][evn]
 
     db = pymysql.connect(
         host=ip,
         user=user_,
-        passwd=passwd_,
+        passwd=password_,
         db=db_)
     return db
 
 
-def thirdly_tran(db, tran_type, third, user):
+def thirdly_tran(db, tran_type, third, user) -> list:
     cur = db.cursor()
     # third 判斷 第三方 是那個 ,gns table 名稱不同
     if third in ['lc', 'ky', 'city', 'im', 'shaba']:
@@ -259,22 +261,22 @@ def thirdly_tran(db, tran_type, third, user):
         return result
 
 
-def select_domain_url(conn, domain):  # 查詢 全局管理 後台設置的domain ,連結設置 (因為生產 沒權限,看不到)
+def select_domain_url(conn, domain) -> Dict[int, list]:  # 查詢 全局管理 後台設置的domain ,連結設置 (因為生產 沒權限,看不到)
     with conn.cursor() as cursor:
         sql = "select a.domain,a.agent,b.url,a.register_display,a.app_download_display,a.domain_type,a.status from  \
         GLOBAL_DOMAIN_LIST a inner join user_url b \
         on a.register_url_id = b.id  where a.domain like '%%%s%%' " % domain
         cursor.execute(sql)
         rows = cursor.fetchall()
-        global domain_url
         domain_url = {}
         for num, url in enumerate(rows):
             domain_url[num] = list(url)
         # print(domain_url)
     conn.close()
+    return domain_url
 
 
-def select_gameResult(conn, result):  # 查詢用戶訂單號, 回傳訂單各個資訊
+def select_game_result(conn, result) -> list:  # 查詢用戶訂單號, 回傳訂單各個資訊
     with conn.cursor() as cursor:
         sql = "select a.order_time,a.status,a.totamount,f.lottery_name,\
         c.group_code_title,c.set_code_title,c.method_code_title,\
@@ -302,7 +304,7 @@ def select_gameResult(conn, result):  # 查詢用戶訂單號, 回傳訂單各�
     return detail_list
 
 
-def select_gameorder(conn, play_type):  # 輸入玩法,找尋訂單
+def select_game_order(conn, play_type):  # 輸入玩法,找尋訂單
     with conn.cursor() as cursor:
         sql = "select f.lottery_name,a.order_time,a.order_code,\
         c.group_code_title,c.set_code_title,c.method_code_title,a.status,g.account,b.bet_detail,h.number_record\
@@ -334,11 +336,11 @@ def select_gameorder(conn, play_type):  # 輸入玩法,找尋訂單
     return [game_order, len_order]
 
 
-def select_activeAPP(conn, user):  # 查詢APP 是否為有效用戶表
+def select_active_app(conn, user):  # 查詢APP 是否為有效用戶表
     with conn.cursor() as cursor:
         sql = "select *  from USER_CENTER_THIRDLY_ACTIVE where \
         create_date >=  trunc(sysdate,'mm') and user_id in \
-        ( select id from user_customer where account = '%s')" % (user)
+        ( select id from user_customer where account = '%s')" % user
         cursor.execute(sql)
         rows = cursor.fetchall()
         active_app = []
@@ -351,7 +353,7 @@ def select_activeAPP(conn, user):  # 查詢APP 是否為有效用戶表
     return active_app
 
 
-def select_AppBet(conn, user):  # 查詢APP 代理中心 銷量
+def select_app_bet(conn, user):  # 查詢APP 代理中心 銷量
     with conn.cursor() as cursor:
         app_bet = {}
         for third in ['ALL', 'LC', 'KY', 'CITY', 'GNS', 'FHLL', 'BBIN', 'IM', 'SB', 'AG']:
@@ -368,7 +370,7 @@ def select_AppBet(conn, user):  # 查詢APP 代理中心 銷量
             new_ = []  # 存放新的列表內容
             for tuple_ in rows:
                 for i in tuple_:
-                    if i == None:  # 就是 0
+                    if i is None:  # 就是 0
                         i = 0
                     new_.append(i)
                 app_bet[third] = new_
@@ -378,7 +380,7 @@ def select_AppBet(conn, user):  # 查詢APP 代理中心 銷量
     return app_bet
 
 
-def select_activeCard(conn, user, envs):  # 查詢綁卡是否有重複綁
+def select_active_card(conn, user, envs):  # 查詢綁卡是否有重複綁
     with conn.cursor() as cursor:
         if envs == 2:  # 生產另外一張表
             sql = "SELECT bank_number, count(id) FROM rd_view_user_bank \
@@ -400,7 +402,7 @@ def select_activeCard(conn, user, envs):  # 查詢綁卡是否有重複綁
     return card_num
 
 
-def select_activeFund(conn, user):  # 查詢當月充值金額
+def select_active_fund(conn, user):  # 查詢當月充值金額
     with conn.cursor() as cursor:
         sql = "select sum(real_charge_amt) from fund_charge where status=2 and apply_time > trunc(sysdate,'mm') \
         and user_id in ( select id from user_customer where account = '%s')" % user
