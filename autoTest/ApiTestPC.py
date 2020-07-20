@@ -20,6 +20,7 @@ class ApiTestPC(unittest.TestCase):
     user = None
     red_type = None
     money_unit = None
+    third_list = ['gns', 'shaba', 'im', 'ky', 'lc', 'city']
 
     def setUp(self):
         logger.info('ApiTestPC setUp : {}'.format(self._testMethodName))
@@ -33,15 +34,6 @@ class ApiTestPC(unittest.TestCase):
         self.red_type = _red_type
         self.money_unit = _money_unit
         logger.info('ApiTestPC __init__.')
-
-    def md(self, _password, _param):
-        m = hashlib.md5()
-        m.update(_password)
-        sr = m.hexdigest()
-        for i in range(3):
-            sr = hashlib.md5(sr.encode()).hexdigest()
-        rx = hashlib.md5(sr.encode() + _param).hexdigest()
-        return rx
 
     def select_issue(self, conn, lotteryid):  # 查詢正在銷售的 期號
         # Joy188Test.date_time()
@@ -421,11 +413,8 @@ class ApiTestPC(unittest.TestCase):
         global userAgent
         global envs  # 回傳redis 或 sql 環境變數   ,dev :0, 188:1
         global cookies_
-        global third_list
-        third_list = ['gns', 'shaba', 'im', 'ky', 'lc', 'city']
         cookies_ = {}
         user = self.user
-        account_ = {self.user: '輸入的用戶名'}
         em_url = self.envConfig.get_em_url()
         password = str.encode(self.envConfig.get_password())
         envs = self.envConfig.get_env_id()
@@ -452,31 +441,32 @@ class ApiTestPC(unittest.TestCase):
         global session
         while True:
             try:
-                for i in account_.keys():
-                    postData = {
-                        "username": i,
-                        "password": self.md(password, param),
-                        "param": param
-                    }
-                    session = requests.Session()
-                    r = session.post(post_url + '/login/login', data=postData, headers=header)
-                    cookies = r.cookies.get_dict()  # 獲得登入的cookies 字典
-                    cookies_.setdefault(i, cookies['ANVOID'])
-                    t = time.strftime('%Y%m%d %H:%M:%S')
-                    # msg = (u'登錄帳號: %s,登入身分: %s'%(i,account_[i])+u',現在時間:'+t+r.text)
-                    print(u'登錄帳號: %s' % (i) + u',現在時間:' + t)
-                    print(r.text)
-                    print(r.json()['isSuccess'])
-
-                    # return url
-                break
-            except requests.exceptions.ConnectionError:
-                raise Exception("ConnectionError Exception")
-                break
-
+                postData = {
+                    "username": self.user,
+                    "password": self.md(password, param),
+                    "param": param
+                }
+                session = requests.Session()
+                r = session.post(post_url + '/login/login', data=postData, headers=header)
+                cookies = r.cookies.get_dict()  # 獲得登入的cookies 字典
+                cookies_.setdefault(self.user, cookies['ANVOID'])
+                t = time.strftime('%Y%m%d %H:%M:%S')
+                # msg = (u'登錄帳號: %s,登入身分: %s'%(i,account_[i])+u',現在時間:'+t+r.text)
+                print(u'登錄帳號: %s' % self.user + u',現在時間:' + t)
+                print(r.text)
+                print(r.json()['isSuccess'])
+                # return url
             except IOError:
                 raise Exception('IOError Exception')
-                break
+
+    def md(self, _password, _param):
+        m = hashlib.md5()
+        m.update(_password)
+        sr = m.hexdigest()
+        for i in range(3):
+            sr = hashlib.md5(sr.encode()).hexdigest()
+        rx = hashlib.md5(sr.encode() + _param).hexdigest()
+        return rx
 
     def session_post(self, account, third, url, post_data):  # 共用 session post方式 (Pc)
         header = {
@@ -603,13 +593,13 @@ class ApiTestPC(unittest.TestCase):
         '''4.0/第三方餘額'''
         threads = []
 
-        header = {
-            'User-Agent': userAgent,
-            'Cookie': 'ANVOID=' + cookies_[user]
-        }
+        # header = {
+        #     'User-Agent': userAgent,
+        #     'Cookie': 'ANVOID=' + cookies_[user]
+        # }
 
         print('帳號: %s' % user)
-        for third in third_list:
+        for third in self.third_list:
             if third == 'gns':
                 third_url = '/gns/gnsBalance'
             else:
@@ -639,7 +629,7 @@ class ApiTestPC(unittest.TestCase):
         }
         post_data = {"amount": 1}
         statu_dict = {}  # 存放 轉帳的 狀態
-        for third in third_list:
+        for third in self.third_list:
             if third == 'gns':
                 third_url = '/gns/transferToGns'
             else:
@@ -692,7 +682,7 @@ class ApiTestPC(unittest.TestCase):
             'Content-Type': 'application/json; charset=UTF-8'
         }
         post_data = {"amount": 1}
-        for third in third_list:
+        for third in self.third_list:
             url = '/%s/transferToFF' % third
 
             r = session.post(post_url + url, data=json.dumps(post_data), headers=header)
