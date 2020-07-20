@@ -20,8 +20,8 @@ def date_time():  # 給查詢 獎期to_date時間用, 今天時間
     year = now.year
     month = now.month
     day = now.day
-    format_day = '{:02d}'.format(day)
-    return '%s-%s-%s' % (year, month, format_day)
+    format_day = f'{day:02d}'
+    return f'{year}-{month}-{format_day}'
 
 
 def suite_test(test_cases, user_name, test_env, is_use_red, money_unit):
@@ -43,47 +43,47 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit):
                  'llssc', '360ffc', 'jlffc', 'v3d']
     # test_list = ['btcffc']
 
-    logger.debug('autoTest test_cases : {}'.format(test_cases))
+    logger.debug(f'autoTest test_cases : {test_cases}')
     try:
         suite = unittest.TestSuite()
         now = time.strftime('%Y_%m_%d %H-%M-%S')
 
-        logger.info('suite_test with test_cases : {}'.format(test_cases))
+        logger.info(f"suite_test with test_cases : {test_cases}")
 
         for case in test_cases[0]:
-            logger.info('test_cases[0] : {}'.format(test_cases[0]))
-            logger.info('For loop[0] : {}'.format(case))
+            logger.info(f'test_cases[0] : {test_cases[0]}')
+            logger.info(f'For loop[0] : {case}')
             suite_list.append(ApiTestPC(case=case, _env=env_config, _user=user_name, _red_type=is_use_red,
                                         _money_unit=money_unit))
         for case in test_cases[1]:
-            logger.info('test_cases[1] : {}'.format(test_cases[1]))
-            logger.info('For loop[1] : {}'.format(case))
+            logger.info(f'test_cases[1] : {test_cases[1]}')
+            logger.info(f'For loop[1] : {case}')
             suite_list.append(ApiTestApp(case_=case, env_=env_config_app, user_=user_name, red_type_=is_use_red))
         for case in test_cases[2]:
             if case == 'test_plan':
                 for lottery in test_list:
-                    logger.info('test_cases[2] : {}'.format('test_{}'.format(lottery)))
-                    logger.info('For loop[2] : {}'.format(case))
+                    logger.info(f'test_cases[2] : "test_{lottery}')
+                    logger.info(f'For loop[2] : {case}')
                     suite_list.append(
-                        IntegrationTestWeb(case='test_{}'.format(lottery), env_config=env_config, user=user_name,
+                        IntegrationTestWeb(case=f'test_{lottery}', env_config=env_config, user=user_name,
                                            red_type=is_use_red))
             else:
-                logger.info('test_cases[2] : {}'.format(test_cases[2]))
-                logger.info('For loop[2] : {}'.format(case))
+                logger.info(f'test_cases[2] : {test_cases[2]}')
+                logger.info(f'For loop[2] : {case}')
                 suite_list.append(
                     IntegrationTestWeb(case=case, env_config=env_config, user=user_name, red_type=is_use_red))
 
-        logger.info("測試內容 suite_list : {}".format(suite_list))
+        logger.info(f"測試內容 suite_list : {suite_list}")
 
         suite.addTests(suite_list)
-        logger.info("測試內容Suite suite_api_pc : {}".format(suite))
+        logger.info(f"測試內容Suite suite_api_pc : {suite}")
 
         filename = Config.reportHtml_Path  # now + u'自動化測試' + '.html'
         fp = open(filename, 'wb')
         runner = HTMLTestRunner.HTMLTestRunner(
             stream=fp,
             title=u'測試報告',
-            description='環境: {env},帳號: {user}'.format(env=env_config, user=user_name),
+            description=f'環境: {env_config},帳號: {user_name}',
         )
         logger.debug(">>>>>>>>Test Start.<<<<<<<<")
         runner.run(suite)

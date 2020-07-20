@@ -24,7 +24,7 @@ def get_oracle_conn(env):  # 連結數據庫 env 0: dev02 , 1:188
 
 
 def get_sql_exec(env, sql):
-    logger.info('get_sql_exec : sql = {}'.format(sql))
+    logger.info(f'get_sql_exec : sql = {sql}')
     cursor = get_oracle_conn(env).cursor()
     cursor.execute(sql)
     rows = cursor.fetchall()
@@ -41,14 +41,14 @@ def select_domain_default_url(conn, domain):
         sql = "select GDL.domain, GDL.agent, UU.url, GDL.register_display, GDL.app_download_display, GDL.domain_type, GDL.status " \
               "from GLOBAL_DOMAIN_LIST GDL " \
               "inner join user_url UU on GDL.register_url_id = UU.id " \
-              "where GDL.domain = '{}'".format(domain)
-        logger.info('get_domain_default_url sql = {}'.format(sql))
+              f"where GDL.domain = '{domain}'"
+        logger.info(f'get_domain_default_url sql = {sql}')
         cursor.execute(sql)
         rows = cursor.fetchall()
         domain_urls = []
         for num, data in enumerate(rows):
             domain_urls.append(list(data))
-        logger.info('get domain_urls = {}'.format(domain_urls))
+        logger.info(f'get domain_urls = {domain_urls}')
     conn.close()
     return domain_urls
 
@@ -59,12 +59,12 @@ def select_url_token(conn, token, joint_venture):  # 輸入 token 查詢 連結
             sql = "select UC.account,UU.url " \
                   "from user_customer UC " \
                   "inner join user_url UU  on UC.id= UU.creator  " \
-                  "where UU.url like  '%token={}%' and UC.joint_venture = {}".format(token, joint_venture)
+                  f"where UU.url like  '%token={token}%' and UC.joint_venture = {joint_venture}"
         else:  # 使用id 去找 url
             sql = "select UC.account,UU.url " \
                   "from user_customer UC " \
                   "inner join user_url UU  on UC.id= UU.creator " \
-                  "where UU.url like  '%id={}%' and UC.joint_venture = {}".format(token, joint_venture)
+                  f"where UU.url like  '%id={token}%' and UC.joint_venture = {joint_venture}"
         print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
@@ -89,19 +89,19 @@ def select_sun_user(conn, user, type_, domain):
         if type_ == 1:  # 1 查詢轉移的用戶
             sql = "select account, cellphone, transfer_status, transfer_date " \
                   "from sun_game_user " \
-                  "where  transfer_status = 1 and come_from = '{}' " \
-                  "order by transfer_date desc".format(come_from)
+                  f"where transfer_status = 1 and come_from = '{come_from}' " \
+                  "order by transfer_date desc"
         elif type_ == 2:  # 查詢 指定domain flask_test. sun_user2()
             sql = "select GDL.domain,GDL.agent,b.url,GDL.register_display,GDL.status,GDL.note,b.days,b.registers " \
                   "from  GLOBAL_DOMAIN_LIST GDL " \
                   "inner join user_url b on GDL.register_url_id = b.id " \
-                  "where note = '{}' " \
-                  "order by GDL.status asc,b.registers desc".format(note)
+                  f"where note = '{note}' " \
+                  "order by GDL.status asc,b.registers desc"
         else:  # 查詢 指定用戶
             sql = "select * " \
                   "from sun_game_user " \
-                  "where account = '{}' and come_from = '{}'".format(user, come_from)
-        print('get_sun_user - > sql = {}'.format(sql))
+                  f"where account = '{user}' and come_from = '{come_from}'"
+        print(f'get_sun_user - > sql = {sql}')
         cursor.execute(sql)
         rows = cursor.fetchall()
         sun_user = []
@@ -117,17 +117,17 @@ def select_user_url(conn, _user, _type=1, _joint_type=''):  # 用戶的 連結 ,
         if _type == 1:  # 這邊user參數 為 userid , test_applycenter()方法使用
             sql = "select url " \
                   "from user_url " \
-                  "where url like '%{}%' and days=-1".format(_user)
+                  f"where url like '%{_user}%' and days=-1"
         elif _type == 2:  # user 為用戶名,這個表如果沒有, 有可能是 上級開戶連結 刪除,導致空 ,再去做else 那段
             sql = "select UC.account, UU.url, UC.user_chain, UC.device, UU.days " \
                   "from user_customer UC " \
                   "inner join  user_url UU on UC.url_id = UU.id " \
-                  "where UC.account = '{}' and joint_venture = '{}'".format(_user, _joint_type)
+                  f"where UC.account = '{_user}' and joint_venture = '{_joint_type}'"
         else:  # 最後才去用 user_customer. referer 去找, 這邊APP 開戶出來的會是null
             sql = "select account, referer, user_chain, device " \
                   "from user_customer " \
-                  "where account = '{}' and joint_venture = '{}'".format(_user, _joint_type)
-        logger.info('select_user_url -> sql : {}'.format(sql))
+                  f"where account = '{_user}' and joint_venture = '{_joint_type}'"
+        logger.info(f'select_user_url -> sql : {sql}')
         cursor.execute(sql)
         rows = cursor.fetchall()
         for num, url in enumerate(rows):
@@ -147,18 +147,18 @@ def select_user_id(conn, account_, joint_type=None):
         if joint_type is None:
             sql = "select id " \
                   "from user_customer " \
-                  "where account = '{}'".format(account_)
+                  f"where account = '{account_}'"
         else:
             sql = "select id " \
                   "from user_customer " \
-                  "where account = '{}' and joint_venture = '{}'".format(account_, joint_type)
-        print('get_user_id -> sql : {}'.format(sql))
+                  f"where account = '{account_}' and joint_venture = '{joint_type}'"
+        print(f'get_user_id -> sql : {sql}')
         cursor.execute(sql)
         rows = cursor.fetchall()
         user_id = []
 
         for i in rows:
-            print('i : {}'.format(i))
+            print(f'i : {i}')
             user_id.append(i[0])
     conn.close()
     return user_id
@@ -170,28 +170,28 @@ def select_red_fund(conn, user, type_=None):  # 充值 紅包 查尋  各充值�
             sql = "select UC.account,BM.cancel_reason " \
                   "from BEGIN_MISSION BM " \
                   "inner join user_customer UC on  BM.user_id = UC.id  " \
-                  "where UC.is_freeze = 0 and UC.account = '{}'".format(user)
+                  f"where UC.is_freeze = 0 and UC.account = '{user}'"
         elif type_ == 1:  # 活動充值表
             sql = "select UC.account, AFOR.THE_DAY " \
                   "from ACTIVITY_FUND_OPEN_RECORD  AFOR " \
                   "inner join user_customer UC on AFOR.user_id = UC.id " \
-                  "where UC.account = '{}'".format(user)
+                  f"where UC.account = '{user}'"
         elif type_ == 2:  # 資金異動表'
             sql = "select UC.account,FCL.sn,FCL.GMT_CREATED " \
                   "from fund_change_log FCL " \
                   "inner join user_customer UC on FCL.user_id = UC.id " \
-                  "where UC.account = '{}' and  FCL.reason like '%{}%'".format(user, 'ADAL')
+                  f"where UC.account = '{user}' and  FCL.reason like '%ADAL%'"
         elif type_ == 3:  # 資金異動表 搬動
             sql = "select UC.account,FCLH.sn,FCLH.GMT_CREATED " \
                   "from fund_change_log_hist FCLH " \
                   "inner join user_customer UC on FCLH.user_id = UC.id " \
-                  "where UC.account = '{}' and  FCLH.reason like '%{}%'".format(user, 'ADAL')
+                  f"where UC.account = '{user}' and  FCLH.reason like '%ADAL%'"
         else:  # - 判斷 是否有領過 首充附言鼓励金
             sql = "select REL.amount " \
                   "from  RED_ENVELOPE_LIST  REL " \
                   "inner join  user_customer UC on REL.user_id  = UC.id " \
-                  "where UC.account = '{}' and note = '首充附言鼓励金'".format(user)
-        logger.info('get_red_fund -> sql = {}'.format(sql))
+                  f"where UC.account = '{user}' and note = '首充附言鼓励金'"
+        logger.info(f'get_red_fund -> sql = {sql}')
         cursor.execute(sql)
         rows = cursor.fetchall()
         fund_ = []
@@ -252,8 +252,8 @@ def thirdly_tran(db, tran_type, third, user) -> list:
     else:
         print('第三方 名稱錯誤')
 
-    sql = "SELECT SN,STATUS FROM %s WHERE FF_ACCOUNT = '%s'\
-    AND CREATE_DATE > DATE(NOW()) AND TRANS_NAME= '%s'" % (table_name, user, trans_name)
+    sql = f"SELECT SN,STATUS FROM {table_name} WHERE FF_ACCOUNT = '{user}'\
+    AND CREATE_DATE > DATE(NOW()) AND TRANS_NAME= '{trans_name}'"
 
     cur.execute(sql)
     for row in cur.fetchall():
@@ -263,9 +263,9 @@ def thirdly_tran(db, tran_type, third, user) -> list:
 
 def select_domain_url(conn, domain) -> Dict[int, list]:  # 查詢 全局管理 後台設置的domain ,連結設置 (因為生產 沒權限,看不到)
     with conn.cursor() as cursor:
-        sql = "select a.domain,a.agent,b.url,a.register_display,a.app_download_display,a.domain_type,a.status from  \
+        sql = f"select a.domain,a.agent,b.url,a.register_display,a.app_download_display,a.domain_type,a.status from  \
         GLOBAL_DOMAIN_LIST a inner join user_url b \
-        on a.register_url_id = b.id  where a.domain like '%%%s%%' " % domain
+        on a.register_url_id = b.id  where a.domain like '%{domain}%' "
         cursor.execute(sql)
         rows = cursor.fetchall()
         domain_url = {}
@@ -278,7 +278,7 @@ def select_domain_url(conn, domain) -> Dict[int, list]:  # 查詢 全局管理 �
 
 def select_game_result(conn, result) -> list:  # 查詢用戶訂單號, 回傳訂單各個資訊
     with conn.cursor() as cursor:
-        sql = "select a.order_time,a.status,a.totamount,f.lottery_name,\
+        sql = f"select a.order_time,a.status,a.totamount,f.lottery_name,\
         c.group_code_title,c.set_code_title,c.method_code_title,\
         b.bet_detail,e.award_name,b.award_mode,b.ret_award,b.multiple,b.money_mode,b.evaluate_win\
         ,a.lotteryid,b.bet_type_code,c.theory_bonus,a.award_group_id\
@@ -291,7 +291,7 @@ def select_game_result(conn, result) -> list:  # 查詢用戶訂單號, 回傳�
         a.lotteryid = d.lotteryid and a.userid=d.userid) inner join \
         game_award_group e on \
         a.award_group_id = e.id and a.lotteryid =e.lotteryid) \
-        inner join game_series f on  a.lotteryid = f.lotteryid where a.order_code = '%s' and d.bet_type=1" % result
+        inner join game_series f on  a.lotteryid = f.lotteryid where a.order_code = '{result}' and d.bet_type=1"
         cursor.execute(sql)
         rows = cursor.fetchall()
         detail_list = []  # 存放各細節
@@ -306,7 +306,7 @@ def select_game_result(conn, result) -> list:  # 查詢用戶訂單號, 回傳�
 
 def select_game_order(conn, play_type):  # 輸入玩法,找尋訂單
     with conn.cursor() as cursor:
-        sql = "select f.lottery_name,a.order_time,a.order_code,\
+        sql = f"select f.lottery_name,a.order_time,a.order_code,\
         c.group_code_title,c.set_code_title,c.method_code_title,a.status,g.account,b.bet_detail,h.number_record\
         from((((((\
         game_order a inner join  game_slip b on \
@@ -320,8 +320,8 @@ def select_game_order(conn, play_type):  # 輸入玩法,找尋訂單
         a.userid = g.id and d.userid = g.id) inner join game_issue h on\
         a.lotteryid = h.lotteryid and a.issue_code = h.issue_code\
         where a.order_time >sysdate - interval '1' month and \
-        c.group_code_title||c.set_code_title||c.method_code_title like '%s' and d.bet_type=1  and a.status !=1 \
-        order by a.order_time desc" % play_type
+        c.group_code_title||c.set_code_title||c.method_code_title like '{play_type}' and d.bet_type=1  and a.status !=1 \
+        order by a.order_time desc"
         cursor.execute(sql)
         rows = cursor.fetchall()
         game_order = {}
@@ -338,9 +338,9 @@ def select_game_order(conn, play_type):  # 輸入玩法,找尋訂單
 
 def select_active_app(conn, user):  # 查詢APP 是否為有效用戶表
     with conn.cursor() as cursor:
-        sql = "select *  from USER_CENTER_THIRDLY_ACTIVE where \
+        sql = f"select *  from USER_CENTER_THIRDLY_ACTIVE where \
         create_date >=  trunc(sysdate,'mm') and user_id in \
-        ( select id from user_customer where account = '%s')" % user
+        ( select id from user_customer where account = '{user}')"
         cursor.execute(sql)
         rows = cursor.fetchall()
         active_app = []
@@ -358,13 +358,13 @@ def select_app_bet(conn, user):  # 查詢APP 代理中心 銷量
         app_bet = {}
         for third in ['ALL', 'LC', 'KY', 'CITY', 'GNS', 'FHLL', 'BBIN', 'IM', 'SB', 'AG']:
             if third == 'ALL':
-                sql = "select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
-                from V_THIRDLY_AGENT_CENTER where account = '%s' \
-                and create_date > trunc(sysdate,'mm')" % user
+                sql = f"select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
+                from V_THIRDLY_AGENT_CENTER where account = '{user}' \
+                and create_date > trunc(sysdate,'mm')"
             else:
-                sql = "select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
-                from V_THIRDLY_AGENT_CENTER where account = '%s' \
-                and create_date > trunc(sysdate,'mm') and plat='%s'" % (user, third)
+                sql = f"select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
+                from V_THIRDLY_AGENT_CENTER where account = '{user}' \
+                and create_date > trunc(sysdate,'mm') and plat='{third}'"
             cursor.execute(sql)
             rows = cursor.fetchall()
             new_ = []  # 存放新的列表內容
@@ -383,15 +383,15 @@ def select_app_bet(conn, user):  # 查詢APP 代理中心 銷量
 def select_active_card(conn, user, envs):  # 查詢綁卡是否有重複綁
     with conn.cursor() as cursor:
         if envs == 2:  # 生產另外一張表
-            sql = "SELECT bank_number, count(id) FROM rd_view_user_bank \
-            WHERE bank_number in (SELECT bank_number FROM rd_view_user_bank WHERE account = '%s' \
-            ) group BY bank_number" % user
+            sql = f"SELECT bank_number, count(id) FROM rd_view_user_bank \
+            WHERE bank_number in (SELECT bank_number FROM rd_view_user_bank WHERE account = '{user}' \
+            ) group BY bank_number"
         else:
-            sql = "SELECT BANK_NUMBER,count(user_id) FROM USER_BANK \
+            sql = f"SELECT BANK_NUMBER,count(user_id) FROM USER_BANK \
             WHERE BANK_NUMBER in \
             (SELECT BANK_NUMBER FROM USER_BANK WHERE USER_ID= \
-            (SELECT ID FROM USER_CUSTOMER WHERE ACCOUNT='%s')) \
-            group by bank_number" % user
+            (SELECT ID FROM USER_CUSTOMER WHERE ACCOUNT='{user}')) \
+            group by bank_number"
         cursor.execute(sql)
         rows = cursor.fetchall()
         card_num = {}
@@ -404,8 +404,8 @@ def select_active_card(conn, user, envs):  # 查詢綁卡是否有重複綁
 
 def select_active_fund(conn, user):  # 查詢當月充值金額
     with conn.cursor() as cursor:
-        sql = "select sum(real_charge_amt) from fund_charge where status=2 and apply_time > trunc(sysdate,'mm') \
-        and user_id in ( select id from user_customer where account = '%s')" % user
+        sql = f"select sum(real_charge_amt) from fund_charge where status=2 and apply_time > trunc(sysdate,'mm')  \
+              and user_id in ( select id from user_customer where account = '{user}')"
         cursor.execute(sql)
         rows = cursor.fetchall()
         user_fund = []  # 當月充值金額

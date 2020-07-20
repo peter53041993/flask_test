@@ -58,11 +58,13 @@ class EnvConfig:
     hyDomains = ['maike2020']
     productDomains = ['fh968']
 
+    yft188Domain = ['yulin.qa', 'feiao.qa', 'tianya.qa']
+
     env_domain = None
 
     def __init__(self, domain):
         try:
-            if domain in self.devDomains + self.joySunDomains + self.joyDomains + self.hyDomains + self.productDomains:
+            if domain in self.devDomains + self.joySunDomains + self.joyDomains + self.hyDomains + self.productDomains + self.yft188Domain:
                 self.env_domain = domain
         except ValueError:
             raise Exception('無對應網域 請至 Config.EnvConfig 添加')
@@ -74,11 +76,13 @@ class EnvConfig:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.devDomains + self.hyDomains + self.productDomains:
-            return "http://www.%s.com" % self.env_domain
+            return f"http://www.{self.env_domain}.com"
         elif self.env_domain in self.joyDomains:
-            return "http://www2.%s.com" % self.env_domain
+            return f"http://www2.{self.env_domain}.com"
         elif self.env_domain in self.joySunDomains:
-            return "http://www2.%s.bet" % self.env_domain
+            return f"http://www2.{self.env_domain}.bet"
+        elif self.env_domain in self.yft188Domain:
+            return f"http://www.{self.env_domain}.space"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
@@ -86,9 +90,9 @@ class EnvConfig:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in self.joySunDomains:
-            return "http://em.%s.bet" % self.env_domain
+            return f"http://em.{self.env_domain}.bet"
         elif self.env_domain in self.devDomains + self.joyDomains + self.hyDomains + self.productDomains:
-            return "http://em.%s.com" % self.env_domain
+            return f"http://em.{self.env_domain}.com"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
@@ -101,6 +105,8 @@ class EnvConfig:
             return "amberrd"
         elif self.env_domain in self.productDomains:
             return "tsuta0425"
+        elif self.env_domain in self.yft188Domain:
+            return "123123"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
@@ -111,6 +117,8 @@ class EnvConfig:
             return "Amberrd"
         elif self.env_domain in self.productDomains:
             return "tsuta0425"
+        elif self.env_domain in self.productDomains:
+            return "Amberrd"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
@@ -121,6 +129,10 @@ class EnvConfig:
             return 0
         elif self.env_domain in self.joyDomains + self.joySunDomains + self.hyDomains:
             return 1
+        elif self.env_domain in self.productDomains:
+            return 2
+        elif self.env_domain in self.yft188Domain:
+            return 11
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
@@ -131,6 +143,8 @@ class EnvConfig:
             return "http://admin.dev02.com"
         elif self.env_domain in self.joyDomains + self.joySunDomains:
             return "http://admin.joy188.com"
+        elif self.env_domain in self.yft188Domain:
+            return f"http://manager.{self.env_domain}.space"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
@@ -141,6 +155,8 @@ class EnvConfig:
             return {'username': 'cancus', 'password': '123qwe', 'bindpwd': 123456}
         elif self.env_domain in self.joyDomains + self.joySunDomains:
             return {'username': 'cancus', 'password': 'amberrd', 'bindpwd': 123456}
+        elif self.env_domain in self.yft188Domain:
+            return {'username': 'admin', 'password': '1234qwer'}
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
@@ -150,10 +166,10 @@ class EnvConfig:
             return 0
         try:
             domain_type = domain_urls[0][5]  # 判斷 該domain 再後台全局設定 的 joint_venture 是多少
-            print("後台設置: %s" % domain_type)
+            print(f"後台設置: {domain_type}")
             return domain_type
         except KeyError:
-            print("全局後台沒設置 : {}".format(self.env_domain))
+            print(f"全局後台沒設置 : {self.env_domain}")
 
 
 class EnvConfigApp(EnvConfig):
@@ -219,6 +235,6 @@ def func_time(func):  # 案例時間
         start_ = time.time()
         func(*args)
         end_ = time.time() - start_
-        print("用時: {}秒".format(end_))
+        print(f"用時: {end_}秒")
 
     return wrapper
