@@ -207,7 +207,7 @@ class EnvConfigApp(EnvConfig):
         else:
             raise Exception('無對應網域參數，請至Config envConfigApp()新增')
 
-    def get_joint_venture(self):
+    def get_joint_venture_by_domain(self):
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
         elif self.env_domain in ['dev02', 'joy188']:

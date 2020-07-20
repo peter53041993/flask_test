@@ -57,7 +57,7 @@ logger = Logger.create_logger(r"\AutoTest", 'auto_test_app')
 class ApiTestApp(unittest.TestCase):
     u'APP接口測試'
     envConfig = None
-    user = None
+    USER = None
     red_type = None
     # loggerApiTest = None
     userAgent = Config.UserAgent.PC.value
@@ -83,18 +83,18 @@ class ApiTestApp(unittest.TestCase):
     def test_AppLogin(self):
         u"APP登入測試"
         account_ = {self.user: '輸入的用戶名'}
-        global token_, userid_
-        token_ = {}
-        userid_ = {}
+        global TOKEN_, USERID_
+        TOKEN_ = {}
+        USERID_ = {}
 
         # 判斷用戶是dev或188,  uuid和loginpasssource為固定值
-        global env_id, env_iapi  # envs : DB環境 用, env 環境 url ,request url 用, domin_url APP開戶 參數用
+        global ENV_ID, ENV_IAPI  # envs : DB環境 用, env 環境 url ,request url 用, domin_url APP開戶 參數用
 
-        env_iapi = self.envConfig.get_iapi()
-        env_id = self.envConfig.get_env_id()
+        ENV_IAPI = self.envConfig.get_iapi()
+        ENV_ID = self.envConfig.get_env_id()
         uuid = self.envConfig.get_uuid()
-        loginpasssource = self.envConfig.get_login_pass_source()
-        jointVenture = self.envConfig.get_joint_venture()
+        login_pass_source = self.envConfig.get_login_pass_source()
+        joint_venture = self.envConfig.get_joint_venture_by_domain()
 
         # 登入request的json
         for i in account_.keys():
@@ -105,7 +105,7 @@ class ApiTestApp(unittest.TestCase):
                 "body": {
                     "param": {
                         "username": i + "|" + uuid,
-                        "loginpassSource": loginpasssource,
+                        "loginpassSource": login_pass_source,
                         "appCode": 1,
                         "uuid": uuid,
                         "loginIp": 2130706433,
@@ -113,36 +113,36 @@ class ApiTestApp(unittest.TestCase):
                         "app_id": 9,
                         "come_from": "3",
                         "appname": "1",
-                        "jointVenture": jointVenture
+                        "jointVenture": joint_venture
                     }
                 }
             }
             print("Joy188Test3 Start")
             print(login_data)
             try:
-                r = requests.post(env_iapi + '/front/login', data=json.dumps(login_data), headers=self.header)
+                r = requests.post(ENV_IAPI + '/front/login', data=json.dumps(login_data), headers=self.header)
                 logger.info(f'login request response = {r.json()}')
                 token = r.json()['body']['result']['token']
-                userid = r.json()['body']['result']['userid']
-                token_.setdefault(i, token)
-                userid_.setdefault(i, userid)
+                user_id = r.json()['body']['result']['userid']
+                TOKEN_.setdefault(i, token)
+                USERID_.setdefault(i, user_id)
                 print(f'APP登入成功,登入帳號: {i}')
                 print(f"Token: {token}")
-                print(f"Userid: {userid}")
+                print(f"Userid: {user_id}")
             except ValueError as e:
                 logger.error(trace_log(e))
                 raise Exception(u"登入失敗")
             # user_list.setdefault(userid,token)
-        get_token(env_id, self.user)
+        get_token(ENV_ID, self.user)
 
     @func_time
     def test_AppSubmit(self):
         u"APP投注"
-        global user
+        global USER
 
-        user = self.user  # 業面用戶登入
+        USER = self.user  # 業面用戶登入
         t = time.strftime('%Y%m%d %H:%M:%S')
-        print(f'投注帳號: {user}, 現在時間: {t}')
+        print(f'投注帳號: {USER}, 現在時間: {t}')
         try:
             for i in LotteryData.lottery_dict.keys():
                 if i in ['slmmc', 'sl115', 'btcctp']:
@@ -160,24 +160,24 @@ class ApiTestApp(unittest.TestCase):
                 else:
                     lotteryid = LotteryData.lottery_dict[i][1]
 
-                    self.select_issue(Connection.get_oracle_conn(env_id), lotteryid)  # 目前彩種的獎棋
+                    self.select_issue(Connection.get_oracle_conn(ENV_ID), lotteryid)  # 目前彩種的獎棋
                     # print(issue,issueName)
                     now = int(time.time() * 1000)  # 時間戳
                     ball_type_post = self.game_type(i)  # 玩法和內容,0為玩法名稱, 1為投注內容
                     methodid = ball_type_post[0].replace('.', '')  # ex: housan.zhuiam.fushi , 把.去掉
 
                     # 找出對應的玩法id
-                    bet_type = self.select_betTypeCode(Connection.get_oracle_conn(env_id), lotteryid, methodid)
+                    bet_type = self.select_betTypeCode(Connection.get_oracle_conn(ENV_ID), lotteryid, methodid)
 
                     data_ = {"head":
-                                 {"sessionId": token_[user]},
-                             "body": {"param": {"CGISESSID": token_[user],  # 產生  kerr001的token
+                                 {"sessionId": TOKEN_[USER]},
+                             "body": {"param": {"CGISESSID": TOKEN_[USER],  # 產生  kerr001的token
                                                 "lotteryId": str(lotteryid), "chan_id": 1, "userid": 1373224,
-                                                "money": 2 * mul, "issue": issue[0], "issueName": issueName[0],
+                                                "money": 2 * MUL, "issue": ISSUE[0], "issueName": ISSUENAME[0],
                                                 "isFirstSubmit": 0,
                                                 "list": [
                                                     {"methodid": bet_type[0], "codes": ball_type_post[1], "nums": 1,
-                                                     "fileMode": 0, "mode": 1, "times": mul, "money": 2 * mul}],
+                                                     "fileMode": 0, "mode": 1, "times": MUL, "money": 2 * MUL}],
                                                 # times是倍數
                                                 "traceIssues": "", "traceTimes": "", "traceIstrace": 0,
                                                 "saleTime": now,
@@ -191,10 +191,10 @@ class ApiTestApp(unittest.TestCase):
                         print(f'{LotteryData.lottery_dict[i][0]} 投注成功')
                         print(bet_type[2])  # 投注完法 中文名稱
                         print(f"投注內容 : {ball_type_post[1]}")
-                        print(f"投注金額 : {2 * mul}, 投注倍數: {mul}")  # mul 為game_type方法對甕倍數
+                        print(f"投注金額 : {2 * MUL}, 投注倍數: {MUL}")  # mul 為game_type方法對甕倍數
                         # print(r.json())
                         orderid = (r.json()['body']['result']['orderId'])
-                        order_code = get_order_code_iapi(Connection.get_oracle_conn(env_id), orderid)  # 找出對應ordercode
+                        order_code = get_order_code_iapi(Connection.get_oracle_conn(ENV_ID), orderid)  # 找出對應ordercode
                         # print(f'orderid: {orderid}')
                         print(f'投注單號: {order_code[-1]}')
                         print('------------------------------')
@@ -216,52 +216,52 @@ class ApiTestApp(unittest.TestCase):
                 cursor.execute(sql)
                 rows = cursor.fetchall()
 
-                global issueName
-                global issue
-                issueName = []
-                issue = []
+                global ISSUENAME
+                global ISSUE
+                ISSUENAME = []
+                ISSUE = []
                 if lotteryid in ['99112', '99306']:  # 順利秒彩,順利11選5  不需 講期. 隨便塞
-                    issueName.append('1')
-                    issue.append('1')
+                    ISSUENAME.append('1')
+                    ISSUE.append('1')
                 else:
                     for i in rows:  # i 生成tuple
-                        issueName.append(i[0])
-                        issue.append(i[1])
+                        ISSUENAME.append(i[0])
+                        ISSUE.append(i[1])
             conn.close()
         except:
             pass
 
     def ball_type(self, test):  # 對應完法,產生對應最大倍數和 投注完法
         ball = []
-        global mul
+        global MUL
         if test == 'wuxing':
 
             ball = [str(Config.random_mul(9)) for i in range(5)]  # 五星都是數值
-            mul = Config.random_mul(2)
+            MUL = Config.random_mul(2)
         elif test == 'sixing':
             ball = ['-' if i == 0 else str(Config.random_mul(9)) for i in range(5)]  # 第一個為-
-            mul = Config.random_mul(22)
+            MUL = Config.random_mul(22)
         elif test == 'housan':
             ball = ['-' if i in [0, 1] else str(Config.random_mul(9)) for i in range(5)]  # 第1和2為-
-            mul = Config.random_mul(222)
+            MUL = Config.random_mul(222)
         elif test == 'qiansan':
             ball = ['-' if i in [3, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第4和5為-
-            mul = Config.random_mul(222)
+            MUL = Config.random_mul(222)
         elif test == 'zhongsan':
             ball = ['-' if i in [0, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第2,3,4為-
-            mul = Config.random_mul(222)
+            MUL = Config.random_mul(222)
         elif test == 'houer':
             ball = ['-' if i in [0, 1, 2] else str(Config.random_mul(9)) for i in range(5)]  # 第1,2,3為-
-            mul = Config.random_mul(2222)
+            MUL = Config.random_mul(2222)
         elif test == 'qianer':
             ball = ['-' if i in [2, 3, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第3,4,5為-
-            mul = Config.random_mul(2222)
+            MUL = Config.random_mul(2222)
         elif test == 'yixing':  # 五個號碼,只有一個隨機數值
             ran = Config.random_mul(4)
             ball = ['-' if i != ran else str(Config.random_mul(9)) for i in range(5)]
-            mul = Config.random_mul(2222)
+            MUL = Config.random_mul(2222)
         else:
-            mul = Config.random_mul(1)
+            MUL = Config.random_mul(1)
         a = (",".join(ball))
         return a
 
@@ -354,10 +354,10 @@ class ApiTestApp(unittest.TestCase):
     def test_AppOpenLink(self):
         '''APP開戶/註冊'''
         user = self.user
-        if env_id == 1:  # 188 環境
+        if ENV_ID == 1:  # 188 環境
             data_ = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": "",
-                              "sessionId": token_[user]}, "body": {"pager": {"startNo": "1", "endNo": "99999"},
-                                                                   "param": {"CGISESSID": token_[user], "type": 1,
+                              "sessionId": TOKEN_[user]}, "body": {"pager": {"startNo": "1", "endNo": "99999"},
+                                                                   "param": {"CGISESSID": TOKEN_[user], "type": 1,
                                                                              "days": -1, "infos": [
                                                                            {"lotteryId": "77101",
                                                                             "lotterySeriesCode": 10,
@@ -692,8 +692,8 @@ class ApiTestApp(unittest.TestCase):
                                                                              "come_from": "3", "appname": "1",
                                                                              "domain": "https:\\/\\/www2.joy188.com"}}}
         else:  # dev
-            data_ = {"head": {"sessionId": token_[user]}, "body": {
-                "param": {"CGISESSID": token_[user], "type": 1, "days": -1, "infos": [
+            data_ = {"head": {"sessionId": TOKEN_[user]}, "body": {
+                "param": {"CGISESSID": TOKEN_[user], "type": 1, "days": -1, "infos": [
                     {"lotteryId": "77101", "lotteryName": "\\u4e50\\u5229\\u771f\\u4eba\\u5f69",
                      "lotterySeriesCode": 10, "lotterySeriesName": "\\u771f\\u4eba\\u5f69\\u7968",
                      "awardGroupId": 77101, "awardName": "\\u5956\\u91d1\\u7ec41800", "directLimitRet": 480},
@@ -823,28 +823,28 @@ class ApiTestApp(unittest.TestCase):
                      "lotterySeriesName": "\\u9ad8\\u9891\\u5f69\\u7cfb", "awardGroupId": 238,
                      "awardName": "\\u5956\\u91d1\\u7ec41800", "directLimitRet": 980}], "memo": "", "setUp": 1,
                           "needContact": "N", "authenCellphone": "N", "showRegisterBtn": "Y"}}}
-        logger.info(f"link = {env_iapi + '/information/doRetSetting'}")
-        r = requests.post(env_iapi + '/information/doRetSetting', data=json.dumps(data_),
+        logger.info(f"link = {ENV_IAPI + '/information/doRetSetting'}")
+        r = requests.post(ENV_IAPI + '/information/doRetSetting', data=json.dumps(data_),
                           headers=self.header)  # 儲存連結反點,生成連結
         print(r.content)
         logger.info(r.content)
         if r.json()['head']['status'] == 0:
             print('開戶連結創立成功')
             data_ = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": "",
-                              "sessionId": token_[user]},
-                     "body": {"param": {"CGISESSID": token_[user], "app_id": "10", "come_from": "4",
+                              "sessionId": TOKEN_[user]},
+                     "body": {"param": {"CGISESSID": TOKEN_[user], "app_id": "10", "come_from": "4",
                                         "appname": "1"}, "pager": {"startNo": "", "endNo": ""}}}
 
-            r = requests.post(env_iapi + '/information/openLinkList', data=json.dumps(data_),
+            r = requests.post(ENV_IAPI + '/information/openLinkList', data=json.dumps(data_),
                               headers=self.header)  # 找出開戶連結后的註冊id,回傳註冊
             # print(r.json())
             result = r.json()['body']['result']['list'][0]
-            global regCode, token, exp, pid
-            regCode = result['regCode']  # 回傳開戶 的 id
-            token = result['urlstring'].split('token=')[1]  # 回傳 開戶 的token
+            global REGCODE, TOKEN, EXP, PID
+            REGCODE = result['regCode']  # 回傳開戶 的 id
+            TOKEN = result['urlstring'].split('token=')[1]  # 回傳 開戶 的token
             # print(token)
-            exp = result['urlstring'].split('exp=')[1].split('&')[0]
-            pid = result['urlstring'].split('pid=')[1].split('&')[0]
+            EXP = result['urlstring'].split('exp=')[1].split('&')[0]
+            PID = result['urlstring'].split('pid=')[1].split('&')[0]
             print(f'{user} 的 開戶連結')
             print(f"註冊連結: {result['urlstring']}, \n註冊碼: {result['regCode']}, 建置於: {result['start']}")
         else:
@@ -855,9 +855,9 @@ class ApiTestApp(unittest.TestCase):
         data_ = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": ""},
                  # 開戶data
                  "body": {
-                     "param": {"token": token, "accountName": new_user, "password": "3bf6add0828ee17c4603563954473c1e",
-                               "cellphone": "", "qqAccount": "", "wechat": "", "id": int(regCode), "exp": exp,
-                               "pid": int(pid), "qq": '',
+                     "param": {"token": TOKEN, "accountName": new_user, "password": "3bf6add0828ee17c4603563954473c1e",
+                               "cellphone": "", "qqAccount": "", "wechat": "", "id": int(REGCODE), "exp": EXP,
+                               "pid": int(PID), "qq": '',
                                "ip": "192.168.2.18", "app_id": "10", "come_from": "4", "appname": "1"},
                      "pager": {"startNo": "", "endNo": ""}}}
         if self.envConfig in ['dev02', 'joy188']:  # 一般 4.0  data 不用帶 joint_venture
@@ -867,7 +867,7 @@ class ApiTestApp(unittest.TestCase):
         else:  # 歡樂棋牌
             data_['body']['param']['jointVenture'] = 2
 
-        r = requests.post(env_iapi + '/user/register', data=json.dumps(data_), headers=self.header)
+        r = requests.post(ENV_IAPI + '/user/register', data=json.dumps(data_), headers=self.header)
         if r.json()['head']['status'] == 0:
             print(f'{new_user} 註冊成功')
         else:
@@ -875,14 +875,14 @@ class ApiTestApp(unittest.TestCase):
 
     def amount_data(self, _user):
         data = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": "",
-                         "sessionId": token_[_user]},
-                "body": {"param": {"amount": 10, "CGISESSID": token_[_user], "app_id": "9",
+                         "sessionId": TOKEN_[_user]},
+                "body": {"param": {"amount": 10, "CGISESSID": TOKEN_[_user], "app_id": "9",
                                    "come_from": "3", "appname": "1"}, "pager": {"startNo": "", "endNo": ""}}}
         return data
 
     def balance_data(self, _user):
         data = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "",
-                         "userAccount": "", "sessionId": token_[_user]}, "body": {"param": {"CGISESSID": token_[_user],
+                         "userAccount": "", "sessionId": TOKEN_[_user]}, "body": {"param": {"CGISESSID": TOKEN_[_user],
                                                                                             "loginIp": "61.220.138.45",
                                                                                             "app_id": "9",
                                                                                             "come_from": "3",
@@ -898,7 +898,7 @@ class ApiTestApp(unittest.TestCase):
         }
         try:
             session = requests.Session()
-            response = session.post(env_iapi + f'/{third}/{url}', headers=self.header, data=json.dumps(post_data))
+            response = session.post(ENV_IAPI + f'/{third}/{url}', headers=self.header, data=json.dumps(post_data))
 
             if 'balance' in url:
                 balance = response.json()['body']['result']['balance']
@@ -963,7 +963,7 @@ class ApiTestApp(unittest.TestCase):
             tran_url = 'Thirdly'  # gns規則不同
             if third == 'gns':
                 tran_url = 'Gns'
-            response = requests.post(env_iapi + f'/{third}/transferTo{tran_url}', data=json.dumps(data_),
+            response = requests.post(ENV_IAPI + f'/{third}/transferTo{tran_url}', data=json.dumps(data_),
                                      headers=self.header)
             logger.info('test_ApptransferIn third = {third}, response = {response.content}')
             status = response.json()['body']['result']['status']
@@ -976,13 +976,13 @@ class ApiTestApp(unittest.TestCase):
             logger.info(f'{third} 轉入開始')
             if third == 'sb':
                 third = 'shaba'
-            tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=env_id, third=third), tran_type=0,
+            tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=ENV_ID, third=third), tran_type=0,
                                                   third=third,
                                                   user=self.user)  # 先確認資料轉帳狀態
             count = 0
             logger.info(f'tran_result : {tran_result}')
             while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=env_id, third=third), tran_type=0,
+                tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=ENV_ID, third=third), tran_type=0,
                                                       third=third,
                                                       user=self.user)  #
                 logger.info(f'tran_result : {tran_result}')
@@ -1001,7 +1001,7 @@ class ApiTestApp(unittest.TestCase):
         print(f'帳號: {self.user}')
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
         for third in third_list:  # PC 沙巴 是 shaba , iapi 是 sb
-            response = requests.post(env_iapi + f'/{third}/transferToFF', data=json.dumps(data_), headers=self.header)
+            response = requests.post(ENV_IAPI + f'/{third}/transferToFF', data=json.dumps(data_), headers=self.header)
             logger.info(f'test_ApptransferOut : third = {third}, response = {response.content}')
             status = response.json()['body']['result']['status']
             if status == 'Y':
@@ -1012,13 +1012,13 @@ class ApiTestApp(unittest.TestCase):
             logger.info(f'{third} 轉出開始')
             if third == 'sb':
                 third = 'shaba'
-            tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=env_id, third=third), tran_type=1,
+            tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=ENV_ID, third=third), tran_type=1,
                                                   third=third,
                                                   user=self.user)  # 先確認資料轉帳傳泰
             count = 0
             logger.info(f'tran_result : {tran_result}')
             while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=env_id, third=third), tran_type=1,
+                tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=ENV_ID, third=third), tran_type=1,
                                                       third=third,
                                                       user=self.user)  #
                 logger.info(f'tran_result : {tran_result}')

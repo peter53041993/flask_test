@@ -29,15 +29,15 @@ from utils import Config, Connection
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
-url_dict = {}  # 存放url 和街口狀態 , 給domain_ 用
+URL_DICT = {}  # 存放url 和街口狀態 , 給domain_ 用
 
 
 def iapi_login(envir):  # iapi 抓取沙巴token
     session = requests.Session()
-    global headerSb
-    global envSb
-    envSb = Config.EnvConfigApp(envir)
-    headerSb = {
+    global HEADERSB
+    global ENVSB
+    ENVSB = Config.EnvConfigApp(envir)
+    HEADERSB = {
         'User-Agent': Config.UserAgent.PC.value,
         'Content-Type': 'application/json'
     }
@@ -54,10 +54,10 @@ def iapi_login(envir):  # iapi 抓取沙巴token
             "sessionId": ''},
         "body": {
             "param": {
-                "username": user + "|" + envSb.get_uuid(),
-                "loginpassSource": envSb.get_login_pass_source(),
+                "username": user + "|" + ENVSB.get_uuid(),
+                "loginpassSource": ENVSB.get_login_pass_source(),
                 "appCode": 1,
-                "uuid": envSb.get_uuid(),
+                "uuid": ENVSB.get_uuid(),
                 "loginIp": 2130706433,
                 "device": 2,
                 "app_id": 9,
@@ -66,24 +66,24 @@ def iapi_login(envir):  # iapi 抓取沙巴token
             }
         }
     }
-    r = session.post(envSb.get_iapi() + '/front/login', data=json.dumps(login_data), headers=headerSb)
+    r = session.post(ENVSB.get_iapi() + '/front/login', data=json.dumps(login_data), headers=HEADERSB)
     # print(r.text)
-    global token
-    token = r.json()['body']['result']['token']
+    global TOKEN
+    TOKEN = r.json()['body']['result']['token']
     # print(token)
 
 
 def sb_game():  # iapi沙巴頁面
     session = requests.Session()
 
-    data = {"head": {"sessionId": token}, "body": {"param": {"CGISESSID": token,
+    data = {"head": {"sessionId": TOKEN}, "body": {"param": {"CGISESSID": TOKEN,
                                                              "loginIp": "10.13.20.57", "types": "1,0,t", "app_id": 9,
                                                              "come_from": "3", "appname": "1"}}}
 
-    r = session.post(envSb.get_iapi() + '/sb/mobile', data=json.dumps(data), headers=headerSb)
+    r = session.post(ENVSB.get_iapi() + '/sb/mobile', data=json.dumps(data), headers=HEADERSB)
     # print(r.text)
-    global sb_url
-    sb_url = r.json()['body']['result']['loginUrl']
+    global SB_URL
+    SB_URL = r.json()['body']['result']['loginUrl']
     cookies = r.cookies.get_dict()
 
 
@@ -92,11 +92,11 @@ def get_sb():  # 沙巴體育
     iapi_login('dev02')
     sb_game()
     # 抓取沙巴,token成功的方式, 先get 在post
-    r = session.get(sb_url + '/', headers=headerSb)
+    r = session.get(SB_URL + '/', headers=HEADERSB)
     cookies = r.cookies.get_dict()
-    r = session.post(sb_url + '/', headers=headerSb)
+    r = session.post(SB_URL + '/', headers=HEADERSB)
 
-    headerSb['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
+    HEADERSB['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
     session = requests.Session()
 
     data = {
@@ -107,10 +107,10 @@ def get_sb():  # 沙巴體育
     }
     url = 'http://smartsbtest.thirdlytest.st402019.com'
     # /Odds/ShowAllOdds ,   /Odds/GetMarket
-    r = session.post(url + '/Odds/ShowAllOdds', headers=headerSb, data=data, cookies=cookies)
+    r = session.post(url + '/Odds/ShowAllOdds', headers=HEADERSB, data=data, cookies=cookies)
 
-    global sb_list
-    sb_list = []
+    global SB_LIST
+    SB_LIST = []
     # print(r.json())
     game = r.json()['Data']['NewMatch']
     game_map = r.json()['Data']['TeamN']
@@ -129,13 +129,13 @@ def get_sb():  # 沙巴體育
             d = datetime.datetime.strptime(date_day[0] + ' ' + date_day[1], '%Y-%m-%d %H:%M:%S')  # date_day 0為年月日, 1為時間
             # print(d)
             game_dict['Etm'] = (d + relativedelta(hours=12)).strftime('%Y-%m-%d %H:%M:%S')  # 加12小時
-        sb_list.append(game_dict)
-    sb_list.sort(key=lambda k: (k.get('Etm', 0)))  # 列表裡包字典, 時間排序
+        SB_LIST.append(game_dict)
+    SB_LIST.sort(key=lambda k: (k.get('Etm', 0)))  # 列表裡包字典, 時間排序
 
-    for i in sb_list:  # list取出各個字點
+    for i in SB_LIST:  # list取出各個字點
         # print(i['MatchId'])#抓出mathch id ,去對應 賠率
         data['Matchid'] = i['MatchId']
-        r = session.post(url + '/Odds/GetMarket', headers=headerSb, data=data, cookies=cookies)
+        r = session.post(url + '/Odds/GetMarket', headers=HEADERSB, data=data, cookies=cookies)
         # print(r.text)
         game_Odd = (r.json()['Data']['NewOdds'])
         # print(game_Odd)
@@ -149,7 +149,7 @@ def get_sb():  # 沙巴體育
 
 
 def date_time():  # 給查詢 獎期to_date時間用, 今天時間
-    global today_time
+    global TODAY_TIME
 
     now = datetime.datetime.now()
     year = now.year
@@ -157,7 +157,7 @@ def date_time():  # 給查詢 獎期to_date時間用, 今天時間
     day = now.day
     format_month = f'{month:02d}'
     format_day = f"{day:02d}"
-    today_time = f'{year}-{format_month}-{format_day}'
+    TODAY_TIME = f'{year}-{format_month}-{format_day}'
 
 
 def test_sport(type_keys='全部'):  # 企鵝網
@@ -169,17 +169,17 @@ def test_sport(type_keys='全部'):  # 企鵝網
     session = requests.Session()
 
     r = session.get('http://live.qq.com' +
-                    f'/api/calendar/game_list/{type_[type_keys]}/{today_time}/{today_time}',
+                    f'/api/calendar/game_list/{type_[type_keys]}/{TODAY_TIME}/{TODAY_TIME}',
                     headers=header)
     # print(r.json())
     # print(r.json())
-    global sport_list
-    sport_list = []  # 存放請求
-    len_game = len(r.json()[today_time])  # 當天遊戲列表長度
+    global SPORT_LIST
+    SPORT_LIST = []  # 存放請求
+    len_game = len(r.json()[TODAY_TIME])  # 當天遊戲列表長度
     # print(r.json()[today_time])
 
     for game in range(len_game):  # 取出長度
-        game_dict = r.json()[today_time][game]
+        game_dict = r.json()[TODAY_TIME][game]
         # print(game_dict)
         play_status = game_dict['play_status']
         # if play_status != '1':#1: 正在 ,2:比完, 3: 還未開打
@@ -198,7 +198,7 @@ def test_sport(type_keys='全部'):  # 企鵝網
             else:
                 pass
         # print(game_new)
-        sport_list.append(game_new)
+        SPORT_LIST.append(game_new)
         # else:
         # pass
     # print(game_new)
@@ -240,26 +240,26 @@ def showbio():  # 提交submit後的頁面顯示
 def sport_():  # 體育比分
     test_sport()
     # return jsonify(game_list)
-    return render_template('sport.html', sport_list=sport_list, today_time=today_time)
+    return render_template('sport.html', sport_list=SPORT_LIST, today_time=TODAY_TIME)
 
 
 @app.route('/sportApi', methods=['GET'])
 def sport_api():  # 體育api
     test_sport()
-    return jsonify(sport_list)
+    return jsonify(SPORT_LIST)
 
 
 @app.route('/sb', methods=['GET'])
 def sb_():
     get_sb()
     date_time()
-    return render_template('sb.html', sb_list=sb_list, today_time=today_time)
+    return render_template('sb.html', sb_list=SB_LIST, today_time=TODAY_TIME)
 
 
 @app.route('/sbApi', methods=['GET'])
 def sb_api():  # 體育api
     get_sb()
-    return jsonify(sb_list)
+    return jsonify(SB_LIST)
 
 
 @app.route('/image', methods=['GET'])
@@ -358,7 +358,7 @@ def benefit():
     if request.method == "POST":
         testInfo = {}  # 存放資廖
         cookies_dict = {}  # 存放cookie
-        global result  # 日工資 data資料
+        global RESULT  # 日工資 data資料
 
         cookies_ = request.cookies  # 目前的改瀏覽器上的cookie
         print(cookies_)
@@ -388,15 +388,15 @@ def benefit():
 
         if benefit_type == 'day':
             test_benefit.game_report_day(user=username, month=int(month), day=int(day), cookies=cookies, env=env)
-            result = test_benefit.result_data
-            print(result)
-            if result['msg'] == '你輸入的日期或姓名不符,請再確認':  # 有cookie, 但cookie失效, 需再重新做
+            RESULT = test_benefit.result_data
+            print(RESULT)
+            if RESULT['msg'] == '你輸入的日期或姓名不符,請再確認':  # 有cookie, 但cookie失效, 需再重新做
                 test_benefit.admin_Login(env)
                 admin_cookie = test_benefit.admin_cookie  # 呼叫  此function ,
                 cookies_dict[env] = admin_cookie['admin_cookie']
                 cookies = admin_cookie['admin_cookie']
                 test_benefit.game_report_day(user=username, month=int(month), day=int(day), cookies=cookies, env=env)
-                result = test_benefit.result_data
+                RESULT = test_benefit.result_data
                 res = redirect('benefit_day')
             else:
                 res = redirect('benefit_day')
@@ -414,7 +414,7 @@ def benefit():
                 now = datetime.datetime.now()
                 day = calendar.monthrange(now.year, int(month))[1]  # 獲取當月 最後一天
             test_benefit.game_report_month(user=username, month=int(month), day=int(day), cookies=cookies, env=env)
-            result = test_benefit.result_data
+            RESULT = test_benefit.result_data
             res = redirect('benefit_month')
             if cookies_dict == {}:
                 pass
@@ -428,17 +428,17 @@ def benefit():
 
 @app.route('/benefit_day', methods=["GET"])
 def benefit_day():
-    return render_template('benefit_day.html', result=result)
+    return render_template('benefit_day.html', result=RESULT)
 
 
 @app.route('/benefit_month', methods=["GET"])
 def benefit_month():
-    return render_template('benefit_month.html', result=result)
+    return render_template('benefit_month.html', result=RESULT)
 
 
 @app.route('/report_APP', methods=["GET", "POST"])  # APP戰報
 def report_APP():
-    global result
+    global RESULT
     if request.method == 'POST':
         envtype = request.form.get('env_type')
         print(envtype)
@@ -447,7 +447,7 @@ def report_APP():
         else:  # 188
             env = 1
         test_lotteryRecord.all_lottery(env)
-        result = test_lotteryRecord.result
+        RESULT = test_lotteryRecord.result
 
         return redirect('report_AppData')
 
@@ -456,7 +456,7 @@ def report_APP():
 
 @app.route('/report_AppData', methods=["GET"])  # APP戰報資料顯示
 def report_AppData():
-    return render_template('report_AppData.html', result=result)
+    return render_template('report_AppData.html', result=RESULT)
 
 
 @app.route('/domain_list', methods=["GET"])  # 域名列表測試,抓取 http://172.16.210.101/domain_list  提供的 網域
@@ -469,18 +469,18 @@ def session_get(url):
     header = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36'
     }
-    global r, url_dict
+    global R, URL_DICT
     try:
-        r = requests.get(url + '/', headers=header, verify=False, timeout=5)
+        R = requests.get(url + '/', headers=header, verify=False, timeout=5)
     except:
         pass
-    url_dict[url] = r.status_code
+    URL_DICT[url] = R.status_code
     # print(url_dict)
 
 
 @app.route('/domain_status', methods=["GET"])
 def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
-    global url_dict
+    global URL_DICT
     urllib3.disable_warnings()  # 解決 會跳出 request InsecureRequestWarning問題
     header = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36'
@@ -488,17 +488,17 @@ def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
     r = requests.get('http://66dca985.ngrok.io' + '/domain_list', headers=header)
     # print(r.text)
     soup = BeautifulSoup(r.text, 'lxml')
-    url_dict = {}  # 存放url 和 皆口狀態
+    URL_DICT = {}  # 存放url 和 皆口狀態
     try:  # 過濾 從頁面上抓取的url, 有些沒帶http
         for i in soup.find_all('table', {'class': 'domain_table'}):
             for a in i.find_all('a'):
                 if 'http' not in a.text:
                     url = 'http://' + a.text
-                    url_dict[url] = ''  # 先存訪到url_dict
+                    URL_DICT[url] = ''  # 先存訪到url_dict
                 else:  # 這邊提供的  頁面 不用做額外處理, 就是 a.text
-                    url_dict[a.text] = ''
+                    URL_DICT[a.text] = ''
         threads = []
-        for url_key in url_dict:
+        for url_key in URL_DICT:
             threads.append(threading.Thread(target=session_get, args=(url_key,)))
         for i in threads:
             i.start()
@@ -508,8 +508,8 @@ def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
         pass
     except urllib3.exceptions.NewConnectionError as e:
         print(e)
-    print(url_dict)
-    return url_dict
+    print(URL_DICT)
+    return URL_DICT
     # return render_template('domain_status.html',url_dict=url_dict)
 
 
@@ -670,16 +670,16 @@ def stock_search2():
 
 
 def game_map():  # 玩法 和 說明 mapping
-    global game_explan, game_playtype  # 說明, 玩法
-    if '五星' in game_playtype:
-        if game_playtype in ['复式', '单式']:
-            game_explan = '五個號碼順續需全相同'
-        elif '组选120' in game_playtype:
-            game_explan = '五個號碼相同,順續無需相同(開獎號無重覆號碼)'
+    global GAME_EXPLAN, GAME_PLAYTYPE  # 說明, 玩法
+    if '五星' in GAME_PLAYTYPE:
+        if GAME_PLAYTYPE in ['复式', '单式']:
+            GAME_EXPLAN = '五個號碼順續需全相同'
+        elif '组选120' in GAME_PLAYTYPE:
+            GAME_EXPLAN = '五個號碼相同,順續無需相同(開獎號無重覆號碼)'
 
     else:
-        game_explan = 'test'
-    return game_explan
+        GAME_EXPLAN = 'test'
+    return GAME_EXPLAN
 
 
 @app.route('/stock_search3', methods=["POST"])
@@ -701,7 +701,7 @@ def status_style(val):  # 判斷狀態,來顯示顏色屬性 , 給 game_order �
 
 @app.route('/game_result', methods=["GET", "POST"])  # 查詢方案紀錄定單號
 def game_result():
-    global game_explan, game_playtype
+    global GAME_EXPLAN, GAME_PLAYTYPE
     cookies_dict = {}  # 存放cookie,避免一隻 登入後台
     if request.method == "POST":
         game_code = request.form.get('game_code')  # 訂單號
@@ -737,8 +737,8 @@ def game_result():
                     game_moneymode = '分'
 
                 # 遊戲玩法 : 後三 + 不定位+ 一碼不定位 , 並回傳給 game_map 來做 mapping
-                game_playtype = game_detail[4] + game_detail[5] + game_detail[6]
-                print(f"玩法: {game_playtype}")
+                GAME_PLAYTYPE = game_detail[4] + game_detail[5] + game_detail[6]
+                print(f"玩法: {GAME_PLAYTYPE}")
 
                 game_award = float(game_detail[13] / 10000)  # 中獎獎金
 
@@ -799,16 +799,16 @@ def game_result():
                 game_map()  # 呼叫玩法說明
                 data = {"遊戲訂單號": game_code, "訂單時間": game_detail[0], "中獎狀態": game_status,
                         "投注金額": game_amount, "投注彩種": game_detail[3],
-                        "投注玩法": game_playtype,
+                        "投注玩法": GAME_PLAYTYPE,
                         "投注內容": game_detail[7], "獎金組": game_detail[8], "獎金模式": bonus,
                         "獎金模式狀態": game_awardmode, "反點獎金": game_retaward, "投注倍數": game_detail[11],
-                        "元角分模式": game_moneymode, "中獎獎金": game_award, "遊戲說明": game_explan
+                        "元角分模式": game_moneymode, "中獎獎金": game_award, "遊戲說明": GAME_EXPLAN
                         }
-                global frame
-                frame = pd.DataFrame(data, index=[0])
-                print(frame)
+                global FRAME
+                FRAME = pd.DataFrame(data, index=[0])
+                print(FRAME)
                 # return frame
-                return frame.to_html()
+                return FRAME.to_html()
         elif game_type != '':  # game_type 不為空,拜表前台輸入 指定玩法
             if "_" in game_type:  # 把頁面輸入  _   去除
                 print('有_需移除')
@@ -859,10 +859,10 @@ def game_result():
             # print(order_list)
             data = {"訂單號": order_list, "用戶名": order_user, "投注時間": order_time, "投注彩種": order_lottery, "投注玩法": order_type,
                     "投注內容": order_detail, "開獎號碼": order_record, "中獎狀態": order_status}
-            frame = pd.DataFrame(data)
+            FRAME = pd.DataFrame(data)
             # test = frame.style.applymap(status_style)#增加狀態顏色 ,這是for jupyter_notebook可以直接使用
-            print(frame)
-            return frame.to_html()
+            print(FRAME)
+            return FRAME.to_html()
 
     return render_template('game_result.html')
 

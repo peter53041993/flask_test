@@ -40,7 +40,7 @@ class BasePage:
         if last_page:
             self.env_config = last_page.env_config
             self.driver = last_page.driver
-            self.user = last_page.user
+            self.user = last_page.USER
             self.password = last_page.password
             self.logger = last_page.logger
         else:
