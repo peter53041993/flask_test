@@ -155,9 +155,9 @@ def date_time():  # 給查詢 獎期to_date時間用, 今天時間
     year = now.year
     month = now.month
     day = now.day
-    format_month = '{:02d}'.format(month)
-    format_day = '{:02d}'.format(day)
-    today_time = '%s-%s-%s' % (year, format_month, format_day)
+    format_month = f'{month:02d}'
+    format_day = f"{day:02d}"
+    today_time = f'{year}-{format_month}-{format_day}'
 
 
 def test_sport(type_keys='全部'):  # 企鵝網
@@ -169,7 +169,7 @@ def test_sport(type_keys='全部'):  # 企鵝網
     session = requests.Session()
 
     r = session.get('http://live.qq.com' +
-                    '/api/calendar/game_list/%s/%s/%s' % (type_[type_keys], today_time, today_time),
+                    f'/api/calendar/game_list/{type_[type_keys]}/{today_time}/{today_time}',
                     headers=header)
     # print(r.json())
     # print(r.json())
@@ -303,7 +303,7 @@ def autoTest():
             domain_type = env_config.get_joint_venture(env_config.get_env_id(), domain_url)  # 查詢 後台是否有設置 該url
             # domain_type = Config.domain_type#後台 該url joint_venture 的 類型
 
-            logger.debug("env_config.id: {},  red: {}".format(env_config.get_env_id(), red))
+            logger.debug(f"env_config.id: {env_config.get_env_id()},  red: {red}")
 
             # 查詢用戶 user_id,合營
             user_id = Connection.select_user_id(Connection.get_oracle_conn(env_config.get_env_id()), user_name,
@@ -314,12 +314,12 @@ def autoTest():
             test_cases.append(api_test_app)
             test_cases.append(integration_test_pc)
 
-            logger.info('user_id : {}'.format(user_id))
-            logger.info('user_name : {}'.format(user_name))
-            logger.info("test_cases : {}".format(test_cases))
+            logger.info(f'user_id : {user_id}')
+            logger.info(f'user_name : {user_name}')
+            logger.info(f"test_cases : {test_cases}")
             if len(user_id) > 0:  # user_id 值為空, 代表該DB環境沒有此用戶名, 就不用做接下來的事
                 logger.info(
-                    "AutoTest.suite_test({}, {}, {}, {})".format(test_cases, user_name, env_config.get_domain(), red))
+                    f"AutoTest.suite_test({test_cases}, {user_name}, {env_config.get_domain()}, {red})")
                 AutoTest.suite_test(test_cases, user_name, env_config.get_domain(),
                                     red, money_unit)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
                 return redirect('report')
@@ -525,7 +525,7 @@ def stock_search():
                 stock.stock_selectname(stock.kerr_conn(), stock_name)  # 找出相關資訊
                 stock_detail2 = stock.stock_detail2
                 if len(stock_detail2) == 0:  # 名稱營收db為空的, 就不列印營收資訊
-                    return ('沒有該股票名稱: %s' % stock_name)
+                    raise Exception(f'沒有該股票名稱: {stock_name}')
                 else:  # DB有找到該名稱 ,
                     stock_deatil2 = stock.stock_detail2
                     print(stock_deatil2)
@@ -550,7 +550,7 @@ def stock_search():
                     latest_low = stock.latest_low
                     latest_volume = stock.latest_volume
                 except KeyError:
-                    return ('沒有該股票號碼: %s' % stock_num)  # yahoo沒有,DB正常就不會有
+                    raise Exception(f'沒有該股票號碼: {stock_num}')  # yahoo沒有,DB正常就不會有
                 stock.stock_selectnum(stock.kerr_conn(), int(stock_num))  # 有股號後, 從mysql 抓出更多資訊
                 stock_detail2 = stock.stock_detail2
                 if len(stock_detail2) == 0:  # 營收db為空的,但 yahoo查詢是有該股的, 就不列印營收資訊 ,
@@ -583,7 +583,7 @@ def stock_search():
                     }
             now_hour = datetime.datetime.now().hour  # 現在時間 :時
             weekday = datetime.date.today().weekday() + 1  # 現在時間 :周, 需加1 , 禮拜一為0
-            print('現在時數: %s,禮拜:%s' % (now_hour, weekday))
+            print(f'現在時數: {now_hour},禮拜:{weekday}')
             if now_hour > 14 or weekday in [6, 7]:
                 print('大於最後成交時間或者六日,不再做更新股價')
             else:
@@ -696,7 +696,7 @@ def status_style(val):  # 判斷狀態,來顯示顏色屬性 , 給 game_order �
         color = 'red'
     else:
         raise Exception('參數錯誤')
-    return ('color:%s' % color)
+    return (f'color:{color}')
 
 
 @app.route('/game_result', methods=["GET", "POST"])  # 查詢方案紀錄定單號
@@ -738,7 +738,7 @@ def game_result():
 
                 # 遊戲玩法 : 後三 + 不定位+ 一碼不定位 , 並回傳給 game_map 來做 mapping
                 game_playtype = game_detail[4] + game_detail[5] + game_detail[6]
-                print("玩法: %s" % game_playtype)
+                print(f"玩法: {game_playtype}")
 
                 game_award = float(game_detail[13] / 10000)  # 中獎獎金
 
@@ -770,8 +770,7 @@ def game_result():
 
                 header['Cookie'] = 'ANVOAID=' + cookie  # 存放後台cookie
                 # header['Content-Type'] ='application/json'
-                r = session.get(env.get_admin_url() + "/gameoa/queryGameAward?lotteryId=%s&awardId=%s&status=1" % (
-                    lotteryid, award_id)
+                r = session.get(env.get_admin_url() + f"/gameoa/queryGameAward?lotteryId={lotteryid}&awardId={award_id}&status=1"
                                 , headers=header)  # 登入後台 查詢 用戶獎金值
                 # print(r.text)
                 soup = BeautifulSoup(r.text, 'lxml')
@@ -779,7 +778,7 @@ def game_result():
                 if game_detail[16] == 0:  # 理論獎金為0, 代表一個完髮有可能有不同獎金
                     print('有多獎金玩法')
                     point_id = str(game_detail[15])
-                    for i in soup.find_all('span', id=re.compile("^(%s)" % point_id)):
+                    for i in soup.find_all('span', id=re.compile(f"^({point_id})")):
                         bonus.append(float(i.text))  # 有多個獎金
                     bonus = " ".join([str(x) for x in bonus])  # 原本bonus裡面裝 float  .需list裡轉成字元,
 
@@ -787,7 +786,7 @@ def game_result():
                 else:
                     point_id = str(game_detail[15]) + "_" + str(
                         game_detail[16])  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
-                    for i in soup.find_all('span', id=re.compile("^(%s)" % point_id)):  # {'id':point_id}):
+                    for i in soup.find_all('span', id=re.compile(f"^({point_id})")):  # {'id':point_id}):
                         bonus = float(i.text)
                 print(bonus, point_id)
                 game_awardmode = game_detail[9]  # 是否為高獎金
@@ -892,10 +891,11 @@ def user_acitve():  # 驗證第三方有校用戶
             user_fund = Connection.select_active_fund(Connection.get_oracle_conn(env.get_env_id()), user)  # 當月充值
             print(user_fund)
 
-            card_num = Connection.select_active_card(Connection.get_oracle_conn(env.get_env_id()), user, env.get_env_id())  # 查詢綁卡數量
+            card_num = Connection.select_active_card(Connection.get_oracle_conn(env.get_env_id()), user,
+                                                     env.get_env_id())  # 查詢綁卡數量
 
             if len(active_app) == 0:  # 非有效用戶,也代表 APP 有效用戶表沒資料(舊式沒投注)
-                print("%s用戶 為非有效用戶" % user)
+                print(f"{user}用戶 為非有效用戶")
 
                 active_submit = 0  # 有效投注
                 is_active = "否"  # 有效用戶值
@@ -923,10 +923,10 @@ def user_acitve():  # 驗證第三方有校用戶
             else:  # 這邊長度非0, 是select_activeAPP 這方法,有值, 需判斷 is_active 是否為1
                 if active_app[2] == 0:  # 列表[1] = is_active,  值 0 非有效
                     is_active = "否"  # active_user[0][1]
-                    print("%s用戶 為非有效用戶" % user)
+                    print(f"{user}用戶 為非有效用戶")
                 else:
                     is_active = "是"  # active_user[0][1]
-                    print("%s用戶 為有效用戶" % user)
+                    print(f"{user}用戶 為有效用戶")
                 active_submit = active_app[3]
 
                 # autoTest.Joy188Test.select_activeFund(autoTest.Joy188Test.get_conn(envs),user)#當月充值
@@ -1069,7 +1069,7 @@ def url_token():
                 user_url = Connection.select_user_url(Connection.get_oracle_conn(int(env)), user,
                                                       joint_type)  # 檢查環境是否有這用戶
                 if not user_url:
-                    raise Exception('{}環境沒有該用戶: {}'.format(env_type, user))
+                    raise Exception(f'{env_type}環境沒有該用戶: {user}')
 
                 data = {'用戶名': user, '用戶從此連結開出': '被刪除'}
                 frame = pd.DataFrame(data, index=[0])
@@ -1097,15 +1097,15 @@ def url_token():
                     if 'www2' in domain:
                         pass
                     else:
-                        domain = 'www2.%s.com'%domain
+                        domain = f'www2.{domain}.com'
                 elif any(s in domain for s in ['com','www']):# 網域名稱 有帶 www /com 不用額外更動
                     pass #  後續可以 對 開頭是否有 http ,尾不是 com  去做處理
                 else: # 沒有帶  www
                     
                     if any(s in domain for s in ['fh888','fh666']):
-                        domain = 'www.%s.bet'%domain
+                        domain = f'www.{domain}.bet'
                     else:
-                        domain = 'www.%s.com'%domain
+                        domain = f'www.{domain}.com'
                 '''
                 print(domain)
                 # env = domain_keys[domain][1]#  1 為環境 ,0 為預設連結
@@ -1221,7 +1221,7 @@ def sun_user():  # 太陽成用戶 找尋
         if len(sun_user) == 0:
             if type_ == 1:
                 raise Exception('目前還沒有成功轉移用戶')
-            raise Exception('{}沒有該用戶 : {}'.format(env_name + domain_type, user))
+            raise Exception(f'{env_name + domain_type}沒有該用戶 : {user}')
         if type_ != 1:  # 指定用戶
             user = sun_user[0][0]
             phone = sun_user[0][1]
@@ -1300,13 +1300,13 @@ def fund_activity():  # 充值紅包 查詢
             if len(fund_data) == 0:
                 msg2 = '無紀錄'
             else:
-                msg2 = '{}'.format(fund_data[0])
+                msg2 = f'{fund_data[0]}'
                 fund_log = fund_log + 1  #
             logger.info('fund_activity -> msg = {}, msg2 = {}'.format(msg, msg2))
             data[msg] = msg2
 
-        logger.warning('fund_activity ->red_able = {}'.format(red_able))
-        logger.warning('fund_activity ->fund_list = {}'.format(fund_list))
+        logger.warning(f'fund_activity ->red_able = {red_able}')
+        logger.warning(f'fund_activity ->fund_list = {fund_list}')
         if len(red_able) == 0:  # 紅包還沒領取
             red_able = '否'
             if fund_log == 0:  # 代表沒成功
@@ -1318,9 +1318,9 @@ def fund_activity():  # 充值紅包 查詢
             activity_able = "符合資格"
         data['紅包是否領取'] = '紅包金 : {}'.format(red_able)
         data['充直紅包活動'] = activity_able
-        logger.info('fund_activity -> data = {}'.format(data))
+        logger.info(f'fund_activity -> data = {data}')
         frame = pd.DataFrame(data, index=[0])
-        logger.info('fund_activity -> frame = {}'.format(frame))
+        logger.info(f'fund_activity -> frame = {frame}')
 
         return frame.to_html()
     return render_template('fund_activity.html')
@@ -1350,7 +1350,7 @@ def handle_http_exception(error):
         'description': error.description,
         'stack_trace': traceback.format_exc()
     }
-    log_msg = f"HTTPException {error_dict.code}, Description: {error_dict.description}, Stack trace: {error_dict.stack_trace}"
+    log_msg = f"HTTPException {error_dict['code']}, Description: {error_dict['description']}, Stack trace: {error_dict['stack_trace']}"
     logger.log(msg=log_msg)
     response = jsonify(error_dict)
     response.status_code = error.code
