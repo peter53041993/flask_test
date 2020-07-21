@@ -400,6 +400,7 @@ class ApiTestPC(unittest.TestCase):
         global USERAGENT
         global ENVS  # 回傳redis 或 sql 環境變數   ,dev :0, 188:1
         global COOKIES_
+        global SESSION
         COOKIES_ = {}
         USER = self.USER
         EM_URL = self.envConfig.get_em_url()
@@ -425,26 +426,24 @@ class ApiTestPC(unittest.TestCase):
         }
         print("userAgent : " + USERAGENT)
         print("post_url : " + POST_URL)
-        global SESSION
-        while True:
-            try:
-                postData = {
-                    "username": self.USER,
-                    "password": self.md(PASSWORD, param),
-                    "param": param
-                }
-                SESSION = requests.Session()
-                r = SESSION.post(POST_URL + '/login/login', data=postData, headers=header)
-                cookies = r.cookies.get_dict()  # 獲得登入的cookies 字典
-                COOKIES_.setdefault(self.USER, cookies['ANVOID'])
-                t = time.strftime('%Y%m%d %H:%M:%S')
-                # msg = (f'登錄帳號: {i},登入身分: {account_[i]}' + u',現在時間:' + t + r.text)
-                print(f'登錄帳號: {self.USER}' + u',現在時間:' + t)
-                print(r.text)
-                print(r.json()['isSuccess'])
-                # return url
-            except IOError:
-                raise Exception('IOError Exception')
+
+        r = None
+        try:
+            postData = {
+                "username": self.USER,
+                "password": self.md(PASSWORD, param),
+                "param": param
+            }
+            SESSION = requests.Session()
+            r = SESSION.post(POST_URL + '/login/login', data=postData, headers=header)
+            cookies = r.cookies.get_dict()  # 獲得登入的cookies 字典
+            COOKIES_.setdefault(self.USER, cookies['ANVOID'])
+            t = time.strftime('%Y%m%d %H:%M:%S')
+            print(f'登錄帳號: {self.USER}' + u',現在時間:' + t)
+            print(f'接口回傳：{r.json()}')
+        except KeyError:
+            self.fail(f'測試結果：登入失敗.\n接口回傳：{r.json()}')
+            # raise KeyError('KeyError Exception')
 
     def md(self, _password, _param):
         m = hashlib.md5()
@@ -478,6 +477,7 @@ class ApiTestPC(unittest.TestCase):
 
         except requests.exceptions.ConnectionError:
             print(u'連線有問題,請稍等')
+            print(f'account = {account}, third = {third}, url = {url}, post_data = {post_data}')
 
     def session_get(self, user, url_, url):  # 共用 session get方式
         header = {
@@ -489,18 +489,19 @@ class ApiTestPC(unittest.TestCase):
             r = SESSION.get(url_ + url, headers=header)
             html = BeautifulSoup(r.text, 'lxml')  # type為 bs4類型
             title = str(html.title)
-            statu_code = str(r.status_code)  # int 轉  str
+            status_code = str(r.status_code)  # int 轉  str
 
             print(title)  # 強制便 unicode, 不燃顯示在html報告  會有誤
             print(url)
-            print('result: ' + statu_code + "\n" + '---------------------')
+            print('result: ' + status_code + "\n" + '---------------------')
 
         except requests.exceptions.ConnectionError:
             print(u'連線有問題,請稍等')
+            print(f'user = {user}, url_ = {url_}, url = {url}')
 
     @func_time
     def test_PcThirdHome(self):  # 登入第三方頁面,創立帳號
-        u"第三方頁面測試"
+        """第三方頁面測試"""
         threads = []
         third_url = ['gns', 'ag', 'sport', 'shaba', 'lc', 'im', 'ky', 'fhx', 'bc', 'fhll', 'bc']
 
@@ -534,7 +535,7 @@ class ApiTestPC(unittest.TestCase):
 
     @func_time
     def test_PcFFHome(self):
-        u"4.0頁面測試"
+        """4.0頁面測試"""
         threads = []
         url_188 = ['/fund', '/bet/fuddetail', '/withdraw', '/transfer', '/index/activityMall',
                    '/ad/noticeList?noticeLevel=2', '/frontCheckIn/checkInIndex', '/frontScoreMall/pointsMall']
@@ -557,7 +558,7 @@ class ApiTestPC(unittest.TestCase):
 
     @func_time
     def test_PcChart(self):
-        "走勢圖測試"
+        """走勢圖測試"""
         ssh_url = ['cqssc', 'hljssc', 'tjssc', 'xjssc', 'llssc', 'txffc', 'btcffc', 'fhjlssc',
                    'jlffc', 'slmmc', 'sd115', 'll115', 'gd115', 'jx115']
         k3_url = ['jsk3', 'ahk3', 'jsdice', 'jldice1', 'jldice2']
@@ -577,7 +578,7 @@ class ApiTestPC(unittest.TestCase):
 
     @func_time
     def test_PcThirdBalance(self):
-        '''4.0/第三方餘額'''
+        """4.0/第三方餘額"""
         threads = []
 
         # header = {
@@ -608,14 +609,14 @@ class ApiTestPC(unittest.TestCase):
 
     @func_time
     def test_PcTransferin(self):  # 第三方轉入
-        '''第三方轉入'''
+        """第三方轉入"""
         header = {
             'User-Agent': USERAGENT,
             'Cookie': 'ANVOID=' + COOKIES_[USER],
             'Content-Type': 'application/json; charset=UTF-8'
         }
         post_data = {"amount": 1}
-        statu_dict = {}  # 存放 轉帳的 狀態
+        status_dict = {}  # 存放 轉帳的 狀態
         for third in self.third_list:
             if third == 'gns':
                 third_url = '/gns/transferToGns'
@@ -634,11 +635,11 @@ class ApiTestPC(unittest.TestCase):
                 status = r.json()['status']
                 print(f'{third} 轉帳失敗')  # 列出錯誤訊息 ,
 
-            statu_dict[third] = status  # 存放 各第三方的轉帳狀態
-        # print(statu_dict)
+            status_dict[third] = status  # 存放 各第三方的轉帳狀態
+        # print(status_dict)
 
-        for third in statu_dict.keys():
-            if statu_dict[third] == True:  # 判斷轉帳的狀態, 才去要 單號
+        for third in status_dict.keys():
+            if status_dict[third]:  # 判斷轉帳的狀態, 才去要 單號
                 tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=ENVS, third=third), tran_type=0,
                                                       third=third,
                                                       user=USER)  # tran_type 0為轉轉入
@@ -661,8 +662,8 @@ class ApiTestPC(unittest.TestCase):
 
     @func_time
     def test_PcTransferout(self):  # 第三方轉回
-        '''第三方轉出'''
-        statu_dict = {}  # 存放 第三方狀態
+        """第三方轉出"""
+        status_dict = {}  # 存放 第三方狀態
         header = {
             'User-Agent': USERAGENT,
             'Cookie': 'ANVOID=' + COOKIES_[USER],
@@ -680,25 +681,25 @@ class ApiTestPC(unittest.TestCase):
                 print(third + r.json()['errorMsg'])
                 status = r.json()['status']
                 # print('轉帳接口失敗')
-            statu_dict[third] = status
+            status_dict[third] = status
 
-        for third in statu_dict.keys():
-            if statu_dict[third]:
+        for third in status_dict.keys():
+            if status_dict[third]:
                 tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=ENVS, third=third), tran_type=1,
                                                       third=third,
                                                       user=USER)  # tran_type 1 是 轉出
                 count = 0
-                while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
+                while tran_result[1] != '2' and count < 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
                     tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=ENVS, third=third),
                                                           tran_type=0,
                                                           third=third,
                                                           user=USER)  #
                     sleep(1)
                     count += 1
+                    if tran_result[1] == '2':
+                        print(f'狀態成功. {third} ,sn 單號: {tran_result[0]}')
                     if count == 9:
-                        # print('轉帳狀態失敗')# 如果跑道9次  需確認
-                        pass
-                print(f'狀態成功. {third} ,sn 單號: {tran_result[0]}')
+                        print(f'三方{third}轉帳失敗.')  # 如果跑道9次  需確認
             else:
                 pass
         self.test_PcThirdBalance()
@@ -763,11 +764,61 @@ class ApiTestPC(unittest.TestCase):
         pass
 
 
-class ApiTestYFT(unittest.TestCase):
+class ApiTestYFT():
     """
     YFT API測試
     """
+    _session = None
+    env_config = None
+    yft_user = None
+    header = {'User-Agent': Config.UserAgent.PC.value,
+              'Content-Type': 'application/json'}
 
-    def __init__(self, case):
-        super().__init__(case)
-        pass
+    # def setUp(self):
+    #     logger.info(f'ApiTestPC setUp : {self._testMethodName}')
+
+    def __init__(self, domain, yft_user):
+        super().__init__()
+        self.env_config = Config.EnvConfig(domain=domain)
+        self.yft_user = yft_user
+
+    def test_login(self):
+        post_url = '/a/login/login'
+        if not self._session:
+            self._session = requests.Session()
+
+        md = hashlib.md5()
+        md.update(self.env_config.get_password().encode('utf-8'))
+        request = f'{{"account": "{self.yft_user}", "passwd": "{md.hexdigest()}", "timeZone": "GMT+8", "isWap": false, "online": false}} '
+        logger.info(f'request_body = {request}')
+        response = self._session.post(url=self.env_config.get_post_url() + post_url, data=request, headers=self.header)
+        logger.info(f'login_url = {self.env_config.get_post_url() + post_url}')
+        logger.info(f'Login response = {response.content}')
+        logger.info(f'Cookies = {response.cookies["JSESSIONID"]}')
+        if response.cookies['JSESSIONID']:
+            self.header['JSESSIONID'] = response.cookies['JSESSIONID']  # setCookie into header
+        else:
+            self.fail('登入失敗.')
+
+    def test_bet_bjpk10(self):
+        from utils.BetContent_yft import bjpk10_trace
+        bet_content = bjpk10_trace
+        post_url = '/a/lottery/betV2'
+        if self.header.get('JSESSIONID') is None:
+            self.test_login()
+        info = self.get_lottery_info('bjpk10')
+        logger.info(f'info = {info}"')
+        response = self._session.post(url=self.env_config.get_post_url() + post_url,
+                                      data=bet_content.format(currIssueNo=info['chaseableIssueNoList'][1]),
+                                      headers=self.header)
+        logger.info(f'response = {response.json()}')
+
+    def get_lottery_info(self, lottery_name):
+        content = f'{{"lotteryType":"{lottery_name}","timeZone":"GMT+8","isWap":false,"online":false}}'
+        url = '/a/lottery/init'
+        if self.header.get('JSESSIONID') is None:
+            self.test_login()
+        response = self._session.post(url=self.env_config.get_post_url() + url, data=content, headers=self.header)
+        logger.info(f'response = {response.json()["content"]}')
+        return response.json()['content']
+

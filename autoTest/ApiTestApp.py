@@ -131,7 +131,7 @@ class ApiTestApp(unittest.TestCase):
                 print(f"Userid: {user_id}")
             except ValueError as e:
                 logger.error(trace_log(e))
-                raise Exception(u"登入失敗")
+                self.fail(u"登入失敗")
             # user_list.setdefault(userid,token)
         get_token(ENV_ID, self.user)
 
@@ -848,8 +848,7 @@ class ApiTestApp(unittest.TestCase):
             print(f'{user} 的 開戶連結')
             print(f"註冊連結: {result['urlstring']}, \n註冊碼: {result['regCode']}, 建置於: {result['start']}")
         else:
-            print('創立失敗')
-            raise Exception('創立失敗')
+            self.fail('創立失敗')
         user_random = random.randint(1, 100000)  # 隨機生成 頁面輸入 用戶名 + 隨機數 的下級
         new_user = self.user + str(user_random)
         data_ = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": ""},
@@ -908,7 +907,7 @@ class ApiTestApp(unittest.TestCase):
                 print(f'4.0餘額: {balance}')
 
         except requests.exceptions.ConnectionError:
-            raise Exception(u'連線有問題,請稍等')
+            self.fail(u'連線有問題,請稍等')
 
     def select_betTypeCode(self, conn, lotteryid, game_type):  # 從game_type 去對應玩法的數字,給app投注使用
         with conn.cursor() as cursor:
@@ -958,6 +957,7 @@ class ApiTestApp(unittest.TestCase):
         data_ = self.amount_data(self.user)
         print(f'帳號: {self.user}')
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
+        third_failed = {}
         for third in third_list:
             logger.info('First.  for third in third_list:')
             tran_url = 'Thirdly'  # gns規則不同
@@ -970,15 +970,13 @@ class ApiTestApp(unittest.TestCase):
             if status == 'Y':
                 print(f'轉入{third}金額 10')
             else:
-                raise Exception(f'{third} 轉入失敗')
+                third_failed[f'{third} 轉入失敗'] = response.json()  # 若轉入失敗計入錯誤
 
         for third in third_list:
             logger.info(f'{third} 轉入開始')
             if third == 'sb':
                 third = 'shaba'
-            tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=ENV_ID, third=third), tran_type=0,
-                                                  third=third,
-                                                  user=self.user)  # 先確認資料轉帳狀態
+            tran_result = ['','']
             count = 0
             logger.info(f'tran_result : {tran_result}')
             while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
@@ -988,10 +986,17 @@ class ApiTestApp(unittest.TestCase):
                 logger.info(f'tran_result : {tran_result}')
                 sleep(0.5)
                 count += 1
+                if tran_result[1] == '2':
+                    print(f'{third} ,sn 單號: {tran_result[0]}')
                 if count == 15:
                     # raise Exception(f'轉帳狀態失敗 : {third}')  # 如果跑道9次  需確認
-                    print(f'轉帳狀態失敗/逾時 : {third}')  # 如果跑道9次  需確認
-            print(f'{third} ,sn 單號: {tran_result[0]}')
+                    # print(f'轉帳狀態失敗/逾時 : {third}')  # 如果跑道9次  需確認
+                    third_failed[f'{third} 驗證逾時'] = tran_result  # 若有多次嘗試仍未成功計入錯誤
+
+        if len(third_failed.items()) > 0:  # 若有三方轉帳錯誤紀錄
+            for key, value in third_failed.items():
+                print(f'三方: {key}, 錯誤: {value}')
+            self.fail('三方轉出有誤')
         self.test_AppBalance()
 
     @func_time
@@ -1000,14 +1005,17 @@ class ApiTestApp(unittest.TestCase):
         data_ = self.amount_data(self.user)
         print(f'帳號: {self.user}')
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
+        third_failed = {}
         for third in third_list:  # PC 沙巴 是 shaba , iapi 是 sb
             response = requests.post(ENV_IAPI + f'/{third}/transferToFF', data=json.dumps(data_), headers=self.header)
             logger.info(f'test_ApptransferOut : third = {third}, response = {response.content}')
             status = response.json()['body']['result']['status']
             if status == 'Y':
+                print(f'轉出接口回傳:{response.json()}')
                 print(f'{third} 轉出金額 10')
             else:
-                raise Exception(f'{third} 轉出失敗')
+                third_failed[f'{third} 轉出'] = response.json()
+
         for third in third_list:
             logger.info(f'{third} 轉出開始')
             if third == 'sb':
@@ -1024,11 +1032,18 @@ class ApiTestApp(unittest.TestCase):
                 logger.info(f'tran_result : {tran_result}')
                 sleep(1)
                 count += 1
+                if tran_result[1] == '2':
+                    print(f'{third} ,sn 單號: {tran_result[0]}')
                 if count == 15:
                     # raise Exception(f'轉帳狀態失敗 : {third}')  # 驗證超出次數
-                    print(f'轉帳狀態失敗/逾時 : {third}')  # 如果跑道9次  需確認  # 驗證超出次數
+                    # print(f'轉帳狀態失敗/逾時 : {third}')  # 如果跑道9次  需確認  # 驗證超出次數
+                    third_failed[f'{third} 驗證逾時'] = tran_result
 
-            print(f'{third}, sn 單號: {tran_result[0]}')
+            if len(third_failed.items()) > 0:
+                for key, value in third_failed.items():
+                    print(f'三方: {key}, 錯誤: {value}')
+                self.fail('三方轉出有誤')
+
         self.test_AppBalance()
 
     def tearDown(self) -> None:
