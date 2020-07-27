@@ -685,16 +685,18 @@ class ApiTestYFT(unittest.TestCase):
     _session = None
     env_config = None
     yft_user = None
+    money_unit = None
     header = {'User-Agent': Config.UserAgent.PC.value,
               'Content-Type': 'application/json'}
 
     def setUp(self):
         logger.info(f'ApiTestPC setUp : {self._testMethodName}')
 
-    def __init__(self, domain, yft_user):
-        super().__init__()
-        self.env_config = Config.EnvConfig(domain=domain)
-        self.yft_user = yft_user
+    def __init__(self, case, _env, _user, _money_unit):
+        super().__init__(case)
+        self.env_config = _env
+        self.yft_user = _user
+        self.money_unit = _money_unit
         if self._session is None:
             self._session = requests.Session()
         # self.login()
@@ -807,6 +809,10 @@ class ApiTestYFT(unittest.TestCase):
                 default['stopOnWon'] = 'yes'
             else:
                 default['stopOnWon'] = 'no'
+        if self.money_unit == 0.1:
+            totalAmount *= 0.1
+        elif self.money_unit == 0.01:
+            totalAmount *= 0.01
 
         default['totalAmount'] = totalAmount
 
@@ -814,6 +820,11 @@ class ApiTestYFT(unittest.TestCase):
         data.replace('\'null\'', 'null')
         data.replace('True', 'true')
         data.replace('False', 'false')
+
+        if self.money_unit == 0.1:
+            data.replace('"potType":"Y"', '"potType":"J"')
+        elif self.money_unit == 0.01:
+            data.replace('"potType":"Y"', '"potType":"F"')
 
         logger.info(f'default = {data}')
         bet_response = self._session.post(url=self.env_config.get_post_url() + post_url, data=data,

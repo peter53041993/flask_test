@@ -299,22 +299,19 @@ def autoTest():
             red = request.form.get('red_type')  # 紅包選擇
             money_unit = request.form.get('moneymode')  # 金額模式
             domain_url = env_config.get_post_url().split('://')[1]  # 後台全局 url 需把 http做切割
-
-            domain_type = env_config.get_joint_venture(env_config.get_env_id(), domain_url)  # 查詢 後台是否有設置 該url
-            # domain_type = Config.domain_type#後台 該url joint_venture 的 類型
-
-            logger.debug(f"env_config.id: {env_config.get_env_id()},  red: {red}")
-
-            # 查詢用戶 user_id,合營
-            user_id = Connection.select_user_id(Connection.get_oracle_conn(env_config.get_env_id()), user_name,
-                                                domain_type)
-            # joint_venture = autoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
+            if env_config.get_env_id() in (0, 1):
+                domain_type = env_config.get_joint_venture(env_config.get_env_id(), domain_url)  # 查詢 後台是否有設置 該url
+                logger.debug(f"env_config.id: {env_config.get_env_id()},  red: {red}")
+                user_id = Connection.select_user_id(Connection.get_oracle_conn(env_config.get_env_id()), user_name,
+                                                    domain_type)
+                logger.info(f'user_id : {user_id}')
+            else:
+                user_id = [0]  # yft用戶暫不提供，初始化以通過驗證
 
             test_cases.append(api_test_pc)
             test_cases.append(api_test_app)
             test_cases.append(integration_test_pc)
 
-            logger.info(f'user_id : {user_id}')
             logger.info(f'user_name : {user_name}')
             logger.info(f"test_cases : {test_cases}")
             if len(user_id) > 0:  # user_id 值為空, 代表該DB環境沒有此用戶名, 就不用做接下來的事
@@ -770,8 +767,9 @@ def game_result():
 
                 header['Cookie'] = 'ANVOAID=' + cookie  # 存放後台cookie
                 # header['Content-Type'] ='application/json'
-                r = session.get(env.get_admin_url() + f"/gameoa/queryGameAward?lotteryId={lotteryid}&awardId={award_id}&status=1"
-                                , headers=header)  # 登入後台 查詢 用戶獎金值
+                r = session.get(
+                    env.get_admin_url() + f"/gameoa/queryGameAward?lotteryId={lotteryid}&awardId={award_id}&status=1"
+                    , headers=header)  # 登入後台 查詢 用戶獎金值
                 # print(r.text)
                 soup = BeautifulSoup(r.text, 'lxml')
                 bonus = []
