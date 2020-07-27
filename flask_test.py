@@ -296,9 +296,11 @@ def autoTest():
             api_test_app = request.form.getlist('api_test_app')  # 回傳 測試案例data內容
             integration_test_pc = request.form.getlist('integration_test_pc')  # 回傳 測試案例data內容
             env_config = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
+            award_mode = Config.EnvConfig(request.form.get('awardmode'))  # 環境選擇
             red = request.form.get('red_type')  # 紅包選擇
             money_unit = request.form.get('moneymode')  # 金額模式
             domain_url = env_config.get_post_url().split('://')[1]  # 後台全局 url 需把 http做切割
+
             if env_config.get_env_id() in (0, 1):
                 domain_type = env_config.get_joint_venture(env_config.get_env_id(), domain_url)  # 查詢 後台是否有設置 該url
                 logger.debug(f"env_config.id: {env_config.get_env_id()},  red: {red}")
@@ -318,7 +320,7 @@ def autoTest():
                 logger.info(
                     f"AutoTest.suite_test({test_cases}, {user_name}, {env_config.get_domain()}, {red})")
                 AutoTest.suite_test(test_cases, user_name, env_config.get_domain(),
-                                    red, money_unit)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
+                                    red, money_unit, award_mode)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
                 return redirect('report')
             else:
                 raise Exception('此環境沒有該用戶')

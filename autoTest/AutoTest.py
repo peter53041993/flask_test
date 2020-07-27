@@ -24,9 +24,11 @@ def date_time():  # 給查詢 獎期to_date時間用, 今天時間
     return f'{year}-{month}-{format_day}'
 
 
-def suite_test(test_cases, user_name, test_env, is_use_red, money_unit):
+def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mode):
     """
     autoTest 初始化
+    :param award_mode: 獎金模式 (0:預設 / 1:高獎金 / 2:高獎金)
+    :param money_unit: 元角分模式 (1 / 0.1 / 0.01)
     :param test_cases: Array[][]; 測試項目，為二維矩陣。第一維區分測試類型（PC_API、APP_API、PC整合），二維紀錄測試method名稱
     :param user_name: String; 就是個用戶名
     :param test_env: String; 網域名稱，用於Config.encConfig初始化
@@ -41,7 +43,6 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit):
     suite_list = []
     test_list = ['cqssc', 'xjssc', 'hljssc', 'shssl', 'tjssc', 'txffc', 'fhjlssc', 'fhcqc', 'fhxjc', '3605fc', 'btcffc',
                  'llssc', '360ffc', 'jlffc', 'v3d']
-    # test_list = ['btcffc']
 
     logger.debug(f'autoTest test_cases : {test_cases}')
     try:
@@ -54,7 +55,7 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit):
                 logger.info(f'test_cases[0] : {test_cases[0]}')
                 logger.info(f'For loop[0] : {case}')
                 suite_list.append(ApiTestPC(case=case, _env=env_config, _user=user_name, _red_type=is_use_red,
-                                            _money_unit=money_unit))
+                                            _money_unit=money_unit, _award_mode=award_mode))
             for case in test_cases[1]:
                 logger.info(f'test_cases[1] : {test_cases[1]}')
                 logger.info(f'For loop[1] : {case}')

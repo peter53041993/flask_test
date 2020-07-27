@@ -24,6 +24,7 @@ class ApiTestPC(unittest.TestCase):
     user = None
     red_type = None
     money_unit = None
+    award_mode = None
     user_agent = Config.UserAgent.PC.value
     header = {  # 預設Header格式
         'User-Agent': Config.UserAgent.PC.value,
@@ -37,13 +38,14 @@ class ApiTestPC(unittest.TestCase):
     def setUp(self):
         logger.info(f'ApiTestPC setUp : {self._testMethodName}')
 
-    def __init__(self, case, _env, _user, _red_type, _money_unit):
+    def __init__(self, case, _env, _user, _red_type, _money_unit, _award_mode):
         super().__init__(case)
         global COOKIE
         self.envConfig = _env
         self.user = _user
         self.red_type = _red_type
         self.money_unit = _money_unit
+        self.award_mode = _award_mode
         self.post_url = self.envConfig.get_post_url()
         self.en_url = self.envConfig.get_em_url()
         logger.info('ApiTestPC __init__.')
@@ -253,15 +255,13 @@ class ApiTestPC(unittest.TestCase):
                     global MUL
                     ball_type_post = self.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
 
-                    award_mode = 1
-
                     if self.money_unit == '1':  # 使用元模式
                         _money_unit = 1
                     elif self.money_unit == '2':  # 使用角模式
                         _money_unit = 0.1
 
                     if i == 'btcctp':
-                        award_mode = 2
+                        self.award_mode = 2
                         MUL = Config.random_mul(1)  # 不支援倍數,所以random參數為1
                     elif i == 'bjkl8':
                         MUL = Config.random_mul(5)  # 北京快樂8
@@ -269,7 +269,7 @@ class ApiTestPC(unittest.TestCase):
                         MUL = Config.random_mul(5)
 
                     elif i in ['btcffc', 'xyft']:
-                        award_mode = 2
+                        self.award_mode = 2
                     elif i in LotteryData.lottery_sb:  # 骰寶只支援  元模式
                         _money_unit = 1
 
@@ -302,7 +302,7 @@ class ApiTestPC(unittest.TestCase):
                     post_data = {"gameType": i, "isTrace": isTrace, "traceWinStop": traceWinStop,
                                  "traceStopValue": traceWinStop,
                                  "balls": [{"id": 1, "ball": ball_type_post[1], "type": ball_type_post[0],
-                                            "moneyunit": _money_unit, "multiple": MUL, "awardMode": award_mode,
+                                            "moneyunit": _money_unit, "multiple": MUL, "awardMode": self.award_mode,
                                             "num": 1}], "orders": plan_, "amount": len_ * amount}  # 不使用紅包
 
                     post_data_lhc = {"balls": [{"id": 1, "moneyunit": _money_unit, "multiple": 1, "num": 1,
@@ -320,17 +320,17 @@ class ApiTestPC(unittest.TestCase):
                                     "orders": plan_}
 
                     if i in 'lhc':
-                        self.req_post_submit(self.user, 'lhc', post_data_lhc, _money_unit, award_mode,
+                        self.req_post_submit(self.user, 'lhc', post_data_lhc, _money_unit, self.award_mode,
                                              ball_type_post[2])
 
                     elif i in LotteryData.lottery_sb:
-                        self.req_post_submit(self.user, i, post_data_sb, _money_unit, award_mode, ball_type_post[2])
+                        self.req_post_submit(self.user, i, post_data_sb, _money_unit, self.award_mode, ball_type_post[2])
                     else:
                         if self.red_type == 'yes':  # 紅包投注
                             post_data['redDiscountAmount'] = 2  # 增加紅包參數
-                            self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
+                            self.req_post_submit(self.user, i, post_data, _money_unit, self.award_mode, ball_type_post[2])
                         else:
-                            self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
+                            self.req_post_submit(self.user, i, post_data, _money_unit, self.award_mode, ball_type_post[2])
                 red_bal = select_red_bal(Connection.get_oracle_conn(1), self.user)
                 print(f'紅包餘額: {int(red_bal[0]) / 10000}')
                 break
@@ -718,7 +718,7 @@ class ApiTestYFT(unittest.TestCase):
         else:
             self.fail('登入失敗.')
 
-    def test_bet_fhxyft_new(self, stop_on_win=True):
+    def test_bet_fhxyft(self, stop_on_win=True):
         """
         幸運飛艇投注。牛牛不可高獎金，另外投注。
         :param stop_on_win: 追號與否
@@ -739,9 +739,9 @@ class ApiTestYFT(unittest.TestCase):
         print(
             f'鳳凰幸運飛艇追號全彩種成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
 
-    def test_bet_bjpk10_new(self, stop_on_win=True):
+    def test_bet_bjpk10(self, stop_on_win=True):
         """
-        幸運飛艇投注。牛牛不可高獎金，另外投注。
+        PK10投注。牛牛不可高獎金，另外投注。
         :param stop_on_win: 追號與否
         :return: None
         """
@@ -763,7 +763,7 @@ class ApiTestYFT(unittest.TestCase):
     def get_lottery_info(self, lottery_name):
         """
         取得彩種資訊（獎期等）
-        :param lottery_name:
+        :param lottery_name: 彩種英文ID
         :return: 返還獎期資訊內容
         """
         content = f'{{"lotteryType":"{lottery_name}","timeZone":"GMT+8","isWap":false,"online":false}}'
@@ -774,9 +774,8 @@ class ApiTestYFT(unittest.TestCase):
     def bet_yft(self, lottery_name, games, is_trace=False, stop_on_win=True):
         """
         YFT發起投注
-        :param games: 投注玩法 List
-        :param lottery_name: 彩種名稱
-        :param bet_content: 投注內容，來自BetContent_yft原檔，需替換currIssueNo等參數
+        :param games: 投注玩法清單，可取自BetContent_yft.py
+        :param lottery_name: 彩種英文ID
         :param is_trace: 追號與否，影響投注內容需替換的參數
         :param stop_on_win: 追中即停
         :return: 投注結果
