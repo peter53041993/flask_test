@@ -416,3 +416,57 @@ def select_active_fund(conn, user):  # 查詢當月充值金額
                 user_fund.append(i)
     conn.close()
     return user_fund
+
+
+def select_issue(conn, lottery_id):  # 查詢正在銷售的 期號
+    # Joy188Test.date_time()
+    # today_time = '2019-06-10'#for 預售中 ,抓當天時間來比對,會沒獎期
+    try:
+        with conn.cursor() as cursor:
+            sql = f"select web_issue_code,issue_code from game_issue where lotteryid = '{lottery_id}' and sysdate between sale_start_time and sale_end_time"
+
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+
+            issueName = []
+            issue = []
+
+            if lottery_id in ['99112', '99306']:  # 順利秒彩,順利11選5  不需 講期. 隨便塞
+                issueName.append('1')
+                issue.append('1')
+            else:
+                for i in rows:  # i 生成tuple
+                    issueName.append(i[0])
+                    issue.append(i[1])
+        conn.close()
+        return {'issueName': issueName, 'issue': issue}
+    except:
+        pass
+
+
+def select_red_id(conn, user):  # 紅包加壁  的訂單號查詢 ,用來審核用
+    with conn.cursor() as cursor:
+        sql = f"SELECT ID FROM RED_ENVELOPE_LIST WHERE status=1 and \
+        USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='{user}')"
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+
+        red_id = []
+        for i in rows:  # i 生成tuple
+            red_id.append(i[0])
+    conn.close()
+    return red_id
+
+
+def select_red_bal(conn, user) -> list:
+    with conn.cursor() as cursor:
+        sql = f"SELECT bal FROM RED_ENVELOPE WHERE \
+        USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='{user}')"
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+
+        red_bal = []
+        for i in rows:  # i 生成tuple
+            red_bal.append(i[0])
+    conn.close()
+    return red_bal

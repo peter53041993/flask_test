@@ -24,7 +24,7 @@ class ApiTestPC(unittest.TestCase):
     user = None
     red_type = None
     money_unit = None
-    user_agent = None
+    user_agent = Config.UserAgent.PC.value
     header = {  # 預設Header格式
         'User-Agent': Config.UserAgent.PC.value,
         'Content-Type': 'application/json; charset=UTF-8'
@@ -47,10 +47,9 @@ class ApiTestPC(unittest.TestCase):
         self.post_url = self.envConfig.get_post_url()
         self.en_url = self.envConfig.get_em_url()
         logger.info('ApiTestPC __init__.')
+        logger.info(f'case = {case}')
         if COOKIE:  # 若已有Cookie則加入Header
             self.header['Cookie'] = f'ANVOID={COOKIE}'
-        elif case != 'test_PcLogin':
-            self.fail('Cookie為空，停止測試！')
 
     def web_issue_code(self, lottery):  # 頁面產生  獎期用法,  取代DB連線問題
         now_time = int(time.time())
@@ -364,11 +363,10 @@ class ApiTestPC(unittest.TestCase):
                 "param": param
             }
             logger.info(f'postData = {postData}')
-            logger.Debug(f'header = {self.header.items()}')
             r = self.SESSION.post(self.post_url + '/login/login', data=postData, headers=self.header)
             logger.info(f'response = {r.json()}')
             COOKIE = r.cookies.get_dict()['ANVOID']  # 獲得登入的cookies 字典
-            logger.Debug(f'r.cookies.get_dict() = {r.cookies.get_dict()}')
+            logger.debug(f'r.cookies.get_dict() = {r.cookies.get_dict()}')
             self.header['Cookie'] = f'ANVOID={COOKIE}'
             t = time.strftime('%Y%m%d %H:%M:%S')
             # msg = (f'登錄帳號: {i},登入身分: {account_[i]}' + u',現在時間:' + t + r.text)
@@ -531,7 +529,6 @@ class ApiTestPC(unittest.TestCase):
                 third_url = '/gns/transferToGns'
             else:
                 third_url = f'/{third}/transferToThirdly'
-            logger.info(f'header = {self.header.items()}')
             r = self.SESSION.post(self.post_url + third_url, data=json.dumps(post_data), headers=self.header)
             logger.info(f'r.json() = {r.json()}')
 
@@ -539,15 +536,14 @@ class ApiTestPC(unittest.TestCase):
             if r.json()['status']:
                 print(f'帳號 {self.user} 轉入 {third} ,金額:1, 進行中')
             else:
+                errors[third] = r.json()
                 print(f'{third} 轉帳失敗')  # 列出錯誤訊息 ,
             status_dict[third] = r.json()['status']  # 存放 各第三方的轉帳狀態
 
+        logger.debug(f'status_dict = {status_dict.items()}')
         for third in status_dict.keys():
             if status_dict[third]:  # 判斷轉帳的狀態, 才去要 單號
-                tran_result = Connection.thirdly_tran(
-                    Connection.get_mysql_conn(evn=self.envConfig.get_env_id(), third=third), tran_type=0,
-                    third=third,
-                    user=self.user)  # tran_type 0為轉轉入
+                tran_result = [0, 0]  # 初始化
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
                     tran_result = Connection.thirdly_tran(
@@ -557,15 +553,22 @@ class ApiTestPC(unittest.TestCase):
                         user=self.user)  #
                     sleep(1.5)
                     count += 1
+                    # print(f'驗證{third}中 : tran_result = {tran_result}')
+                    if tran_result[1] == '2':
+                        print(f'狀態成功. {third} ,sn 單號: {tran_result[0]}')
+                        break
                     if count == 15:
                         errors[third] = tran_result
                         print('轉帳狀態失敗')  # 如果跑道9次  需確認
                         break
-                else:
-                    pass
+            else:
+                pass
         for key, value in errors.items():
             print(f'三方: {key} 轉帳失敗. 接口返回: {value}')
         self.test_PcThirdBalance()
+
+        if errors:
+            self.fail('部分轉帳失敗')
 
     @func_time
     def test_PcTransferout(self):  # 第三方轉回
@@ -580,16 +583,15 @@ class ApiTestPC(unittest.TestCase):
             if r.json()['status']:
                 print(f'帳號 {self.user}, {third} 轉回4.0 ,金額:1, 進行中')
             else:
-                print(third + r.json()['errorMsg'])
+                logger.error(f'轉帳接口失敗 : errors[{third}] = {r.json()}')
+                errors[third] = r.json()
                 print('轉帳接口失敗')
             status_dict[third] = r.json()['status']
-
+        logger.debug(f'status_dict = {status_dict.items()}')
         for third in status_dict.keys():
             if status_dict[third]:
-                tran_result = Connection.thirdly_tran(
-                    Connection.get_mysql_conn(evn=self.envConfig.get_env_id(), third=third), tran_type=1,
-                    third=third,
-                    user=self.user)  # tran_type 1 是 轉出
+                logger.debug(f'status_dict[{third}]:  # 判斷轉帳的狀態, 才去要 單號 = {status_dict[third]}')
+                tran_result = [0, 0]
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
                     tran_result = Connection.thirdly_tran(
@@ -599,10 +601,12 @@ class ApiTestPC(unittest.TestCase):
                         user=self.user)
                     sleep(1)
                     count += 1
+                    # print(f'驗證{third}中 : tran_result = {tran_result}')
                     if tran_result[1] == '2':
                         print(f'狀態成功. {third} ,sn 單號: {tran_result[0]}')
                         break
                     if count == 9:
+                        logger.error(f'轉帳狀態失敗 : errors[{third}] = {tran_result}')
                         errors[third] = tran_result
                         print('轉帳狀態失敗')  # 如果跑道9次  需確認
                         break
@@ -611,6 +615,8 @@ class ApiTestPC(unittest.TestCase):
         for key, value in errors.items():
             print(f'三方: {key} 轉帳失敗. 接口返回: {value}')
         self.test_PcThirdBalance()
+        if errors:
+            self.fail('部分轉帳失敗')
 
     @staticmethod
     def admin_login(env_config):
@@ -672,7 +678,7 @@ class ApiTestPC(unittest.TestCase):
         pass
 
 
-class ApiTestYFT():
+class ApiTestYFT(unittest.TestCase):
     """
     YFT API測試
     """
@@ -682,19 +688,21 @@ class ApiTestYFT():
     header = {'User-Agent': Config.UserAgent.PC.value,
               'Content-Type': 'application/json'}
 
-    # def setUp(self):
-    #     logger.info(f'ApiTestPC setUp : {self._testMethodName}')
+    def setUp(self):
+        logger.info(f'ApiTestPC setUp : {self._testMethodName}')
 
     def __init__(self, domain, yft_user):
         super().__init__()
         self.env_config = Config.EnvConfig(domain=domain)
         self.yft_user = yft_user
-
-    def test_login(self):
-        post_url = '/a/login/login'
-        if not self._session:
+        if self._session is None:
             self._session = requests.Session()
+        # self.login()
+        if self.header.get('JSESSIONID') is None:
+            self.login()
 
+    def login(self):
+        post_url = '/a/login/login'
         md = hashlib.md5()
         md.update(self.env_config.get_password().encode('utf-8'))
         request = f'{{"account": "{self.yft_user}", "passwd": "{md.hexdigest()}", "timeZone": "GMT+8", "isWap": false, "online": false}} '
@@ -708,25 +716,107 @@ class ApiTestYFT():
         else:
             self.fail('登入失敗.')
 
-    def test_bet_bjpk10(self):
-        from utils.BetContent_yft import bjpk10_trace
-        bet_content = bjpk10_trace
-        post_url = '/a/lottery/betV2'
-        if self.header.get('JSESSIONID') is None:
-            self.test_login()
-        info = self.get_lottery_info('bjpk10')
-        logger.info(f'info = {info}"')
-        response = self._session.post(url=self.env_config.get_post_url() + post_url,
-                                      data=bet_content.format(currIssueNo=info['chaseableIssueNoList'][1]),
-                                      headers=self.header)
-        logger.info(f'response = {response.json()}')
+    def test_bet_fhxyft_new(self, stop_on_win=True):
+        """
+        幸運飛艇投注。牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        from utils.BetContent_yft import fhxyft_games
+
+        expected = 'ok'
+        bet_response = self.bet_yft(lottery_name='fhxyft', stop_on_win=stop_on_win, games=fhxyft_games,
+                                    is_trace=False)
+        assert bet_response['status'] == expected
+        print(
+            f'鳳凰幸運飛艇投注追號成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+
+        bet_response = self.bet_yft(lottery_name='fhxyft', stop_on_win=stop_on_win, games=fhxyft_games,
+                                    is_trace=True)
+        assert bet_response['status'] == expected
+        print(
+            f'鳳凰幸運飛艇追號全彩種成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+
+    def test_bet_bjpk10_new(self, stop_on_win=True):
+        """
+        幸運飛艇投注。牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        from utils.BetContent_yft import bjpk10_games
+
+        expected = 'ok'
+        bet_response = self.bet_yft(lottery_name='bjpk10', stop_on_win=stop_on_win, games=bjpk10_games,
+                                    is_trace=False)
+        assert bet_response['status'] == expected
+        print(
+            f'PK10投注追號成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+
+        bet_response = self.bet_yft(lottery_name='bjpk10', stop_on_win=stop_on_win, games=bjpk10_games,
+                                    is_trace=True)
+        assert bet_response['status'] == expected
+        print(
+            f'PK10追號全彩種成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
 
     def get_lottery_info(self, lottery_name):
+        """
+        取得彩種資訊（獎期等）
+        :param lottery_name:
+        :return: 返還獎期資訊內容
+        """
         content = f'{{"lotteryType":"{lottery_name}","timeZone":"GMT+8","isWap":false,"online":false}}'
-        url = '/a/lottery/init'
-        if self.header.get('JSESSIONID') is None:
-            self.test_login()
-        response = self._session.post(url=self.env_config.get_post_url() + url, data=content, headers=self.header)
-        logger.info(f'response = {response.json()["content"]}')
+        response = self._session.post(url=self.env_config.get_post_url() + '/a/lottery/init', data=content,
+                                      headers=self.header)
         return response.json()['content']
 
+    def bet_yft(self, lottery_name, games, is_trace=False, stop_on_win=True):
+        """
+        YFT發起投注
+        :param games: 投注玩法 List
+        :param lottery_name: 彩種名稱
+        :param bet_content: 投注內容，來自BetContent_yft原檔，需替換currIssueNo等參數
+        :param is_trace: 追號與否，影響投注內容需替換的參數
+        :param stop_on_win: 追中即停
+        :return: 投注結果
+        """
+        post_url = '/a/lottery/betV2'
+        lottery_info = self.get_lottery_info(lottery_name)
+
+        from utils.BetContent_yft import game_default
+        import json
+        default = json.loads(game_default)
+        logger.info(f'default json = {default}')
+        from utils.BetContent_yft import game_dict
+        totalAmount = 0
+        schemeList = []
+        for game in games:
+            if game_dict.get(game) and game != 'pt333bt02':  # 排除牛牛
+                schemeList.append(game_dict.get(game)[0])
+                totalAmount += game_dict.get(game)[1]
+        default['currIssueNo'] = lottery_info["chaseableIssueNoList"][0]
+        default['stopOnWon'] = 'null'
+        default['schemeList'] = schemeList
+        default['lotteryType'] = lottery_name
+        default['issueList'] = [1]
+        default['isWap'] = False
+
+        if is_trace:
+            default['issueList'] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            totalAmount *= 10
+            if stop_on_win:
+                default['stopOnWon'] = 'yes'
+            else:
+                default['stopOnWon'] = 'no'
+
+        default['totalAmount'] = totalAmount
+
+        data = json.dumps(default)
+        data.replace('\'null\'', 'null')
+        data.replace('True', 'true')
+        data.replace('False', 'false')
+
+        logger.info(f'default = {data}')
+        bet_response = self._session.post(url=self.env_config.get_post_url() + post_url, data=data,
+                                          headers=self.header)
+        logger.info(f'bet_response = {bet_response.json()}\n')
+        return bet_response.json()
