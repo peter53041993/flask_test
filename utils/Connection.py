@@ -470,3 +470,31 @@ def select_red_bal(conn, user) -> list:
             red_bal.append(i[0])
     conn.close()
     return red_bal
+
+
+def get_order_code_iapi(conn, orderid):  # 從iapi投注的orderid對應出 order_code 方案編號
+    with conn.cursor() as cursor:
+        sql = f"select order_code from game_order where id in (select orderid from game_slip where orderid = '{orderid}')"
+
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+
+        order_code = []
+        for i in rows:  # i 生成tuple
+            order_code.append(i[0])
+    conn.close()
+    return order_code
+
+
+def select_bet_type_code(conn, lottery_id, game_type):  # 從game_type 去對應玩法的數字,給app投注使用
+    with conn.cursor() as cursor:
+        sql = f"select bet_type_code from game_bettype_status where lotteryid = '{lottery_id}' and group_code_name||set_code_name||method_code_name = '{game_type}'"
+
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+
+        bet_type = []
+        for i in rows:  # i 生成tuple
+            bet_type.append(i[0])
+    conn.close()
+    return bet_type

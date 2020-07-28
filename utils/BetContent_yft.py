@@ -1,4 +1,6 @@
 game_default = '{"lotteryType":"","currIssueNo":"","stopOnWon":"","totalAmount":"","issueList":[],"schemeList":[],"timeZone":"GMT+8","isWap":false,"online":true}'
+iapi_default = '{"callType":"","content":{"passwd":"","account":"","uuid":""},"clientInfo":{"appType":"teemo","clientType":"android","clientVersion":"3.0.0"},"timeZone":"Asia/Taipei"}'
+
 fhxyft_games = ['pt330bt02', 'pt333bt02', 'pt320bt02', 'pt321bt01', 'pt321bt02', 'pt322bt01', 'pt322bt02', 'pt323bt02',
                 'pt325bt01', 'pt325bt02', 'pt326bt02', 'pt326bt02', 'pt327bt02']
 bjpk10_games = ['pt330bt02', 'pt333bt02', 'pt320bt02', 'pt321bt01', 'pt321bt02', 'pt322bt01', 'pt322bt02', 'pt323bt02',

@@ -678,7 +678,7 @@ class ApiTestPC(unittest.TestCase):
         pass
 
 
-class ApiTestYFT(unittest.TestCase):
+class ApiTestPC_YFT(unittest.TestCase):
     """
     YFT API測試
     """

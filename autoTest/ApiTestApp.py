@@ -1,3 +1,4 @@
+import hashlib
 import threading
 import unittest
 from time import sleep
@@ -10,48 +11,13 @@ import requests
 import time
 
 from utils import Config, Logger, Connection
+from utils.BetContent_yft import iapi_default
+from utils.Connection import get_order_code_iapi, select_issue, select_bet_type_code
 from utils.TestTool import trace_log
 from utils.Config import LotteryData, func_time
 
-
-def get_rediskey(envs):  # env參數 決定是哪個環境
-    redis_dict = {'ip': ['10.13.22.152', '10.6.1.82']}  # 0:dev,1:188
-    pool = redis.ConnectionPool(host=redis_dict['ip'][envs], port=6379)
-    return redis.Redis(connection_pool=pool)
-
-
-def get_token(envs, user):
-    redis_conn = get_rediskey(envs)
-    user_keys = ''
-    redis_keys = redis_conn.keys(f"USER_TOKEN_{re.findall(r'[0-9]+|[a-z]+', user)[0]}*")
-    for index in redis_keys:
-        if user in str(index):
-            user_keys = (str(index).replace("'", '')[1:])
-    if user_keys == '':
-        raise Exception('token 取得失敗')
-
-    user_dict = redis_conn.get(user_keys)
-    timestap = str(user_dict).split('timeOut')[1].split('"token"')[0][2:-4]  #
-    token_time = time.localtime(int(timestap))
-    print(
-        f'token到期時間: {token_time.tm_year}-{token_time.tm_mon}-{token_time.tm_mday} {token_time.tm_hour}:{token_time.tm_min}:{token_time.tm_sec}')
-
-
-def get_order_code_iapi(conn, orderid):  # 從iapi投注的orderid對應出 order_code 方案編號
-    with conn.cursor() as cursor:
-        sql = f"select order_code from game_order where id in (select orderid from game_slip where orderid = '{orderid}')"
-
-        cursor.execute(sql)
-        rows = cursor.fetchall()
-
-        order_code = []
-        for i in rows:  # i 生成tuple
-            order_code.append(i[0])
-    conn.close()
-    return order_code
-
-
 logger = Logger.create_logger(r"\AutoTest", 'auto_test_app')
+YFT_SIGN = None
 
 
 class ApiTestApp(unittest.TestCase):
@@ -133,7 +99,28 @@ class ApiTestApp(unittest.TestCase):
                 logger.error(trace_log(e))
                 self.fail(u"登入失敗")
             # user_list.setdefault(userid,token)
-        get_token(ENV_ID, self.user)
+        self.get_token(ENV_ID, self.user)
+
+    def get_token(self, envs, user):
+        redis_conn = self.get_rediskey(envs)
+        user_keys = ''
+        redis_keys = redis_conn.keys(f"USER_TOKEN_{re.findall(r'[0-9]+|[a-z]+', user)[0]}*")
+        for index in redis_keys:
+            if user in str(index):
+                user_keys = (str(index).replace("'", '')[1:])
+        if user_keys == '':
+            raise Exception('token 取得失敗')
+
+        user_dict = redis_conn.get(user_keys)
+        timestap = str(user_dict).split('timeOut')[1].split('"token"')[0][2:-4]  #
+        token_time = time.localtime(int(timestap))
+        print(
+            f'token到期時間: {token_time.tm_year}-{token_time.tm_mon}-{token_time.tm_mday} {token_time.tm_hour}:{token_time.tm_min}:{token_time.tm_sec}')
+
+    def get_rediskey(self, envs):  # env參數 決定是哪個環境
+        redis_dict = {'ip': ['10.13.22.152', '10.6.1.82']}  # 0:dev,1:188
+        pool = redis.ConnectionPool(host=redis_dict['ip'][envs], port=6379)
+        return redis.Redis(connection_pool=pool)
 
     @func_time
     def test_AppSubmit(self):
@@ -158,22 +145,23 @@ class ApiTestApp(unittest.TestCase):
                     '''
                     pass
                 else:
-                    lotteryid = LotteryData.lottery_dict[i][1]
+                    lottery_id = LotteryData.lottery_dict[i][1]
 
-                    self.select_issue(Connection.get_oracle_conn(ENV_ID), lotteryid)  # 目前彩種的獎棋
+                    issue = select_issue(Connection.get_oracle_conn(ENV_ID), lottery_id)  # 目前彩種的獎棋
                     # print(issue,issueName)
                     now = int(time.time() * 1000)  # 時間戳
                     ball_type_post = self.game_type(i)  # 玩法和內容,0為玩法名稱, 1為投注內容
                     methodid = ball_type_post[0].replace('.', '')  # ex: housan.zhuiam.fushi , 把.去掉
 
                     # 找出對應的玩法id
-                    bet_type = self.select_betTypeCode(Connection.get_oracle_conn(ENV_ID), lotteryid, methodid)
+                    bet_type = select_bet_type_code(Connection.get_oracle_conn(ENV_ID), lottery_id, methodid)
 
                     data_ = {"head":
                                  {"sessionId": TOKEN_[USER]},
                              "body": {"param": {"CGISESSID": TOKEN_[USER],  # 產生  kerr001的token
-                                                "lotteryId": str(lotteryid), "chan_id": 1, "userid": 1373224,
-                                                "money": 2 * MUL, "issue": ISSUE[0], "issueName": ISSUENAME[0],
+                                                "lotteryId": str(lottery_id), "chan_id": 1, "userid": 1373224,
+                                                "money": 2 * MUL, "issue": issue['issue'][0],
+                                                "issueName": issue['issueName'][0],
                                                 "isFirstSubmit": 0,
                                                 "list": [
                                                     {"methodid": bet_type[0], "codes": ball_type_post[1], "nums": 1,
@@ -204,31 +192,6 @@ class ApiTestApp(unittest.TestCase):
         except requests.exceptions.ConnectionError:
             print('please wait')
         except IndexError:
-            pass
-
-    def select_issue(self, conn, lotteryid):  # 查詢正在銷售的 期號
-        # Joy188Test.date_time()
-        # today_time = '2019-06-10'#for 預售中 ,抓當天時間來比對,會沒獎期
-        try:
-            with conn.cursor() as cursor:
-                sql = f"select web_issue_code,issue_code from game_issue where lotteryid = '{lotteryid}' and sysdate between sale_start_time and sale_end_time"
-
-                cursor.execute(sql)
-                rows = cursor.fetchall()
-
-                global ISSUENAME
-                global ISSUE
-                ISSUENAME = []
-                ISSUE = []
-                if lotteryid in ['99112', '99306']:  # 順利秒彩,順利11選5  不需 講期. 隨便塞
-                    ISSUENAME.append('1')
-                    ISSUE.append('1')
-                else:
-                    for i in rows:  # i 生成tuple
-                        ISSUENAME.append(i[0])
-                        ISSUE.append(i[1])
-            conn.close()
-        except:
             pass
 
     def ball_type(self, test):  # 對應完法,產生對應最大倍數和 投注完法
@@ -352,7 +315,7 @@ class ApiTestApp(unittest.TestCase):
         return test_dicts[num][0], test_dicts[num][1], play_
 
     def test_AppOpenLink(self):
-        '''APP開戶/註冊'''
+        """APP開戶/註冊"""
         user = self.user
         if ENV_ID == 1:  # 188 環境
             data_ = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": "",
@@ -909,22 +872,9 @@ class ApiTestApp(unittest.TestCase):
         except requests.exceptions.ConnectionError:
             self.fail(u'連線有問題,請稍等')
 
-    def select_betTypeCode(self, conn, lotteryid, game_type):  # 從game_type 去對應玩法的數字,給app投注使用
-        with conn.cursor() as cursor:
-            sql = f"select bet_type_code from game_bettype_status where lotteryid = '{lotteryid}' and group_code_name||set_code_name||method_code_name = '{game_type}'"
-
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-
-            bet_type = []
-            for i in rows:  # i 生成tuple
-                bet_type.append(i[0])
-        conn.close()
-        return bet_type
-
     @func_time
     def test_AppBalance(self):
-        '''APP 4.0/第三方餘額'''
+        """APP 4.0/第三方餘額"""
         threads = []
         user = self.user
         data_ = self.balance_data(user)
@@ -953,7 +903,7 @@ class ApiTestApp(unittest.TestCase):
 
     @func_time
     def test_ApptransferIn(self):
-        '''APP轉入'''
+        """APP轉入"""
         data_ = self.amount_data(self.user)
         print(f'帳號: {self.user}')
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
@@ -976,7 +926,7 @@ class ApiTestApp(unittest.TestCase):
             logger.info(f'{third} 轉入開始')
             if third == 'sb':
                 third = 'shaba'
-            tran_result = ['','']
+            tran_result = ['', '']
             count = 0
             logger.info(f'tran_result : {tran_result}')
             while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
@@ -1001,7 +951,7 @@ class ApiTestApp(unittest.TestCase):
 
     @func_time
     def test_ApptransferOut(self):
-        '''APP轉出'''
+        """APP轉出"""
         data_ = self.amount_data(self.user)
         print(f'帳號: {self.user}')
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
@@ -1048,3 +998,172 @@ class ApiTestApp(unittest.TestCase):
 
     def tearDown(self) -> None:
         pass
+
+
+class ApiTestAPP_YFT(unittest.TestCase):
+    """
+    YFT APP API測試
+    """
+    api_url = '/app/call'
+    iapi_default = json.loads(iapi_default)
+    _session = None
+    env_config = None
+    yft_user = None
+    money_unit = None
+    header = {'User-Agent': Config.UserAgent.PC.value,
+              'Content-Type': 'application/json'}
+
+    def setUp(self):
+        logger.info(f'ApiTestPC setUp : {self._testMethodName}')
+
+    def __init__(self, case, _env, _user, _money_unit):
+        global YFT_SIGN
+        super().__init__(case)
+        self.env_config = _env
+        self.yft_user = _user
+        self.money_unit = _money_unit
+        if self._session is None:
+            self._session = requests.Session()
+        if YFT_SIGN is None:
+            YFT_SIGN = self.login()
+
+    def login(self):
+        call_type = 'login'
+
+        md = hashlib.md5()
+        md.update(self.env_config.get_password().encode('utf-8'))
+        data = self.iapi_default
+        data['callType'] = call_type
+        data[
+            "content"] = f'{{"passwd":"{md.hexdigest()}","account":"{self.yft_user}","uuid":"DF4D21DD8B87A5A84F5EE57122CCB06F6D14CFE6"}}'
+        response = self._session.post(url=self.env_config.get_post_url() + self.api_url, data=json.dumps(data),
+                                      headers=self.header)
+        response_json = json.loads(response.content)
+        logger.debug(f'login_url = {self.env_config.get_post_url() + self.api_url}')
+        logger.debug(f'Login response = {response.content}')
+        logger.debug(f'Cookies = {response_json["content"]["sign"]}')
+        if response_json["content"]["sign"]:
+            return response_json["content"]["sign"]  # setCookie into header
+        else:
+            self.fail('登入失敗.')
+
+    def test_bet_fhxyft(self, stop_on_win=True):
+        """
+        幸運飛艇投注。牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        from utils.BetContent_yft import fhxyft_games
+
+        expected = 'ok'
+        bet_response = self.bet_yft(lottery_name='fhxyft', stop_on_win=stop_on_win, games=fhxyft_games,
+                                    is_trace=False)
+        assert bet_response['status'] == expected
+        print(
+            f'鳳凰幸運飛艇投注追號成功。　訂單編號：{bet_response["content"]["orderNo"]}'
+            f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+
+        bet_response = self.bet_yft(lottery_name='fhxyft', stop_on_win=stop_on_win, games=fhxyft_games,
+                                    is_trace=True)
+        assert bet_response['status'] == expected
+        print(
+            f'鳳凰幸運飛艇追號全彩種成功。　訂單編號：{bet_response["content"]["orderNo"]}'
+            f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+
+    def test_bet_bjpk10(self, stop_on_win=True):
+        """
+        PK10投注。牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        from utils.BetContent_yft import bjpk10_games
+
+        expected = 'ok'
+        bet_response = self.bet_yft(lottery_name='bjpk10', stop_on_win=stop_on_win, games=bjpk10_games,
+                                    is_trace=False)
+        logger.debug(f'bet_response = {bet_response}')
+        assert bet_response['status'] == expected
+        print(
+            f'PK10投注追號成功。　訂單編號：{bet_response["content"]["orderNo"]}'
+            f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+
+        bet_response = self.bet_yft(lottery_name='bjpk10', stop_on_win=stop_on_win, games=bjpk10_games,
+                                    is_trace=True)
+        assert bet_response['status'] == expected
+        print(
+            f'PK10追號全彩種成功。　訂單編號：{bet_response["content"]["orderNo"]}'
+            f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+
+    def get_lottery_info(self, lottery_name):
+        """
+        取得彩種資訊（獎期等）
+        :param lottery_name: 彩種英文ID
+        :return: 返還獎期資訊內容
+        """
+        call_type = 'get_bet_issue_info'
+        data = self.iapi_default
+        data['callType'] = call_type
+        if YFT_SIGN is None:
+            raise Exception('Sign is None.')
+        data['sign'] = YFT_SIGN
+        data['content'] = {"lotteryType": lottery_name}
+        logger.debug(f'data = {json.dumps(data)}')
+        response = self._session.post(url=self.env_config.get_post_url() + self.api_url, data=json.dumps(data),
+                                      headers=self.header)
+        logger.debug(f'response = {response.content}')
+        return response.json()['content']
+
+    def bet_yft(self, lottery_name, games, is_trace=False, stop_on_win=True):
+        """
+        YFT發起投注
+        :param games: 投注玩法清單，可取自BetContent_yft.py
+        :param lottery_name: 彩種英文ID
+        :param is_trace: 追號與否，影響投注內容需替換的參數
+        :param stop_on_win: 追中即停
+        :return: 投注結果
+        """
+        call_type = 'bet_v2'
+        lottery_info = self.get_lottery_info(lottery_name)
+
+        import json
+        default = self.iapi_default
+        from utils.BetContent_yft import game_dict
+        totalAmount = 0
+        schemeList = []
+        for game in games:
+            if game_dict.get(game) and game != 'pt333bt02':  # 排除牛牛
+                schemeList.append(game_dict.get(game)[0])
+                totalAmount += game_dict.get(game)[1]
+        default['content']['currIssueNo'] = lottery_info["noopsycheIssueList"][0]
+        default['content']['lotteryType'] = lottery_name
+        default['sign'] = YFT_SIGN
+        default['content']['schemeList'] = schemeList
+        default['content']['lotteryType'] = lottery_name
+        default['content']['issueList'] = [1]
+        default['callType' \
+                ''] = call_type
+
+        if is_trace:
+            default['content']['issueList'] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            totalAmount *= 10
+            if stop_on_win:
+                default['content']['stopOnWon'] = 'yes'
+        if self.money_unit == 0.1:
+            totalAmount *= 0.1
+        elif self.money_unit == 0.01:
+            totalAmount *= 0.01
+
+        default['content']['totalAmount'] = totalAmount
+
+        data = json.dumps(default)
+
+        if self.money_unit == 0.1:
+            data.replace('"potType":"Y"', '"potType":"J"')
+        elif self.money_unit == 0.01:
+            data.replace('"potType":"Y"', '"potType":"F"')
+
+        logger.info(f'bet_yft body = {data}')
+        bet_response = self._session.post(url=self.env_config.get_post_url() + self.api_url, data=data,
+                                          headers=self.header)
+        logger.info(f'bet_response = {bet_response.json()}\n')
+        return bet_response.json()
