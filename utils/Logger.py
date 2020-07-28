@@ -12,7 +12,7 @@ def create_logger(log_folder, log_name):
     logging.captureWarnings(True)  # 捕捉 py waring message
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
     my_logger = logging.getLogger(log_name)  # 捕捉 py waring message
-    my_logger.setLevel(logging.DEBUG)
+    my_logger.setLevel(logging.INFO)
 
     # # 若不存在目錄則新建
     # if not os.path.exists(dir_path + log_folder):

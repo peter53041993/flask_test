@@ -301,14 +301,14 @@ def autoTest():
             money_unit = request.form.get('moneymode')  # 金額模式
             domain_url = env_config.get_post_url().split('://')[1]  # 後台全局 url 需把 http做切割
 
-            if env_config.get_env_id() in (0, 1):
+            if env_config.get_env_id() in (0, 1):  # FF4.0 用戶驗證
                 domain_type = env_config.get_joint_venture(env_config.get_env_id(), domain_url)  # 查詢 後台是否有設置 該url
                 logger.debug(f"env_config.id: {env_config.get_env_id()},  red: {red}")
                 user_id = Connection.select_user_id(Connection.get_oracle_conn(env_config.get_env_id()), user_name,
                                                     domain_type)
                 logger.info(f'user_id : {user_id}')
-            else:
-                user_id = [0]  # yft用戶暫不提供，初始化以通過驗證
+            else:  # yft用戶名驗證
+                user_id = Connection.get_user_id_yft(user_name=user_name)
 
             test_cases.append(api_test_pc)
             test_cases.append(api_test_app)
@@ -316,6 +316,8 @@ def autoTest():
 
             logger.info(f'user_name : {user_name}')
             logger.info(f"test_cases : {test_cases}")
+            if user_id is None:
+                raise Exception('取得用戶ID失敗')
             if len(user_id) > 0:  # user_id 值為空, 代表該DB環境沒有此用戶名, 就不用做接下來的事
                 logger.info(
                     f"AutoTest.suite_test({test_cases}, {user_name}, {env_config.get_domain()}, {red})")

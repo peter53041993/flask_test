@@ -691,6 +691,13 @@ class ApiTestPC_YFT(unittest.TestCase):
 
     def setUp(self):
         logger.info(f'ApiTestPC setUp : {self._testMethodName}')
+        self.login()
+        logger.info(f'After login. header = {self.header}')
+        # if self.header.get('JSESSIONID') is None:
+        #     self.login()
+        #     logger.info(f'After login. header = {self.header}')
+        # else:
+        #     logger.info(f'header = {self.header}')
 
     def __init__(self, case, _env, _user, _money_unit):
         super().__init__(case)
@@ -699,21 +706,18 @@ class ApiTestPC_YFT(unittest.TestCase):
         self.money_unit = _money_unit
         if self._session is None:
             self._session = requests.Session()
-        # self.login()
-        if self.header.get('JSESSIONID') is None:
-            self.login()
 
     def login(self):
         post_url = '/a/login/login'
         md = hashlib.md5()
         md.update(self.env_config.get_password().encode('utf-8'))
         request = f'{{"account": "{self.yft_user}", "passwd": "{md.hexdigest()}", "timeZone": "GMT+8", "isWap": false, "online": false}} '
-        logger.info(f'request_body = {request}')
+        logger.debug(f'request_body = {request}')
         response = self._session.post(url=self.env_config.get_post_url() + post_url, data=request, headers=self.header)
-        logger.info(f'login_url = {self.env_config.get_post_url() + post_url}')
-        logger.info(f'Login response = {response.content}')
-        logger.info(f'Cookies = {response.cookies["JSESSIONID"]}')
+        logger.debug(f'login_url = {self.env_config.get_post_url() + post_url}')
+        logger.debug(f'Login response = {response.content}')
         if response.cookies['JSESSIONID']:
+            logger.info(f'Cookies = {response.cookies["JSESSIONID"]}')
             self.header['JSESSIONID'] = response.cookies['JSESSIONID']  # setCookie into header
         else:
             self.fail('登入失敗.')
@@ -786,7 +790,7 @@ class ApiTestPC_YFT(unittest.TestCase):
         from utils.BetContent_yft import game_default
         import json
         default = json.loads(game_default)
-        logger.info(f'default json = {default}')
+        logger.debug(f'default json = {default}')
         from utils.BetContent_yft import game_dict
         totalAmount = 0
         schemeList = []

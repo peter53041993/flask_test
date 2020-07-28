@@ -1014,18 +1014,18 @@ class ApiTestAPP_YFT(unittest.TestCase):
               'Content-Type': 'application/json'}
 
     def setUp(self):
+        global YFT_SIGN
         logger.info(f'ApiTestPC setUp : {self._testMethodName}')
+        if YFT_SIGN is None:
+            YFT_SIGN = self.login()
 
     def __init__(self, case, _env, _user, _money_unit):
-        global YFT_SIGN
         super().__init__(case)
         self.env_config = _env
         self.yft_user = _user
         self.money_unit = _money_unit
         if self._session is None:
             self._session = requests.Session()
-        if YFT_SIGN is None:
-            YFT_SIGN = self.login()
 
     def login(self):
         call_type = 'login'
@@ -1140,8 +1140,7 @@ class ApiTestAPP_YFT(unittest.TestCase):
         default['content']['schemeList'] = schemeList
         default['content']['lotteryType'] = lottery_name
         default['content']['issueList'] = [1]
-        default['callType' \
-                ''] = call_type
+        default['callType'] = call_type
 
         if is_trace:
             default['content']['issueList'] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]

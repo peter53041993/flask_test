@@ -1,7 +1,10 @@
 from typing import Dict
 
 import cx_Oracle
+import pandas
 import pymysql
+from sqlalchemy import create_engine
+from sshtunnel import SSHTunnelForwarder
 
 from utils.Logger import create_logger
 
@@ -21,6 +24,42 @@ def get_oracle_conn(env):  # 連結數據庫 env 0: dev02 , 1:188
     conn = cx_Oracle.connect(username, oracle_['password'][env], oracle_['ip'][env] + ':1521/' +
                              oracle_['sid'][env] + service_name)
     return conn
+
+
+def get_postgre_conn(sql):
+    try:
+        with SSHTunnelForwarder(
+                ('18.144.130.142', 22),
+                ssh_private_key="C:\\Users\\Wen\\Documents\\03_SQL\\YFT\\qa.pem",
+                ssh_username="centos",
+                remote_bind_address=('localhost', 5432)) as server:
+            # trace_logger = sshtunnel.create_logger(loglevel="TRACE")
+            server.daemon_forward_servers = True
+            server.start()
+            logger.info("server connected")
+
+            local_port = str(server.local_bind_port)
+            logger.info(f'local_port = {local_port}')
+            engine = create_engine('postgresql://admin:LfCnkYSHu4UCSPf49-Xy45Ymgvq1qY@127.0.0.1:' + local_port + '/lux')
+            logger.info("database connected")
+
+            id_list = []
+            logger.info(f'sql = {sql}')
+            result = pandas.read_sql(sql, engine)
+            engine.dispose()
+            for value in result.values:
+                id_list.append(value[0])
+            server.stop()
+            return id_list
+    except Exception as e:
+        logger.error("Connection Failed")
+        print(e)
+
+
+def get_user_id_yft(user_name):
+    id_list = get_postgre_conn(f"SELECT UID FROM USER_BASIC WHERE ACCOUNT = '{user_name}'")
+    logger.info(f'user+id = {id_list}')
+    return id_list
 
 
 def get_sql_exec(env, sql):
