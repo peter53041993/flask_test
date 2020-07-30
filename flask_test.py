@@ -317,7 +317,7 @@ def autoTest():
             logger.info(f'user_name : {user_name}')
             logger.info(f"test_cases : {test_cases}")
             if user_id is None:
-                raise Exception('取得用戶ID失敗')
+                return '此環境沒有該用戶'
             if len(user_id) > 0:  # user_id 值為空, 代表該DB環境沒有此用戶名, 就不用做接下來的事
                 logger.info(
                     f"AutoTest.suite_test({test_cases}, {user_name}, {env_config.get_domain()}, {red})")
@@ -325,7 +325,7 @@ def autoTest():
                                     red, money_unit, award_mode)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
                 return redirect('report')
             else:
-                raise Exception('此環境沒有該用戶')
+                return '此環境沒有該用戶'
         # return redirect("/report")
     except Exception as e:
         from utils.TestTool import trace_log
