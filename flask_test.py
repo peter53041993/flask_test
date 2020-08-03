@@ -269,7 +269,7 @@ def image_():  # 調整圖片大小
 
 
 @app.route('/imageAdj', methods=["POST"])
-def imageAdj():
+def image_adj():
     testInfo = {}  # 存放 圖名,長,寬 的資料
     image_name = request.form.get('image_name')
     height = request.form.get('height')
@@ -283,7 +283,7 @@ def imageAdj():
 
 
 @app.route('/autoTest', methods=["GET", "POST"])  # 自動化測試 頁面
-def autoTest():
+def auto_test():
     try:
         if request.method == "POST":
             logger.info('logged by app.module')
@@ -313,6 +313,7 @@ def autoTest():
                 user_id = ["ignore"]
             else:  # yft用戶名驗證
                 user_id = Connection.get_user_id_yft(user_name=user_name)
+
 
             test_cases.append(api_test_pc)
             test_cases.append(api_test_app)

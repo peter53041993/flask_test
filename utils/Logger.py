@@ -4,6 +4,7 @@ import pathlib
 from datetime import datetime
 
 dir_path = project_path = str(pathlib.Path(__file__).parent.parent.absolute()) + r"\logs"
+
 filename = "{:%Y-%m-%d}".format(datetime.now()) + '.log'  # 設定檔名
 
 

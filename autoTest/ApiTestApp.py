@@ -947,6 +947,7 @@ class ApiTestApp(unittest.TestCase):
             for key, value in third_failed.items():
                 print(f'三方: {key}, 錯誤: {value}')
             self.fail('三方轉出有誤')
+
         self.test_AppBalance()
 
     @func_time
@@ -993,7 +994,6 @@ class ApiTestApp(unittest.TestCase):
                 for key, value in third_failed.items():
                     print(f'三方: {key}, 錯誤: {value}')
                 self.fail('三方轉出有誤')
-
         self.test_AppBalance()
 
     def tearDown(self) -> None:

@@ -5,6 +5,9 @@ from typing import Dict
 
 from selenium.webdriver.chrome.options import Options
 from enum import Enum
+# 各檔路徑
+from utils import Logger
+from utils.TestTool import trace_log
 
 from utils.Connection import get_oracle_conn, select_domain_default_url
 
@@ -167,6 +170,7 @@ class EnvConfig:
         domain_urls = select_domain_default_url(get_oracle_conn(int(env)), domain)  # 先去全局 找是否有設定 該domain
         if not domain_urls:  # 若無對應domain_url, default domain type = 0 ?
             return 0
+
         try:
             domain_type = domain_urls[0][5]  # 判斷 該domain 再後台全局設定 的 joint_venture 是多少
             print(f"後台設置: {domain_type}")

@@ -207,6 +207,7 @@ class RegPage(BasePage):
     def __init__(self, last_page: BasePage):
         super().__init__(last_page=last_page)
         user_id = utils.Connection.get_sql_exec(self.env_config.get_env_id(),
+
                                       "select id from user_customer where account = '{}'".format(self.user))
         self.logger.info("user_id = {}".format(user_id[0]))
         reg_url = utils.Connection.get_sql_exec(self.env_config.get_env_id(),
