@@ -1,7 +1,12 @@
 from typing import Dict
 
 import cx_Oracle
+import pandas
 import pymysql
+import sshtunnel
+from sqlalchemy import create_engine
+from sshtunnel import SSHTunnelForwarder
+from urllib3.exceptions import MaxRetryError
 
 from utils.Logger import create_logger
 
@@ -21,6 +26,52 @@ def get_oracle_conn(env):  # 連結數據庫 env 0: dev02 , 1:188
     conn = cx_Oracle.connect(username, oracle_['password'][env], oracle_['ip'][env] + ':1521/' +
                              oracle_['sid'][env] + service_name)
     return conn
+
+
+def get_postgre_conn(sql):
+    try:
+        logger.info('get_postgre_conn start.')
+        with SSHTunnelForwarder(
+                ('18.144.130.142', 22),
+                ssh_private_key="C:\\Users\\Wen\\Documents\\03_SQL\\YFT\\qa.pem",
+                ssh_username="centos",
+                remote_bind_address=('localhost', 5432)) as server:
+            logger.info('SSHTunnelForwarder start.')
+            # trace_logger = sshtunnel.create_logger(loglevel="TRACE")
+            server.daemon_forward_servers = True
+            server.start()
+            logger.info("server connected")
+
+            local_port = str(server.local_bind_port)
+            logger.info(f'local_port = {local_port}')
+            engine = create_engine('postgresql://admin:LfCnkYSHu4UCSPf49-Xy45Ymgvq1qY@127.0.0.1:' + local_port + '/lux')
+            logger.info("database connected")
+
+            response_list = []
+            logger.info(f'sql = {sql}')
+            result = pandas.read_sql(sql, engine)
+            engine.dispose()
+            for value in result.values:
+                response_list.append(value[0])
+            server.stop()
+            return response_list
+    except sshtunnel.BaseSSHTunnelForwarderError:
+        return 'SSH連線失敗'
+    except MaxRetryError:
+        return '連線逾時'
+
+
+def get_user_id_yft(user_name):
+    id_list = get_postgre_conn(f"SELECT UID FROM USER_BASIC WHERE ACCOUNT = '{user_name}'")
+    logger.info(f'user_id = {id_list}')
+    return id_list
+
+
+def get_lottery_games(lottery):
+    sql = f"select (play_type||bet_type) as games from lottery_play_info where lottery_type = '{lottery}' and delete_flag = 'no'"
+    response = get_postgre_conn(sql)
+    logger.info(f'{lottery} games = {response}')
+    return response
 
 
 def get_sql_exec(env, sql):
@@ -416,3 +467,85 @@ def select_active_fund(conn, user):  # 查詢當月充值金額
                 user_fund.append(i)
     conn.close()
     return user_fund
+
+
+def select_issue(conn, lottery_id):  # 查詢正在銷售的 期號
+    # Joy188Test.date_time()
+    # today_time = '2019-06-10'#for 預售中 ,抓當天時間來比對,會沒獎期
+    try:
+        with conn.cursor() as cursor:
+            sql = f"select web_issue_code,issue_code from game_issue where lotteryid = '{lottery_id}' and sysdate between sale_start_time and sale_end_time"
+
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+
+            issueName = []
+            issue = []
+
+            if lottery_id in ['99112', '99306']:  # 順利秒彩,順利11選5  不需 講期. 隨便塞
+                issueName.append('1')
+                issue.append('1')
+            else:
+                for i in rows:  # i 生成tuple
+                    issueName.append(i[0])
+                    issue.append(i[1])
+        conn.close()
+        return {'issueName': issueName, 'issue': issue}
+    except:
+        pass
+
+
+def select_red_id(conn, user):  # 紅包加壁  的訂單號查詢 ,用來審核用
+    with conn.cursor() as cursor:
+        sql = f"SELECT ID FROM RED_ENVELOPE_LIST WHERE status=1 and \
+        USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='{user}')"
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+
+        red_id = []
+        for i in rows:  # i 生成tuple
+            red_id.append(i[0])
+    conn.close()
+    return red_id
+
+
+def select_red_bal(conn, user) -> list:
+    with conn.cursor() as cursor:
+        sql = f"SELECT bal FROM RED_ENVELOPE WHERE \
+        USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='{user}')"
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+
+        red_bal = []
+        for i in rows:  # i 生成tuple
+            red_bal.append(i[0])
+    conn.close()
+    return red_bal
+
+
+def get_order_code_iapi(conn, orderid):  # 從iapi投注的orderid對應出 order_code 方案編號
+    with conn.cursor() as cursor:
+        sql = f"select order_code from game_order where id in (select orderid from game_slip where orderid = '{orderid}')"
+
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+
+        order_code = []
+        for i in rows:  # i 生成tuple
+            order_code.append(i[0])
+    conn.close()
+    return order_code
+
+
+def select_bet_type_code(conn, lottery_id, game_type):  # 從game_type 去對應玩法的數字,給app投注使用
+    with conn.cursor() as cursor:
+        sql = f"select bet_type_code from game_bettype_status where lotteryid = '{lottery_id}' and group_code_name||set_code_name||method_code_name = '{game_type}'"
+
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+
+        bet_type = []
+        for i in rows:  # i 生成tuple
+            bet_type.append(i[0])
+    conn.close()
+    return bet_type

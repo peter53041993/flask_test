@@ -10,7 +10,7 @@ import time
 
 from utils import Config, Logger, Connection
 from utils.Config import LotteryData, func_time
-from utils.Connection import select_issue, select_red_id, select_red_bal
+from utils.Connection import select_issue, select_red_id, select_red_bal, get_lottery_games
 
 logger = Logger.create_logger(r"\AutoTest", 'auto_test_pc')
 COOKIE = None  # 以全域變數儲存，以利在各測試間共用
@@ -24,7 +24,8 @@ class ApiTestPC(unittest.TestCase):
     user = None
     red_type = None
     money_unit = None
-    user_agent = None
+    award_mode = None
+    user_agent = Config.UserAgent.PC.value
     header = {  # 預設Header格式
         'User-Agent': Config.UserAgent.PC.value,
         'Content-Type': 'application/json; charset=UTF-8'
@@ -37,20 +38,20 @@ class ApiTestPC(unittest.TestCase):
     def setUp(self):
         logger.info(f'ApiTestPC setUp : {self._testMethodName}')
 
-    def __init__(self, case, _env, _user, _red_type, _money_unit):
+    def __init__(self, case, _env, _user, _red_type, _money_unit, _award_mode):
         super().__init__(case)
         global COOKIE
         self.envConfig = _env
         self.user = _user
         self.red_type = _red_type
         self.money_unit = _money_unit
+        self.award_mode = _award_mode
         self.post_url = self.envConfig.get_post_url()
         self.en_url = self.envConfig.get_em_url()
         logger.info('ApiTestPC __init__.')
+        logger.info(f'case = {case}')
         if COOKIE:  # 若已有Cookie則加入Header
             self.header['Cookie'] = f'ANVOID={COOKIE}'
-        elif case != 'test_PcLogin':
-            self.fail('Cookie為空，停止測試！')
 
     def web_issue_code(self, lottery):  # 頁面產生  獎期用法,  取代DB連線問題
         now_time = int(time.time())
@@ -254,15 +255,13 @@ class ApiTestPC(unittest.TestCase):
                     global MUL
                     ball_type_post = self.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
 
-                    award_mode = 1
-
                     if self.money_unit == '1':  # 使用元模式
                         _money_unit = 1
                     elif self.money_unit == '2':  # 使用角模式
                         _money_unit = 0.1
 
                     if i == 'btcctp':
-                        award_mode = 2
+                        self.award_mode = 2
                         MUL = Config.random_mul(1)  # 不支援倍數,所以random參數為1
                     elif i == 'bjkl8':
                         MUL = Config.random_mul(5)  # 北京快樂8
@@ -270,7 +269,7 @@ class ApiTestPC(unittest.TestCase):
                         MUL = Config.random_mul(5)
 
                     elif i in ['btcffc', 'xyft']:
-                        award_mode = 2
+                        self.award_mode = 2
                     elif i in LotteryData.lottery_sb:  # 骰寶只支援  元模式
                         _money_unit = 1
 
@@ -303,7 +302,7 @@ class ApiTestPC(unittest.TestCase):
                     post_data = {"gameType": i, "isTrace": isTrace, "traceWinStop": traceWinStop,
                                  "traceStopValue": traceWinStop,
                                  "balls": [{"id": 1, "ball": ball_type_post[1], "type": ball_type_post[0],
-                                            "moneyunit": _money_unit, "multiple": MUL, "awardMode": award_mode,
+                                            "moneyunit": _money_unit, "multiple": MUL, "awardMode": self.award_mode,
                                             "num": 1}], "orders": plan_, "amount": len_ * amount}  # 不使用紅包
 
                     post_data_lhc = {"balls": [{"id": 1, "moneyunit": _money_unit, "multiple": 1, "num": 1,
@@ -321,17 +320,20 @@ class ApiTestPC(unittest.TestCase):
                                     "orders": plan_}
 
                     if i in 'lhc':
-                        self.req_post_submit(self.user, 'lhc', post_data_lhc, _money_unit, award_mode,
+                        self.req_post_submit(self.user, 'lhc', post_data_lhc, _money_unit, self.award_mode,
                                              ball_type_post[2])
 
                     elif i in LotteryData.lottery_sb:
-                        self.req_post_submit(self.user, i, post_data_sb, _money_unit, award_mode, ball_type_post[2])
+                        self.req_post_submit(self.user, i, post_data_sb, _money_unit, self.award_mode,
+                                             ball_type_post[2])
                     else:
                         if self.red_type == 'yes':  # 紅包投注
                             post_data['redDiscountAmount'] = 2  # 增加紅包參數
-                            self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
+                            self.req_post_submit(self.user, i, post_data, _money_unit, self.award_mode,
+                                                 ball_type_post[2])
                         else:
-                            self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
+                            self.req_post_submit(self.user, i, post_data, _money_unit, self.award_mode,
+                                                 ball_type_post[2])
                 red_bal = select_red_bal(Connection.get_oracle_conn(1), self.user)
                 print(f'紅包餘額: {int(red_bal[0]) / 10000}')
                 break
@@ -364,11 +366,10 @@ class ApiTestPC(unittest.TestCase):
                 "param": param
             }
             logger.info(f'postData = {postData}')
-            logger.Debug(f'header = {self.header.items()}')
             r = self.SESSION.post(self.post_url + '/login/login', data=postData, headers=self.header)
             logger.info(f'response = {r.json()}')
             COOKIE = r.cookies.get_dict()['ANVOID']  # 獲得登入的cookies 字典
-            logger.Debug(f'r.cookies.get_dict() = {r.cookies.get_dict()}')
+            logger.debug(f'r.cookies.get_dict() = {r.cookies.get_dict()}')
             self.header['Cookie'] = f'ANVOID={COOKIE}'
             t = time.strftime('%Y%m%d %H:%M:%S')
             # msg = (f'登錄帳號: {i},登入身分: {account_[i]}' + u',現在時間:' + t + r.text)
@@ -531,7 +532,6 @@ class ApiTestPC(unittest.TestCase):
                 third_url = '/gns/transferToGns'
             else:
                 third_url = f'/{third}/transferToThirdly'
-            logger.info(f'header = {self.header.items()}')
             r = self.SESSION.post(self.post_url + third_url, data=json.dumps(post_data), headers=self.header)
             logger.info(f'r.json() = {r.json()}')
 
@@ -539,15 +539,14 @@ class ApiTestPC(unittest.TestCase):
             if r.json()['status']:
                 print(f'帳號 {self.user} 轉入 {third} ,金額:1, 進行中')
             else:
+                errors[third] = r.json()
                 print(f'{third} 轉帳失敗')  # 列出錯誤訊息 ,
             status_dict[third] = r.json()['status']  # 存放 各第三方的轉帳狀態
 
+        logger.debug(f'status_dict = {status_dict.items()}')
         for third in status_dict.keys():
             if status_dict[third]:  # 判斷轉帳的狀態, 才去要 單號
-                tran_result = Connection.thirdly_tran(
-                    Connection.get_mysql_conn(evn=self.envConfig.get_env_id(), third=third), tran_type=0,
-                    third=third,
-                    user=self.user)  # tran_type 0為轉轉入
+                tran_result = [0, 0]  # 初始化
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
                     tran_result = Connection.thirdly_tran(
@@ -557,15 +556,22 @@ class ApiTestPC(unittest.TestCase):
                         user=self.user)  #
                     sleep(1.5)
                     count += 1
+                    # print(f'驗證{third}中 : tran_result = {tran_result}')
+                    if tran_result[1] == '2':
+                        print(f'狀態成功. {third} ,sn 單號: {tran_result[0]}')
+                        break
                     if count == 15:
                         errors[third] = tran_result
                         print('轉帳狀態失敗')  # 如果跑道9次  需確認
                         break
-                else:
-                    pass
+            else:
+                pass
         for key, value in errors.items():
             print(f'三方: {key} 轉帳失敗. 接口返回: {value}')
         self.test_PcThirdBalance()
+
+        if errors:
+            self.fail('部分轉帳失敗')
 
     @func_time
     def test_PcTransferout(self):  # 第三方轉回
@@ -580,16 +586,15 @@ class ApiTestPC(unittest.TestCase):
             if r.json()['status']:
                 print(f'帳號 {self.user}, {third} 轉回4.0 ,金額:1, 進行中')
             else:
-                print(third + r.json()['errorMsg'])
+                logger.error(f'轉帳接口失敗 : errors[{third}] = {r.json()}')
+                errors[third] = r.json()
                 print('轉帳接口失敗')
             status_dict[third] = r.json()['status']
-
+        logger.debug(f'status_dict = {status_dict.items()}')
         for third in status_dict.keys():
             if status_dict[third]:
-                tran_result = Connection.thirdly_tran(
-                    Connection.get_mysql_conn(evn=self.envConfig.get_env_id(), third=third), tran_type=1,
-                    third=third,
-                    user=self.user)  # tran_type 1 是 轉出
+                logger.debug(f'status_dict[{third}]:  # 判斷轉帳的狀態, 才去要 單號 = {status_dict[third]}')
+                tran_result = [0, 0]
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
                     tran_result = Connection.thirdly_tran(
@@ -599,10 +604,12 @@ class ApiTestPC(unittest.TestCase):
                         user=self.user)
                     sleep(1)
                     count += 1
+                    # print(f'驗證{third}中 : tran_result = {tran_result}')
                     if tran_result[1] == '2':
                         print(f'狀態成功. {third} ,sn 單號: {tran_result[0]}')
                         break
                     if count == 9:
+                        logger.error(f'轉帳狀態失敗 : errors[{third}] = {tran_result}')
                         errors[third] = tran_result
                         print('轉帳狀態失敗')  # 如果跑道9次  需確認
                         break
@@ -611,6 +618,8 @@ class ApiTestPC(unittest.TestCase):
         for key, value in errors.items():
             print(f'三方: {key} 轉帳失敗. 接口返回: {value}')
         self.test_PcThirdBalance()
+        if errors:
+            self.fail('部分轉帳失敗')
 
     @staticmethod
     def admin_login(env_config):
@@ -672,11 +681,413 @@ class ApiTestPC(unittest.TestCase):
         pass
 
 
-class ApiTestYFT(unittest.TestCase):
+class ApiTestPC_YFT(unittest.TestCase):
     """
     YFT API測試
     """
+    _session = None
+    env_config = None
+    yft_user = None
+    money_unit = None
+    award_mode = None
+    header = {'User-Agent': Config.UserAgent.PC.value,
+              'Content-Type': 'application/json'}
 
-    def __init__(self, case):
+    def setUp(self):
+        logger.info(f'ApiTestPC setUp : {self._testMethodName}')
+        self.login()
+        logger.info(f'After login. header = {self.header}')
+
+    def __init__(self, case, _env, _user, _money_unit=1, _award_mode=0):
+        """
+        YFT初始化
+        :param case: List
+        :param _env: EnvConfig
+        :param _user: Str
+        :param _money_unit: 1 / 0.1 / 0.01
+        :param _award_mode: 0=預設 / 1=一般 / 2=高獎金
+        """
         super().__init__(case)
-        pass
+        logger.info(
+            f'ApiTestPC_YFT __init__ : _env={_env}, _user={_user}, _money_unit={_money_unit}, _award_mode={_award_mode}')
+        self.env_config = _env
+        self.yft_user = _user
+        self.money_unit = _money_unit
+        self.award_mode = _award_mode
+        if self._session is None:
+            self._session = requests.Session()
+
+    def login(self):
+        post_url = '/a/login/login'
+        md = hashlib.md5()
+        md.update(self.env_config.get_password().encode('utf-8'))
+        request = f'{{"account": "{self.yft_user}", "passwd": "{md.hexdigest()}", "timeZone": "GMT+8", "isWap": false, "online": false}} '
+        logger.debug(f'request_body = {request}')
+        response = self._session.post(url=self.env_config.get_post_url() + post_url, data=request, headers=self.header)
+        logger.debug(f'login_url = {self.env_config.get_post_url() + post_url}')
+        logger.debug(f'Login response = {response.content}')
+        if response.cookies['JSESSIONID']:
+            logger.info(f'Cookies = {response.cookies["JSESSIONID"]}')
+            self.header['JSESSIONID'] = response.cookies['JSESSIONID']  # setCookie into header
+        else:
+            self.fail('登入失敗.')
+
+    """時時彩系列"""
+
+    def test_bet_qqffc(self, stop_on_win=True):
+        """
+        QQ分分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['qqffc', 'QQ分分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_hjcqssc(self, stop_on_win=True):
+        """
+        懷舊重慶時時彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['hjcqssc', '懷舊重慶時時彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_ynffc(self, stop_on_win=True):
+        """
+        印尼分分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['ynffc', '印尼分分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_tcffc(self, stop_on_win=True):
+        """
+        騰訊分分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['tcffc', '騰訊分分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_se15fc(self, stop_on_win=True):
+        """
+        首爾1.5分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['se15fc', '首爾1.5分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_yn2fc(self, stop_on_win=True):
+        """
+        印尼2分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['yn2fc', '印尼2分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_xjssc(self, stop_on_win=True):
+        """
+        新疆時時彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['xjssc', '新疆時時彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_tjssc(self, stop_on_win=True):
+        """
+        天津時時彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['tjssc', '天津時時彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_tcdffc(self, stop_on_win=True):
+        """
+        騰訊兩分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['tcdffc', '騰訊兩分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_cqssc(self, stop_on_win=True):
+        """
+        重慶時時彩生肖
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['cqssc', '重慶時時彩生肖']
+        self.bet_trace(game_name, stop_on_win)
+
+    """賽車／飛艇系列"""
+
+    def test_bet_fhxyft(self, stop_on_win=True):
+        """
+        幸運飛艇投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['fhxyft', '鳳凰幸運飛艇']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_bjpk10(self, stop_on_win=True):
+        """
+        PK10投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['bjpk10', '北京PK10']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_djpk10(self, stop_on_win=True):
+        """
+        東京賽車投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['djpk10', '東京賽車']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_xyftpk10(self, stop_on_win=True):
+        """
+        皇家幸運飛艇投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['xyftpk10', '皇家幸運飛艇']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_metftpk10(self, stop_on_win=True):
+        """
+        馬爾他飛艇投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['metftpk10', '馬爾他飛艇']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_xnpk10(self, stop_on_win=True):
+        """
+        悉尼PK10投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['xnpk10', '悉尼PK10']
+        self.bet_trace(game_name, stop_on_win)
+
+    """快三系列"""
+
+    def test_bet_ahk3(self, stop_on_win=True):
+        """
+        安徽快三投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['ahk3', '安徽快三']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_hbk3(self, stop_on_win=True):
+        """
+        湖北快三
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['hbk3', '湖北快三']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_jsk3(self, stop_on_win=True):
+        """
+        江蘇快三投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['jsk3', '江蘇快三']
+        self.bet_trace(game_name, stop_on_win)
+
+    """11選5系列"""
+
+    def test_bet_sd11x5(self, stop_on_win=True):
+        """
+        山東11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['sd11x5', '山東11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_jx11x5(self, stop_on_win=True):
+        """
+        江西11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['jx11x5', '江西11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_sh11x5(self, stop_on_win=True):
+        """
+        上海11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['sh11x5', '上海11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_js11x5(self, stop_on_win=True):
+        """
+        江蘇11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['js11x5', '江蘇11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_gd11x5(self, stop_on_win=True):
+        """
+        廣東11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['gd11x5', '廣東蘇11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def get_lottery_info(self, lottery_name):
+        """
+        取得彩種資訊（獎期等）
+        :param lottery_name: 彩種英文ID
+        :return: 返還獎期資訊內容
+        """
+        content = f'{{"lotteryType":"{lottery_name}","timeZone":"GMT+8","isWap":false,"online":false}}'
+        logger.debug(f'get_lottery_info -----> {content}')
+
+        response = self._session.post(url=self.env_config.get_post_url() + '/a/lottery/init', data=content,
+                                      headers=self.header)
+        logger.debug(f'get_lottery_info <----- {response.json()}')
+        return response.json()['content']
+
+    def bet_yft(self, lottery_name, games, is_trace=False, stop_on_win=True):
+        """
+        YFT發起投注
+        :param games: 投注玩法清單，可取自BetContent_yft.py
+        :param lottery_name: 彩種英文ID
+        :param is_trace: 追號與否，影響投注內容需替換的參數
+        :param stop_on_win: 追中即停
+        :return: 投注結果
+        """
+        post_url = '/a/lottery/betV2'
+        lottery_info = self.get_lottery_info(lottery_name)
+
+        from utils.BetContent_yft import game_default
+        import json
+        default = json.loads(game_default)
+        logger.debug(f'default json = {default}')
+        from utils.BetContent_yft import game_dict
+        totalAmount = 0
+        schemeList = []
+        for game in games:
+            if game_dict.get(game) and game not in ('pt333bt02', 'pt137bt02'):  # 排除牛牛
+                schemeList.append(game_dict.get(game)[0])
+                totalAmount += game_dict.get(game)[1]
+        default['currIssueNo'] = lottery_info["chaseableIssueNoList"][0]
+        default['stopOnWon'] = 'null'
+        default['schemeList'] = schemeList
+        default['lotteryType'] = lottery_name
+        default['issueList'] = [1]
+        default['isWap'] = False
+
+        if is_trace:
+            default['issueList'] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            totalAmount *= 10
+            if stop_on_win:
+                default['stopOnWon'] = 'yes'
+            else:
+                default['stopOnWon'] = 'no'
+        if self.money_unit == '0.1':
+            totalAmount *= 0.1
+        elif self.money_unit == '0.01':
+            totalAmount *= 0.01
+
+        default['totalAmount'] = totalAmount
+
+        data = json.dumps(default)
+        data.replace('\'null\'', 'null')
+        data.replace('True', 'true')
+        data.replace('False', 'false')
+
+        logger.debug(f"self.money_unit == '0.1' = {self.money_unit == '0.1'}\n"
+                     f"self.money_unit == '0.01' = {self.money_unit == '0.01'}\n"
+                     f"self.award_mode == '2' = {self.award_mode == '2'}")
+        if self.money_unit == '0.1':
+            logger.debug("self.money_unit == '0.1'")
+            data = data.replace('"potType": "Y"', '"potType": "J"')
+        elif self.money_unit == '0.01':
+            logger.debug("self.money_unit == '0.01'")
+            data = data.replace('"potType": "Y"', '"potType": "F"')
+        if self.award_mode == '2':
+            logger.debug("self.award_mode == '2'")
+            data = data.replace('"doRebate": "yes"', '"doRebate": "no"')
+
+        logger.info(f'Bet content = {data}')
+        bet_response = self._session.post(url=self.env_config.get_post_url() + post_url, data=data,
+                                          headers=self.header)
+        logger.info(f'Bet response = {bet_response.json()}\n')
+        return bet_response.json()
+
+    def bet_trace(self, game_name, stop_on_win):
+        games = get_lottery_games(game_name[0])
+        expected = 'ok'
+        bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
+                                    is_trace=False)
+        assert bet_response['status'] == expected
+        print(
+            f'{game_name[1]}投注追號成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
+                                    is_trace=True)
+        assert bet_response['status'] == expected
+        print(
+            f'{game_name[1]}追號全彩種成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')

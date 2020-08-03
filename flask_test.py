@@ -297,34 +297,43 @@ def autoTest():
             integration_test_pc = request.form.getlist('integration_test_pc')  # 回傳 測試案例data內容
             env_config = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
             red = request.form.get('red_type')  # 紅包選擇
+            award_mode = request.form.get('awardmode')  # 獎金組設置
             money_unit = request.form.get('moneymode')  # 金額模式
+            ignore_name_check = request.form.get('ignore_user_check')
             domain_url = env_config.get_post_url().split('://')[1]  # 後台全局 url 需把 http做切割
+            logger.info(f'ignore_name_check = {ignore_name_check}')
 
-            domain_type = env_config.get_joint_venture(env_config.get_env_id(), domain_url)  # 查詢 後台是否有設置 該url
-            # domain_type = Config.domain_type#後台 該url joint_venture 的 類型
-
-            logger.debug(f"env_config.id: {env_config.get_env_id()},  red: {red}")
-
-            # 查詢用戶 user_id,合營
-            user_id = Connection.select_user_id(Connection.get_oracle_conn(env_config.get_env_id()), user_name,
-                                                domain_type)
-            # joint_venture = autoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
+            if env_config.get_env_id() in (0, 1):  # FF4.0 用戶驗證
+                domain_type = env_config.get_joint_venture(env_config.get_env_id(), domain_url)  # 查詢 後台是否有設置 該url
+                logger.debug(f"env_config.id: {env_config.get_env_id()},  red: {red}")
+                user_id = Connection.select_user_id(Connection.get_oracle_conn(env_config.get_env_id()), user_name,
+                                                    domain_type)
+                logger.info(f'user_id : {user_id}')
+            elif ignore_name_check:
+                user_id = ["ignore"]
+            else:  # yft用戶名驗證
+                user_id = Connection.get_user_id_yft(user_name=user_name)
 
             test_cases.append(api_test_pc)
             test_cases.append(api_test_app)
             test_cases.append(integration_test_pc)
 
-            logger.info(f'user_id : {user_id}')
             logger.info(f'user_name : {user_name}')
             logger.info(f"test_cases : {test_cases}")
+            if user_id is None:
+                return '此環境沒有該用戶'
+            elif type(user_id) == str:
+                return user_id
             if len(user_id) > 0:  # user_id 值為空, 代表該DB環境沒有此用戶名, 就不用做接下來的事
                 logger.info(
-                    f"AutoTest.suite_test({test_cases}, {user_name}, {env_config.get_domain()}, {red})")
+                    f"AutoTest.suite_test(test_cases={test_cases}, user_name={user_name}, "
+                    f"env_config.get_domain()={env_config.get_domain()}, red={red}), "
+                    f"money_unit={money_unit}, award_mode={award_mode}")
                 AutoTest.suite_test(test_cases, user_name, env_config.get_domain(),
-                                    red, money_unit)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
+                                    red, money_unit, award_mode)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
                 return redirect('report')
             else:
-                raise Exception('此環境沒有該用戶')
+                return '此環境沒有該用戶'
         # return redirect("/report")
     except Exception as e:
         from utils.TestTool import trace_log
@@ -770,8 +779,9 @@ def game_result():
 
                 header['Cookie'] = 'ANVOAID=' + cookie  # 存放後台cookie
                 # header['Content-Type'] ='application/json'
-                r = session.get(env.get_admin_url() + f"/gameoa/queryGameAward?lotteryId={lotteryid}&awardId={award_id}&status=1"
-                                , headers=header)  # 登入後台 查詢 用戶獎金值
+                r = session.get(
+                    env.get_admin_url() + f"/gameoa/queryGameAward?lotteryId={lotteryid}&awardId={award_id}&status=1"
+                    , headers=header)  # 登入後台 查詢 用戶獎金值
                 # print(r.text)
                 soup = BeautifulSoup(r.text, 'lxml')
                 bonus = []

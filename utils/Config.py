@@ -52,19 +52,20 @@ class UserAgent(Enum):
 
 
 class EnvConfig:
-    devDomains = ['dev02', 'dev03', 'fh82dev02', '88hlqpdev02', 'teny2020dev02']
-    joyDomains = ['joy188', 'joy188.teny2020', 'joy188.195353', 'joy188.88hlqp']
-    joySunDomains = ['joy188.fh888']
-    hyDomains = ['maike2020']
-    productDomains = ['fh968']
+    dev_domains = ['dev02', 'dev03', 'fh82dev02', '88hlqpdev02', 'teny2020dev02']
+    joy_domains = ['joy188', 'joy188.teny2020', 'joy188.195353', 'joy188.88hlqp']
+    joy_sun_domains = ['joy188.fh888']
+    hy_domains = ['maike2020']
+    product_domains = ['fh968']
 
-    yft188Domain = ['yulin.qa', 'feiao.qa', 'tianya.qa']
+    yft_domains_wap = ['m.yulin.qa', 'm.feiao.qa', 'm.tianya.qa']
+    yft_domains = ['yulin.qa', 'feiao.qa', 'tianya.qa']
 
     env_domain = None
 
     def __init__(self, domain):
         try:
-            if domain in self.devDomains + self.joySunDomains + self.joyDomains + self.hyDomains + self.productDomains + self.yft188Domain:
+            if domain in self.dev_domains + self.joy_sun_domains + self.joy_domains + self.hy_domains + self.product_domains + self.yft_domains + self.yft_domains_wap:
                 self.env_domain = domain
         except ValueError:
             raise Exception('無對應網域 請至 Config.EnvConfig 添加')
@@ -75,13 +76,15 @@ class EnvConfig:
     def get_post_url(self) -> str:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
-        elif self.env_domain in self.devDomains + self.hyDomains + self.productDomains:
+        elif self.env_domain in self.dev_domains + self.hy_domains + self.product_domains:
             return f"http://www.{self.env_domain}.com"
-        elif self.env_domain in self.joyDomains:
+        elif self.env_domain in self.joy_domains:
             return f"http://www2.{self.env_domain}.com"
-        elif self.env_domain in self.joySunDomains:
+        elif self.env_domain in self.joy_sun_domains:
             return f"http://www2.{self.env_domain}.bet"
-        elif self.env_domain in self.yft188Domain:
+        elif self.env_domain in self.yft_domains_wap:
+            return f"http://{self.env_domain}.space"
+        elif self.env_domain in self.yft_domains:
             return f"http://www.{self.env_domain}.space"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
@@ -89,9 +92,9 @@ class EnvConfig:
     def get_em_url(self) -> str:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
-        elif self.env_domain in self.joySunDomains:
+        elif self.env_domain in self.joy_sun_domains:
             return f"http://em.{self.env_domain}.bet"
-        elif self.env_domain in self.devDomains + self.joyDomains + self.hyDomains + self.productDomains:
+        elif self.env_domain in self.dev_domains + self.joy_domains + self.hy_domains + self.product_domains:
             return f"http://em.{self.env_domain}.com"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
@@ -99,13 +102,13 @@ class EnvConfig:
     def get_password(self) -> str:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
-        elif self.env_domain in self.devDomains:
+        elif self.env_domain in self.dev_domains:
             return "123qwe"
-        elif self.env_domain in self.joyDomains + self.hyDomains + self.joySunDomains:
+        elif self.env_domain in self.joy_domains + self.hy_domains + self.joy_sun_domains:
             return "amberrd"
-        elif self.env_domain in self.productDomains:
+        elif self.env_domain in self.product_domains:
             return "tsuta0425"
-        elif self.env_domain in self.yft188Domain:
+        elif self.env_domain in self.yft_domains + self.yft_domains_wap:
             return "123123"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
@@ -113,11 +116,11 @@ class EnvConfig:
     def get_safe_password(self) -> str:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
-        elif self.env_domain in self.devDomains + self.joyDomains + self.hyDomains + self.joySunDomains:
+        elif self.env_domain in self.dev_domains + self.joy_domains + self.hy_domains + self.joy_sun_domains:
             return "Amberrd"
-        elif self.env_domain in self.productDomains:
+        elif self.env_domain in self.product_domains:
             return "tsuta0425"
-        elif self.env_domain in self.productDomains:
+        elif self.env_domain in self.product_domains:
             return "Amberrd"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
@@ -125,13 +128,13 @@ class EnvConfig:
     def get_env_id(self) -> int:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
-        elif self.env_domain in self.devDomains:
+        elif self.env_domain in self.dev_domains:
             return 0
-        elif self.env_domain in self.joyDomains + self.joySunDomains + self.hyDomains:
+        elif self.env_domain in self.joy_domains + self.joy_sun_domains + self.hy_domains:
             return 1
-        elif self.env_domain in self.productDomains:
+        elif self.env_domain in self.product_domains:
             return 2
-        elif self.env_domain in self.yft188Domain:
+        elif self.env_domain in self.yft_domains + self.yft_domains_wap:
             return 11
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
@@ -139,23 +142,23 @@ class EnvConfig:
     def get_admin_url(self) -> str:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
-        elif self.env_domain in self.devDomains:
+        elif self.env_domain in self.dev_domains:
             return "http://admin.dev02.com"
-        elif self.env_domain in self.joyDomains + self.joySunDomains:
+        elif self.env_domain in self.joy_domains + self.joy_sun_domains:
             return "http://admin.joy188.com"
-        elif self.env_domain in self.yft188Domain:
-            return f"http://manager.{self.env_domain}.space"
+        elif self.env_domain in self.yft_domains + self.yft_domains_wap:
+            return "http://manager.yulin.qa.space"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
     def get_admin_data(self) -> Dict:
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
-        elif self.env_domain in self.devDomains:
+        elif self.env_domain in self.dev_domains:
             return {'username': 'cancus', 'password': '123qwe', 'bindpwd': 123456}
-        elif self.env_domain in self.joyDomains + self.joySunDomains:
+        elif self.env_domain in self.joy_domains + self.joy_sun_domains:
             return {'username': 'cancus', 'password': 'amberrd', 'bindpwd': 123456}
-        elif self.env_domain in self.yft188Domain:
+        elif self.env_domain in self.yft_domains + self.yft_domains_wap:
             return {'username': 'admin', 'password': '1234qwer'}
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
@@ -180,9 +183,9 @@ class EnvConfigApp(EnvConfig):
         print(self.env_domain)
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
-        elif self.env_domain in self.devDomains:
+        elif self.env_domain in self.dev_domains:
             return "http://10.13.22.152:8199"
-        elif self.env_domain in self.joyDomains:
+        elif self.env_domain in self.joy_domains:
             return "http://iphong.joy188.com"
         else:
             raise Exception('無對應網域參數，請至Config envConfigApp()新增')
@@ -190,9 +193,9 @@ class EnvConfigApp(EnvConfig):
     def get_uuid(self):
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
-        elif self.env_domain in self.devDomains:
+        elif self.env_domain in self.dev_domains:
             return "2D424FA3-D7D9-4BB2-BFDA-4561F921B1D5"
-        elif self.env_domain in self.joyDomains:
+        elif self.env_domain in self.joy_domains:
             return "f009b92edc4333fd"
         else:
             raise Exception('無對應網域參數，請至Config envConfigApp()新增')
@@ -200,9 +203,9 @@ class EnvConfigApp(EnvConfig):
     def get_login_pass_source(self):
         if self.env_domain is None:
             raise Exception('env 環境未初始化')
-        elif self.env_domain in self.devDomains:
+        elif self.env_domain in self.dev_domains:
             return "fa0c0fd599eaa397bd0daba5f47e7151"
-        elif self.env_domain in self.joyDomains:
+        elif self.env_domain in self.joy_domains:
             return "3bf6add0828ee17c4603563954473c1e"
         else:
             raise Exception('無對應網域參數，請至Config envConfigApp()新增')
