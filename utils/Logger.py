@@ -25,7 +25,7 @@ def create_logger(log_folder, log_name):
 
     # console handler
     consoleHandler = logging.StreamHandler()
-    consoleHandler.setLevel(logging.DEBUG)
+    consoleHandler.setLevel(logging.INFO)
     consoleHandler.setFormatter(formatter)
     my_logger.addHandler(consoleHandler)
 

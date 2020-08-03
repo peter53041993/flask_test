@@ -68,9 +68,11 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mo
                         IntegrationTestWeb(case=case, env_config=env_config, user=user_name, red_type=is_use_red))
         elif env_config.get_env_id() == 11:  # 若為YFT測試案例
             for case in test_cases[0]:
-                suite_list.append(ApiTestPC_YFT(case=case, _env=env_config, _user=user_name, _money_unit=money_unit))
+                suite_list.append(ApiTestPC_YFT(case=case, _env=env_config, _user=user_name, _money_unit=money_unit,
+                                                _award_mode=award_mode))
             for case in test_cases[1]:
-                suite_list.append(ApiTestAPP_YFT(case=case, _env=env_config, _user=user_name, _money_unit=money_unit))
+                suite_list.append(ApiTestAPP_YFT(case=case, _env=env_config, _user=user_name, _money_unit=money_unit,
+                                                 _award_mode=award_mode))
 
         logger.info(f"測試內容 suite_list : {suite_list}")
 

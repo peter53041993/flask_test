@@ -3,8 +3,10 @@ from typing import Dict
 import cx_Oracle
 import pandas
 import pymysql
+import sshtunnel
 from sqlalchemy import create_engine
 from sshtunnel import SSHTunnelForwarder
+from urllib3.exceptions import MaxRetryError
 
 from utils.Logger import create_logger
 
@@ -28,11 +30,13 @@ def get_oracle_conn(env):  # 連結數據庫 env 0: dev02 , 1:188
 
 def get_postgre_conn(sql):
     try:
+        logger.info('get_postgre_conn start.')
         with SSHTunnelForwarder(
                 ('18.144.130.142', 22),
                 ssh_private_key="C:\\Users\\Wen\\Documents\\03_SQL\\YFT\\qa.pem",
                 ssh_username="centos",
                 remote_bind_address=('localhost', 5432)) as server:
+            logger.info('SSHTunnelForwarder start.')
             # trace_logger = sshtunnel.create_logger(loglevel="TRACE")
             server.daemon_forward_servers = True
             server.start()
@@ -43,23 +47,31 @@ def get_postgre_conn(sql):
             engine = create_engine('postgresql://admin:LfCnkYSHu4UCSPf49-Xy45Ymgvq1qY@127.0.0.1:' + local_port + '/lux')
             logger.info("database connected")
 
-            id_list = []
+            response_list = []
             logger.info(f'sql = {sql}')
             result = pandas.read_sql(sql, engine)
             engine.dispose()
             for value in result.values:
-                id_list.append(value[0])
+                response_list.append(value[0])
             server.stop()
-            return id_list
-    except Exception as e:
-        logger.error("Connection Failed")
-        print(e)
+            return response_list
+    except sshtunnel.BaseSSHTunnelForwarderError:
+        return 'SSH連線失敗'
+    except MaxRetryError:
+        return '連線逾時'
 
 
 def get_user_id_yft(user_name):
     id_list = get_postgre_conn(f"SELECT UID FROM USER_BASIC WHERE ACCOUNT = '{user_name}'")
-    logger.info(f'user+id = {id_list}')
+    logger.info(f'user_id = {id_list}')
     return id_list
+
+
+def get_lottery_games(lottery):
+    sql = f"select (play_type||bet_type) as games from lottery_play_info where lottery_type = '{lottery}' and delete_flag = 'no'"
+    response = get_postgre_conn(sql)
+    logger.info(f'{lottery} games = {response}')
+    return response
 
 
 def get_sql_exec(env, sql):

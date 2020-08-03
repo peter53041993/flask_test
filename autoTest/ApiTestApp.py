@@ -12,7 +12,7 @@ import time
 
 from utils import Config, Logger, Connection
 from utils.BetContent_yft import iapi_default
-from utils.Connection import get_order_code_iapi, select_issue, select_bet_type_code
+from utils.Connection import get_order_code_iapi, select_issue, select_bet_type_code, get_lottery_games
 from utils.TestTool import trace_log
 from utils.Config import LotteryData, func_time
 
@@ -1010,6 +1010,7 @@ class ApiTestAPP_YFT(unittest.TestCase):
     env_config = None
     yft_user = None
     money_unit = None
+    award_mode = None
     header = {'User-Agent': Config.UserAgent.PC.value,
               'Content-Type': 'application/json'}
 
@@ -1019,11 +1020,14 @@ class ApiTestAPP_YFT(unittest.TestCase):
         if YFT_SIGN is None:
             YFT_SIGN = self.login()
 
-    def __init__(self, case, _env, _user, _money_unit):
+    def __init__(self, case, _env, _user, _money_unit=1, _award_mode=0):
         super().__init__(case)
+        logger.info(
+            f'ApiTestAPP_YFT __init__ : _env={_env}, _user={_user}, _money_unit={_money_unit}, _award_mode={_award_mode}')
         self.env_config = _env
         self.yft_user = _user
         self.money_unit = _money_unit
+        self.award_mode = _award_mode
         if self._session is None:
             self._session = requests.Session()
 
@@ -1047,52 +1051,255 @@ class ApiTestAPP_YFT(unittest.TestCase):
         else:
             self.fail('登入失敗.')
 
-    def test_bet_fhxyft(self, stop_on_win=True):
+    """時時彩投注"""
+
+    def test_bet_qqffc(self, stop_on_win=True):
         """
-        幸運飛艇投注。牛牛不可高獎金，另外投注。
+        QQ分分彩投注
+        牛牛不可高獎金，另外投注。
         :param stop_on_win: 追號與否
         :return: None
         """
-        from utils.BetContent_yft import fhxyft_games
 
-        expected = 'ok'
-        bet_response = self.bet_yft(lottery_name='fhxyft', stop_on_win=stop_on_win, games=fhxyft_games,
-                                    is_trace=False)
-        assert bet_response['status'] == expected
-        print(
-            f'鳳凰幸運飛艇投注追號成功。　訂單編號：{bet_response["content"]["orderNo"]}'
-            f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        game_name = ['qqffc', 'QQ分分彩']
+        self.bet_trace(game_name, stop_on_win)
 
-        bet_response = self.bet_yft(lottery_name='fhxyft', stop_on_win=stop_on_win, games=fhxyft_games,
-                                    is_trace=True)
-        assert bet_response['status'] == expected
-        print(
-            f'鳳凰幸運飛艇追號全彩種成功。　訂單編號：{bet_response["content"]["orderNo"]}'
-            f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+    def test_bet_hjcqssc(self, stop_on_win=True):
+        """
+        懷舊重慶時時彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['hjcqssc', '懷舊重慶時時彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_ynffc(self, stop_on_win=True):
+        """
+        印尼分分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['ynffc', '印尼分分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_tcffc(self, stop_on_win=True):
+        """
+        騰訊分分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['tcffc', '騰訊分分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_se15fc(self, stop_on_win=True):
+        """
+        首爾1.5分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['se15fc', '首爾1.5分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_yn2fc(self, stop_on_win=True):
+        """
+        印尼2分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['yn2fc', '印尼2分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_xjssc(self, stop_on_win=True):
+        """
+        新疆時時彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['xjssc', '新疆時時彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_tjssc(self, stop_on_win=True):
+        """
+        天津時時彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['tjssc', '天津時時彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_tcdffc(self, stop_on_win=True):
+        """
+        騰訊兩分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['tcdffc', '騰訊兩分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_cqssc(self, stop_on_win=True):
+        """
+        重慶時時彩生肖
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['cqssc', '重慶時時彩生肖']
+        self.bet_trace(game_name, stop_on_win)
+
+    """快艇／賽車投注"""
+
+    def test_bet_fhxyft(self, stop_on_win=True):
+        """
+        幸運飛艇投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        game_name = ['fhxyft', '鳳凰幸運飛艇']
+        self.bet_trace(game_name, stop_on_win)
 
     def test_bet_bjpk10(self, stop_on_win=True):
         """
-        PK10投注。牛牛不可高獎金，另外投注。
+        PK10投注
+        牛牛不可高獎金，另外投注。
         :param stop_on_win: 追號與否
         :return: None
         """
-        from utils.BetContent_yft import bjpk10_games
+        game_name = ['bjpk10', '北京PK10']
+        self.bet_trace(game_name, stop_on_win)
 
-        expected = 'ok'
-        bet_response = self.bet_yft(lottery_name='bjpk10', stop_on_win=stop_on_win, games=bjpk10_games,
-                                    is_trace=False)
-        logger.debug(f'bet_response = {bet_response}')
-        assert bet_response['status'] == expected
-        print(
-            f'PK10投注追號成功。　訂單編號：{bet_response["content"]["orderNo"]}'
-            f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+    def test_bet_djpk10(self, stop_on_win=True):
+        """
+        東京賽車投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        game_name = ['djpk10', '東京賽車']
+        self.bet_trace(game_name, stop_on_win)
 
-        bet_response = self.bet_yft(lottery_name='bjpk10', stop_on_win=stop_on_win, games=bjpk10_games,
-                                    is_trace=True)
-        assert bet_response['status'] == expected
-        print(
-            f'PK10追號全彩種成功。　訂單編號：{bet_response["content"]["orderNo"]}'
-            f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+    def test_bet_xyftpk10(self, stop_on_win=True):
+        """
+        皇家幸運飛艇投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        game_name = ['xyftpk10', '皇家幸運飛艇']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_metftpk10(self, stop_on_win=True):
+        """
+        馬爾他飛艇投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        game_name = ['metftpk10', '馬爾他飛艇']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_xnpk10(self, stop_on_win=True):
+        """
+        悉尼PK10投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        game_name = ['xnpk10', '悉尼PK10']
+        self.bet_trace(game_name, stop_on_win)
+
+    """快三投注"""
+
+    def test_bet_ahk3(self, stop_on_win=True):
+        """
+        安徽快三投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        game_name = ['ahk3', '安徽快三']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_hbk3(self, stop_on_win=True):
+        """
+        湖北快三投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        game_name = ['hbk3', '湖北快三']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_jsk3(self, stop_on_win=True):
+        """
+        江蘇快三投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        game_name = ['jsk3', '江蘇快三']
+        self.bet_trace(game_name, stop_on_win)
+
+    """11選5投注"""
+
+    def test_bet_sd11x5(self, stop_on_win=True):
+        """
+        山東11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        game_name = ['sd11x5', '山東11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_jx11x5(self, stop_on_win=True):
+        """
+        江西11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        game_name = ['jx11x5', '江西11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_sh11x5(self, stop_on_win=True):
+        """
+        上海11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        game_name = ['sh11x5', '上海11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_js11x5(self, stop_on_win=True):
+        """
+        江蘇11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        game_name = ['sd11x5', '江蘇11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_gd11x5(self, stop_on_win=True):
+        """
+        廣東11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+        game_name = ['gd11x5', '廣東11選5']
+        self.bet_trace(game_name, stop_on_win)
 
     def get_lottery_info(self, lottery_name):
         """
@@ -1110,7 +1317,7 @@ class ApiTestAPP_YFT(unittest.TestCase):
         logger.debug(f'data = {json.dumps(data)}')
         response = self._session.post(url=self.env_config.get_post_url() + self.api_url, data=json.dumps(data),
                                       headers=self.header)
-        logger.debug(f'response = {response.content}')
+        logger.debug(f'lottery_info response = {response.content}')
         return response.json()['content']
 
     def bet_yft(self, lottery_name, games, is_trace=False, stop_on_win=True):
@@ -1131,7 +1338,7 @@ class ApiTestAPP_YFT(unittest.TestCase):
         totalAmount = 0
         schemeList = []
         for game in games:
-            if game_dict.get(game) and game != 'pt333bt02':  # 排除牛牛
+            if game_dict.get(game) and game not in ('pt333bt02', 'pt137bt02'):  # 排除牛牛
                 schemeList.append(game_dict.get(game)[0])
                 totalAmount += game_dict.get(game)[1]
         default['content']['currIssueNo'] = lottery_info["noopsycheIssueList"][0]
@@ -1147,22 +1354,43 @@ class ApiTestAPP_YFT(unittest.TestCase):
             totalAmount *= 10
             if stop_on_win:
                 default['content']['stopOnWon'] = 'yes'
-        if self.money_unit == 0.1:
+        if self.money_unit == '0.1':
             totalAmount *= 0.1
-        elif self.money_unit == 0.01:
+        elif self.money_unit == '0.01':
             totalAmount *= 0.01
 
         default['content']['totalAmount'] = totalAmount
 
         data = json.dumps(default)
 
-        if self.money_unit == 0.1:
-            data.replace('"potType":"Y"', '"potType":"J"')
-        elif self.money_unit == 0.01:
-            data.replace('"potType":"Y"', '"potType":"F"')
+        logger.debug(f"self.money_unit == '0.1' = {self.money_unit == '0.1'}\n"
+                     f"self.money_unit == '0.01' = {self.money_unit == '0.01'}\n"
+                     f"self.award_mode == '2' = {self.award_mode == '2'}")
+        if self.money_unit == '0.1':
+            data.replace('"potType": "Y"', '"potType": "J"')
+        elif self.money_unit == '0.01':
+            data.replace('"potType": "Y""', '"potType": "F"')
+        if self.award_mode == '2':
+            data.replace('"doRebate": "yes"', '"doRebate": "no"')
 
-        logger.info(f'bet_yft body = {data}')
+        logger.info(f'Bet content = {data}')
         bet_response = self._session.post(url=self.env_config.get_post_url() + self.api_url, data=data,
                                           headers=self.header)
-        logger.info(f'bet_response = {bet_response.json()}\n')
+        logger.info(f'Bet response = {bet_response.json()}\n')
         return bet_response.json()
+
+    def bet_trace(self, game_name, stop_on_win):
+        games = get_lottery_games(game_name[0])
+        expected = 'ok'
+        bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
+                                    is_trace=False)
+        assert bet_response['status'] == expected
+        print(
+            f'{game_name[1]}投注追號成功。　訂單編號：{bet_response["content"]["orderNo"]}'
+            f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
+                                    is_trace=True)
+        assert bet_response['status'] == expected
+        print(
+            f'{game_name[1]}追號全彩種成功。　訂單編號：{bet_response["content"]["orderNo"]}'
+            f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
