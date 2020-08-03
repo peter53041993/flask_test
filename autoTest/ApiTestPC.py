@@ -8,257 +8,56 @@ import json
 import requests
 import time
 
-import utils.Config
-from utils import Config, Logger
+from utils import Config, Logger, Connection
 from utils.Config import LotteryData, func_time
+from utils.Connection import select_issue, select_red_id, select_red_bal, get_lottery_games
 
 logger = Logger.create_logger(r"\AutoTest", 'auto_test_pc')
+COOKIE = None  # 以全域變數儲存，以利在各測試間共用
+MUL = None
+MUL_ = None
 
 
 class ApiTestPC(unittest.TestCase):
-    u"PC接口測試"
+    """PC接口測試"""
     envConfig = None
     user = None
     red_type = None
     money_unit = None
+    award_mode = None
+    user_agent = Config.UserAgent.PC.value
+    header = {  # 預設Header格式
+        'User-Agent': Config.UserAgent.PC.value,
+        'Content-Type': 'application/json; charset=UTF-8'
+    }
+    post_url = None
+    en_url = None
+    SESSION = requests.Session()
+    third_list = ['gns', 'shaba', 'im', 'ky', 'lc', 'city']
 
     def setUp(self):
-        logger.info('ApiTestPC setUp : {}'.format(self._testMethodName))
+        logger.info(f'ApiTestPC setUp : {self._testMethodName}')
 
-    def __init__(self, case, _env, _user, _red_type, _money_unit):
+    def __init__(self, case, _env, _user, _red_type, _money_unit, _award_mode):
         super().__init__(case)
-        # if not logger:
-        #     logger = Logger.create_logger(r"\ApiTestPC")
+        global COOKIE
         self.envConfig = _env
         self.user = _user
         self.red_type = _red_type
         self.money_unit = _money_unit
+        self.award_mode = _award_mode
+        self.post_url = self.envConfig.get_post_url()
+        self.en_url = self.envConfig.get_em_url()
         logger.info('ApiTestPC __init__.')
+        logger.info(f'case = {case}')
+        if COOKIE:  # 若已有Cookie則加入Header
+            self.header['Cookie'] = f'ANVOID={COOKIE}'
 
-    def md(self, _password, _param):
-        m = hashlib.md5()
-        m.update(_password)
-        sr = m.hexdigest()
-        for i in range(3):
-            sr = hashlib.md5(sr.encode()).hexdigest()
-        rx = hashlib.md5(sr.encode() + _param).hexdigest()
-        return rx
-
-    @staticmethod
-    def select_domain_url(conn, domain):  # 查詢 全局管理 後台設置的domain ,連結設置 (因為生產 沒權限,看不到)
-        with conn.cursor() as cursor:
-            sql = "select a.domain,a.agent,b.url,a.register_display,a.app_download_display,a.domain_type,a.status from  \
-            GLOBAL_DOMAIN_LIST a inner join user_url b \
-            on a.register_url_id = b.id  where a.domain like '%%%s%%' " % domain
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global domain_url
-            domain_url = {}
-            for num, url in enumerate(rows):
-                domain_url[num] = list(url)
-            # print(domain_url)
-        conn.close()
-
-    def select_issue(self, conn, lotteryid):  # 查詢正在銷售的 期號
-        # Joy188Test.date_time()
-        # today_time = '2019-06-10'#for 預售中 ,抓當天時間來比對,會沒獎期
-        try:
-            with conn.cursor() as cursor:
-                sql = "select web_issue_code,issue_code from game_issue where lotteryid = '%s' and sysdate between sale_start_time and sale_end_time" % (
-                    lotteryid)
-
-                cursor.execute(sql)
-                rows = cursor.fetchall()
-
-                global issueName
-                global issue
-                issueName = []
-                issue = []
-                if lotteryid in ['99112', '99306']:  # 順利秒彩,順利11選5  不需 講期. 隨便塞
-                    issueName.append('1')
-                    issue.append('1')
-                else:
-                    for i in rows:  # i 生成tuple
-                        issueName.append(i[0])
-                        issue.append(i[1])
-            conn.close()
-        except:
-            pass
-
-    def select_RedBal(self, conn, user):
-        with conn.cursor() as cursor:
-            sql = "SELECT bal FROM RED_ENVELOPE WHERE \
-            USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='%s')" % user
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-
-            global red_bal
-            red_bal = []
-            for i in rows:  # i 生成tuple
-                red_bal.append(i[0])
-        conn.close()
-
-    def select_RedID(self, conn, user):  # 紅包加壁  的訂單號查詢 ,用來審核用
-        with conn.cursor() as cursor:
-            sql = "SELECT ID FROM RED_ENVELOPE_LIST WHERE status=1 and \
-            USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='%s')" % user
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-
-            global red_id
-            red_id = []
-            for i in rows:  # i 生成tuple
-                red_id.append(i[0])
-        conn.close()
-
-    def select_gameResult(self, conn, result):  # 查詢用戶訂單號, 回傳訂單各個資訊
-        with conn.cursor() as cursor:
-            sql = "select a.order_time,a.status,a.totamount,f.lottery_name,\
-            c.group_code_title,c.set_code_title,c.method_code_title,\
-            b.bet_detail,e.award_name,b.award_mode,b.ret_award,b.multiple,b.money_mode,b.evaluate_win\
-            ,a.lotteryid,b.bet_type_code,c.theory_bonus,a.award_group_id\
-            from(((\
-            (game_order a inner join game_slip b on\
-            a.id = b.orderid and a.userid=b.userid and a.lotteryid=b.lotteryid) inner join \
-            game_bettype_status c on \
-            a.lotteryid = c.lotteryid and b.bet_type_code=c.bet_type_code) inner join\
-            game_award_user_group d on\
-            a.lotteryid = d.lotteryid and a.userid=d.userid) inner join \
-            game_award_group e on \
-            a.award_group_id = e.id and a.lotteryid =e.lotteryid) \
-            inner join game_series f on  a.lotteryid = f.lotteryid where a.order_code = '%s' and d.bet_type=1" % result
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global game_detail
-            game_detail = {}
-            detail_list = []  # 存放各細節
-            # game_detail[result] = detail_list# 讓訂單為key,　value 為一個list 存放各訂單細節
-            for tuple_ in rows:
-                for i in tuple_:
-                    # print(i)
-                    detail_list.append(i)
-            game_detail[result] = detail_list
-        conn.close()
-
-    def select_gameorder(self, conn, play_type):  # 輸入玩法,找尋訂單
-        with conn.cursor() as cursor:
-            sql = "select f.lottery_name,a.order_time,a.order_code,\
-            c.group_code_title,c.set_code_title,c.method_code_title,a.status,g.account,b.bet_detail,h.number_record\
-            from((((((\
-            game_order a inner join  game_slip b on \
-            a.id = b.orderid and a.userid=b.userid and a.lotteryid=b.lotteryid) inner join game_bettype_status c on \
-            a.lotteryid = c.lotteryid and b.bet_type_code=c.bet_type_code) \
-            inner join game_award_user_group d on \
-            a.lotteryid = d.lotteryid and a.userid=d.userid) \
-            inner join game_award_group e on \
-            a.award_group_id = e.id and a.lotteryid =e.lotteryid) \
-            inner join game_series f on a.lotteryid = f.lotteryid) inner join user_customer g on\
-            a.userid = g.id and d.userid = g.id) inner join game_issue h on\
-            a.lotteryid = h.lotteryid and a.issue_code = h.issue_code\
-            where a.order_time >sysdate - interval '1' month and \
-            c.group_code_title||c.set_code_title||c.method_code_title like '%s' and d.bet_type=1  and a.status !=1 \
-            order by a.order_time desc" % play_type
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global game_order, len_order
-            game_order = {}
-            len_order = len(rows)  # 需傳回去長度
-            # print(rows,len(rows))#rows 為一個 list 包 tuple
-            order_list = []  # 存放指定玩法 產生 的多少訂單
-            for index, tuple_ in enumerate(rows):  # 取出 list長度 的各訂單 tuple
-                order_list.append(list(tuple_))  # 把tuple 轉乘list  ,然後放入  order_list
-                game_order[index] = order_list[index]  # 字典 index 為 key ,  order_list 為value
-            # print(game_order)
-        conn.close()
-
-    def select_activeAPP(self, conn, user):  # 查詢APP 是否為有效用戶表
-        with conn.cursor() as cursor:
-            sql = "select *  from USER_CENTER_THIRDLY_ACTIVE where \
-            create_date >=  trunc(sysdate,'mm') and user_id in \
-            ( select id from user_customer where account = '%s')" % (user)
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global active_app
-            active_app = []
-            for tuple_ in rows:
-                for i in tuple_:
-                    # print(i)
-                    active_app.append(i)
-            # print(active_app,len(active_app))
-        conn.close()
-
-    def select_AppBet(self, conn, user):  # 查詢APP 代理中心 銷量
-        with conn.cursor() as cursor:
-            global app_bet
-            app_bet = {}
-            for third in ['ALL', 'LC', 'KY', 'CITY', 'GNS', 'FHLL', 'BBIN', 'IM', 'SB', 'AG']:
-                if third == 'ALL':
-                    sql = "select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
-                    from V_THIRDLY_AGENT_CENTER where account = '%s' \
-                    and create_date > trunc(sysdate,'mm')" % user
-                else:
-                    sql = "select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
-                    from V_THIRDLY_AGENT_CENTER where account = '%s' \
-                    and create_date > trunc(sysdate,'mm') and plat='%s'" % (user, third)
-                cursor.execute(sql)
-                rows = cursor.fetchall()
-                new_ = []  # 存放新的列表內容
-                for tuple_ in rows:
-                    for i in tuple_:
-                        if i == None:  # 就是 0
-                            i = 0
-                        new_.append(i)
-                    app_bet[third] = new_
-
-            print(app_bet)
-        conn.close()
-
-    def select_activeCard(self, conn, user, envs):  # 查詢綁卡是否有重複綁
-        with conn.cursor() as cursor:
-            if envs == 2:  # 生產另外一張表
-                sql = "SELECT bank_number, count(id) FROM rd_view_user_bank \
-                WHERE bank_number in (SELECT bank_number FROM rd_view_user_bank WHERE account = '%s' \
-                ) group BY bank_number" % user
-            else:
-                sql = "SELECT BANK_NUMBER,count(user_id) FROM USER_BANK \
-                WHERE BANK_NUMBER in \
-                (SELECT BANK_NUMBER FROM USER_BANK WHERE USER_ID= \
-                (SELECT ID FROM USER_CUSTOMER WHERE ACCOUNT='%s')) \
-                group by bank_number" % user
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global card_num  # 綁卡的數量
-            card_num = {}
-            for index, tuple_ in enumerate(rows):
-                card_num[index] = list(tuple_)
-            # print(card_num)
-        conn.close()
-
-    def select_activeFund(self, conn, user):  # 查詢當月充值金額
-        with conn.cursor() as cursor:
-            sql = "select sum(real_charge_amt) from fund_charge where status=2 and apply_time > trunc(sysdate,'mm') \
-            and user_id in ( select id from user_customer where account = '%s')" % user
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            global user_fund
-            user_fund = []  # 當月充值金額
-            print(rows)
-            for tuple_ in rows:
-                for i in tuple_:
-                    # print(i)
-                    user_fund.append(i)
-        conn.close()
-
-    def web_issuecode(self, lottery):  # 頁面產生  獎期用法,  取代DB連線問題
+    def web_issue_code(self, lottery):  # 頁面產生  獎期用法,  取代DB連線問題
         now_time = int(time.time())
-        header = {
-            'User-Agent': userAgent,
-            'Cookies': 'ANVOID=' + cookies_[user]
-        }
-        r = session.get(em_url + '/gameBet/%s/lastNumber?_=%s' % (lottery, now_time), headers=header)
-        global issuecode
+        r = self.SESSION.get(self.en_url + f'/gameBet/{lottery}/lastNumber?_={now_time}', headers=self.header)
         try:
-            issuecode = r.json()['issueCode']
+            return r.json()['issueCode']
         except:
             pass
         if lottery == 'lhc':
@@ -266,42 +65,41 @@ class ApiTestPC(unittest.TestCase):
 
     def plan_num(self, evn, lottery, plan_len):  # 追號生成
         plan_ = []  # 存放 多少 長度追號的 list
-        self.select_issue(utils.Config.get_conn(evn), LotteryData.lottery_dict[lottery][1])
+        issue = select_issue(Connection.get_oracle_conn(evn), LotteryData.lottery_dict[lottery][1])
         for i in range(plan_len):
-            plan_.append({"number": issueName[i], "issueCode": issue[i], "multiple": 1})
+            plan_.append({"number": issue.get('issueName')[i], "issueCode": issue.get('issue')[i], "multiple": 1})
         return plan_
 
     def ball_type(self, test):  # 對應完法,產生對應最大倍數和 投注完法
         ball = []
-        global mul
+        global MUL
         if test == 'wuxing':
-
-            ball = [str(utils.Config.random_mul(9)) for i in range(5)]  # 五星都是數值
-            mul = utils.Config.random_mul(2)
+            ball = [str(Config.random_mul(9)) for i in range(5)]  # 五星都是數值
+            MUL = Config.random_mul(2)
         elif test == 'sixing':
-            ball = ['-' if i == 0 else str(utils.Config.random_mul(9)) for i in range(5)]  # 第一個為-
-            mul = utils.Config.random_mul(22)
+            ball = ['-' if i == 0 else str(Config.random_mul(9)) for i in range(5)]  # 第一個為-
+            MUL = Config.random_mul(22)
         elif test == 'housan':
-            ball = ['-' if i in [0, 1] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第1和2為-
-            mul = utils.Config.random_mul(222)
+            ball = ['-' if i in [0, 1] else str(Config.random_mul(9)) for i in range(5)]  # 第1和2為-
+            MUL = Config.random_mul(222)
         elif test == 'qiansan':
-            ball = ['-' if i in [3, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第4和5為-
-            mul = utils.Config.random_mul(222)
+            ball = ['-' if i in [3, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第4和5為-
+            MUL = Config.random_mul(222)
         elif test == 'zhongsan':
-            ball = ['-' if i in [0, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第2,3,4為-
-            mul = utils.Config.random_mul(222)
+            ball = ['-' if i in [0, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第2,3,4為-
+            MUL = Config.random_mul(222)
         elif test == 'houer':
-            ball = ['-' if i in [0, 1, 2] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第1,2,3為-
-            mul = utils.Config.random_mul(2222)
+            ball = ['-' if i in [0, 1, 2] else str(Config.random_mul(9)) for i in range(5)]  # 第1,2,3為-
+            MUL = Config.random_mul(2222)
         elif test == 'qianer':
-            ball = ['-' if i in [2, 3, 4] else str(utils.Config.random_mul(9)) for i in range(5)]  # 第3,4,5為-
-            mul = utils.Config.random_mul(2222)
+            ball = ['-' if i in [2, 3, 4] else str(Config.random_mul(9)) for i in range(5)]  # 第3,4,5為-
+            MUL = Config.random_mul(2222)
         elif test == 'yixing':  # 五個號碼,只有一個隨機數值
-            ran = utils.Config.random_mul(4)
-            ball = ['-' if i != ran else str(utils.Config.random_mul(9)) for i in range(5)]
-            mul = utils.Config.random_mul(2222)
+            ran = Config.random_mul(4)
+            ball = ['-' if i != ran else str(Config.random_mul(9)) for i in range(5)]
+            MUL = Config.random_mul(2222)
         else:
-            mul = utils.Config.random_mul(1)
+            MUL = Config.random_mul(1)
         a = (",".join(ball))
         return a
 
@@ -321,7 +119,7 @@ class ApiTestPC(unittest.TestCase):
             'renxuan7': u'任選7'
         }
 
-        group_ = utils.Config.play_type()  # 建立 個隨機的goup玩法 ex: wuxing,目前先給時彩系列使用
+        group_ = Config.play_type()  # 建立 個隨機的goup玩法 ex: wuxing,目前先給時彩系列使用
         # set_ = game_set.keys()[0]#ex: zhixuan
         # method_ = game_method.keys()[0]# ex: fushi
         play_ = ''
@@ -331,7 +129,7 @@ class ApiTestPC(unittest.TestCase):
         lottery_ball = self.ball_type(group_)  # 組出什麼玩法 的 投注內容 ,目前只有給時彩系列用
 
         test_dicts = {
-            0: ["%s.zhixuan.fushi" % (group_,), lottery_ball],
+            0: [f"{group_}.zhixuan.fushi", lottery_ball],
             1: ["qianer.zhixuan.zhixuanfushi", '3,6,-'],
             2: ["xuanqi.renxuanqizhongwu.fushi", "01,02,05,06,08,09,10"],
             3: ["sanbutonghao.biaozhun.biaozhuntouzhu", "1,2,6"],
@@ -347,119 +145,99 @@ class ApiTestPC(unittest.TestCase):
 
         if lottery in LotteryData.lottery_sh:  # 時彩系列
             num = 0
-            play_ = u'玩法名稱: %s.%s.%s' % (game_group[group_], game_set['zhixuan'],
-                                         game_method['fushi'])
+            play_ = f'玩法名稱: {game_group[group_]}.{game_set["zhixuan"]}.{game_method["fushi"]}'
 
         elif lottery in LotteryData.lottery_3d:
             num = 1
-            play_ = u'玩法名稱: %s.%s.%s' % (game_group['qianer'], game_set['zhixuan'],
-                                         game_method['zhixuanfushi'])
+            play_ = f'玩法名稱: {game_group["qianer"]}.{game_set["zhixuan"]}.{game_method["zhixuanfushi"]}'
         elif lottery in LotteryData.lottery_noRed:
             if lottery in ['p5', 'np3']:
                 num = 9
-                play_ = u'玩法名稱: %s.%s.%s' % (game_group['p3sanxing'], game_set['zhixuan'],
-                                             game_method['fushi'])
+                play_ = f'玩法名稱: {game_group["p3sanxing"]}.{game_set["zhixuan"]}.{game_method["fushi"]}'
             else:
                 num = 1
-                play_ = u'玩法名稱: %s.%s.%s' % (game_group['qianer'], game_set['zhixuan'],
-                                             game_method['zhixuanfushi'])
+                play_ = f'玩法名稱: {game_group["qianer"]}.{game_set["zhixuan"]}.{game_method["zhixuanfushi"]}'
         elif lottery in LotteryData.lottery_115:
             num = 2
-            play_ = u'玩法名稱: %s.%s.%s' % (game_group['xuanqi'], game_set['renxuanqizhongwu'],
-                                         game_method['fushi'])
+            play_ = f'玩法名稱: {game_group["xuanqi"]}.{game_set["renxuanqizhongwu"]}.{game_method["fushi"]}'
         elif lottery in LotteryData.lottery_k3:
             num = 3
-            play_ = u'玩法名稱: %s.%s' % (game_group['sanbutonghao'], game_set['biaozhun'])
+            play_ = f'玩法名稱: {game_group["sanbutonghao"]}.{game_set["biaozhun"]}'
         elif lottery in LotteryData.lottery_sb:
             num = 4
-            play_ = u'玩法名稱: %s' % (game_group['santonghaotongxuan'])
+            play_ = f'玩法名稱: {game_group["santonghaotongxuan"]}'
         elif lottery in LotteryData.lottery_fun:
             num = 5
-            play_ = u'玩法名稱: %s.%s.%s' % (game_group['guanya'], game_set['zhixuan'],
-                                         game_method['fushi'])
+            play_ = f'玩法名稱: {game_group["guanya"]}.{game_set["zhixuan"]}.{game_method["fushi"]}'
         elif lottery == 'shssl':
             num = 6
-            play_ = u'玩法名稱: %s.%s.%s' % (game_group['qianer'], game_set['zuxuan'],
-                                         game_method['fushi'])
+            play_ = f'玩法名稱: {game_group["qianer"]}.{game_set["zuxuan"]}.{game_method["fushi"]}'
         elif lottery == 'ssq':
             num = 7
-            play_ = u'玩法名稱: %s.%s.%s' % (game_group['biaozhuntouzhu'], game_set['biaozhun'],
-                                         game_method['fushi'])
+            play_ = f'玩法名稱: {game_group["biaozhuntouzhu"]}.{game_set["biaozhun"]}.{game_method["fushi"]}'
         elif lottery == 'lhc':
             num = 8
-            play_ = u'玩法名稱: %s.%s.%s' % (game_group['zhengma'], game_set['pingma'],
-                                         game_method['zhixuanliuma'])
+            play_ = f'玩法名稱: {game_group["zhengma"]}.{game_set["pingma"]}.{game_method["zhixuanliuma"]}'
         elif lottery == 'p5':
             num = 9
-            play_ = u'玩法名稱: %s.%s.%s' % (game_group['p3sanxing'], game_set['zhixuan'],
-                                         game_method['fushi'])
+            play_ = f'玩法名稱: {game_group["p3sanxing"]}.{game_set["zhixuan"]}.{game_method["fushi"]}'
         elif lottery == 'bjkl8':
             num = 10
-            play_ = u'玩法名稱: %s.%s.%s' % (game_group['renxuan'], game_set['putongwanfa'],
-                                         game_method['renxuan7'])
+            play_ = f'玩法名稱: {game_group["renxuan"]}.{game_set["putongwanfa"]}.{game_method["renxuan7"]}'
         else:
             num = 11
             # play_ = u'玩法名稱: 沖天炮
         return test_dicts[num][0], test_dicts[num][1], play_
 
-    def req_post_submit(self, account, lottery, data_, moneyunit, awardmode, play_):
+    def req_post_submit(self, account, lottery, data_, money_unit, award_mode, play_):
         logger.info(
-            'account: {}, lottery: {}, data_: {}, moneyunit: {}, awardmode: {}, play_ {}'.format(account, lottery,
-                                                                                                 data_, moneyunit,
-                                                                                                 awardmode, play_))
-        awardmode_dict = {0: u"非一般模式", 1: u"非高獎金模式", 2: u"高獎金"}
+            f'account: {account}, lottery: {lottery}, data_: {data_}, moneyunit: {money_unit}, awardmode: {award_mode}, '
+            f'play_ {play_}')
+        global MUL_
+
+        award_mode_dict = {0: u"非一般模式", 1: u"非高獎金模式", 2: u"高獎金"}
         money_dict = {1: u"元模式", 0.1: u"分模式", 0.01: u"角模式"}
-        while True:
-            header = {
-                'Cookie': "ANVOID=" + cookies_[account],
-                'User-Agent': userAgent
-            }
+        r = self.SESSION.post(self.en_url + '/gameBet/' + lottery + '/submit',
+                              data=json.dumps(data_), headers=self.header)
+        try:
+            msg = (r.json()['msg'])
+            mode = money_dict[money_unit]
+            mode1 = award_mode_dict[award_mode]
+            project_id = (r.json()['data']['projectId'])  # 訂單號
+            submit_amount = (r.json()['data']['totalprice'])  # 投注金額
+            # submit_mul = f"投注倍數: {m}"  #隨機倍數
+            lottery_name = f'投注彩種: {LotteryData.lottery_dict[lottery][0]}'
 
-            r = session.post(em_url + '/gameBet/' + lottery + '/submit',
-                             data=json.dumps(data_), headers=header)
+            if r.json()['isSuccess'] == 0:  #
+                content_ = f'{lottery_name} \n {MUL_} "\n" {play_} "\n" {msg} "\n"'
 
-            global content_
-            try:
-                # print(r.json())
-                msg = (r.json()['msg'])
-                mode = money_dict[moneyunit]
-                mode1 = awardmode_dict[awardmode]
-                project_id = (r.json()['data']['projectId'])  # 訂單號
-                submit_amount = (r.json()['data']['totalprice'])  # 投注金額
-                # submit_mul = u"投注倍數: %s"%m#隨機倍數
-                lottery_name = u'投注彩種: %s' % LotteryData.lottery_dict[lottery][0]
-
-                if r.json()['isSuccess'] == 0:  #
-                    # select_issue(get_conn(envs),lottery_dict[lottery][1])#呼叫目前正在販售的獎期
-                    content_ = (lottery_name + "\n" + mul_ + "\n" + play_ + "\n" + msg + "\n")
-                    # print(content_)
-
-                    if r.json()['msg'] == u'存在封锁变价':  # 有可能封鎖變價,先跳過   ()
-                        break
-                    elif r.json()['msg'] == u'您的投注内容 超出倍数限制，请调整！':
-                        print(u'倍數超出了唷,下次再來')
-                        break
-                    elif r.json()['msg'] == u'方案提交失败，请检查网络并重新提交！':
-                        print(r.json()['msg'])
-                        break
-                    else:  # 系統內部錯誤
-                        print(r.json()['msg'])
-                        break
-                else:  # 投注成功
-                    if self.red_type == 'yes':
-                        content_ = (lottery_name + "\n" + u'投注單號: ' + project_id + "\n"
-                                    + mul_ + "\n"
-                                    + play_ + "\n" + u"投注金額: " + str(float(submit_amount * 0.0001)) + "\n"
-                                    + "紅包金額: 2" + mode + "/" + mode1 + "\n" + msg + "\n")
-                    else:
-                        content_ = (lottery_name + "\n" + u'投注單號: ' + project_id + "\n"
-                                    + mul_ + "\n"
-                                    + play_ + "\n" + u"投注金額: " + str(float(submit_amount * 0.0001)) + "\n"
-                                    + mode + "/" + mode1 + "\n" + msg + "\n")
-                    break
-            except ValueError:
-                content_ = ('%s 投注失敗' % lottery + "\n")
-                break
+                if r.json()['msg'] == u'存在封锁变价':  # 有可能封鎖變價,先跳過   ()
+                    print(u'存在封锁变价')
+                elif r.json()['msg'] == u'您的投注内容 超出倍数限制，请调整！':
+                    print(u'倍數超出了唷,下次再來')
+                elif r.json()['msg'] == u'方案提交失败，请检查网络并重新提交！':
+                    print(r.json()['msg'])
+                else:  # 系統內部錯誤
+                    print(r.json()['msg'])
+            else:  # 投注成功
+                if self.red_type == 'yes':
+                    content_ = f'{lottery_name} \n' \
+                               f' 投注單號: {project_id} \n' \
+                               f' {MUL_}\n' \
+                               f' {play_}\n' \
+                               f' 投注金額: {str(float(submit_amount * 0.0001))} \n' \
+                               f' 紅包金額: 2 {mode}/{mode1} \n' \
+                               f' {msg} \n'
+                else:
+                    content_ = f'{lottery_name}\n' \
+                               f' 投注單號: {project_id}\n' \
+                               f' {MUL_}\n' \
+                               f' {play_}\n' \
+                               f'投注金額: {str(float(submit_amount * 0.0001))} \n' \
+                               f' {mode}/{mode1} \n' \
+                               f' {msg}\n'
+        except ValueError:
+            content_ = (f'{lottery} 投注失敗' + "\n")
         print(content_)
 
     def test_PCLotterySubmit(self, plan=1):  # 彩種投注
@@ -473,11 +251,9 @@ class ApiTestPC(unittest.TestCase):
         while True:
             try:
                 for i in LotteryData.lottery_dict.keys():
-                    global mul_  # 傳回 投注出去的組合訊息 req_post_submit 的 content裡
-                    global mul
+                    global MUL_  # 傳回 投注出去的組合訊息 req_post_submit 的 content裡
+                    global MUL
                     ball_type_post = self.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
-
-                    award_mode = 1
 
                     if self.money_unit == '1':  # 使用元模式
                         _money_unit = 1
@@ -485,20 +261,20 @@ class ApiTestPC(unittest.TestCase):
                         _money_unit = 0.1
 
                     if i == 'btcctp':
-                        award_mode = 2
-                        mul = utils.Config.random_mul(1)  # 不支援倍數,所以random參數為1
+                        self.award_mode = 2
+                        MUL = Config.random_mul(1)  # 不支援倍數,所以random參數為1
                     elif i == 'bjkl8':
-                        mul = utils.Config.random_mul(5)  # 北京快樂8
+                        MUL = Config.random_mul(5)  # 北京快樂8
                     elif i == 'p5':
-                        mul = utils.Config.random_mul(5)
+                        MUL = Config.random_mul(5)
 
                     elif i in ['btcffc', 'xyft']:
-                        award_mode = 2
+                        self.award_mode = 2
                     elif i in LotteryData.lottery_sb:  # 骰寶只支援  元模式
                         _money_unit = 1
 
-                    mul_ = (u'選擇倍數: {}'.format(mul))
-                    amount = 2 * mul * _money_unit
+                    MUL_ = f'選擇倍數: {MUL}'
+                    amount = 2 * MUL * _money_unit
 
                     # 從DB抓取最新獎期.[1]為 99101類型select_issueselect_issue
 
@@ -507,15 +283,15 @@ class ApiTestPC(unittest.TestCase):
                         # Joy188Test.select_issue(Joy188Test.get_conn(1),lottery_dict[i][1])
                         # 從DB抓取最新獎期.[1]為 99101類型
                         # print(issueName,issue)
-                        self.web_issuecode(i)
+                        issuecode = self.web_issue_code(i)
                         plan_ = [{"number": '123', "issueCode": issuecode, "multiple": 1}]
                         print(u'一般投住')
                         isTrace = 0
                         traceWinStop = 0
                         traceStopValue = -1
                     else:  # 追號
-                        plan_ = self.plan_num(envs, i, utils.Config.random_mul(30))  # 隨機生成 50期內的比數
-                        print(u'追號, 期數:%s' % len(plan_))
+                        plan_ = self.plan_num(self.envConfig.get_env_id(), i, Config.random_mul(30))  # 隨機生成 50期內的比數
+                        print(f'追號, 期數:{len(plan_)}')
                         isTrace = 1
                         traceWinStop = 1
                         traceStopValue = 1
@@ -526,7 +302,7 @@ class ApiTestPC(unittest.TestCase):
                     post_data = {"gameType": i, "isTrace": isTrace, "traceWinStop": traceWinStop,
                                  "traceStopValue": traceWinStop,
                                  "balls": [{"id": 1, "ball": ball_type_post[1], "type": ball_type_post[0],
-                                            "moneyunit": _money_unit, "multiple": mul, "awardMode": award_mode,
+                                            "moneyunit": _money_unit, "multiple": MUL, "awardMode": self.award_mode,
                                             "num": 1}], "orders": plan_, "amount": len_ * amount}  # 不使用紅包
 
                     post_data_lhc = {"balls": [{"id": 1, "moneyunit": _money_unit, "multiple": 1, "num": 1,
@@ -544,19 +320,22 @@ class ApiTestPC(unittest.TestCase):
                                     "orders": plan_}
 
                     if i in 'lhc':
-                        self.req_post_submit(self.user, 'lhc', post_data_lhc, _money_unit, award_mode,
+                        self.req_post_submit(self.user, 'lhc', post_data_lhc, _money_unit, self.award_mode,
                                              ball_type_post[2])
 
                     elif i in LotteryData.lottery_sb:
-                        self.req_post_submit(self.user, i, post_data_sb, _money_unit, award_mode, ball_type_post[2])
+                        self.req_post_submit(self.user, i, post_data_sb, _money_unit, self.award_mode,
+                                             ball_type_post[2])
                     else:
                         if self.red_type == 'yes':  # 紅包投注
                             post_data['redDiscountAmount'] = 2  # 增加紅包參數
-                            self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
+                            self.req_post_submit(self.user, i, post_data, _money_unit, self.award_mode,
+                                                 ball_type_post[2])
                         else:
-                            self.req_post_submit(self.user, i, post_data, _money_unit, award_mode, ball_type_post[2])
-                self.select_RedBal(utils.Config.get_conn(1), user)
-                print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
+                            self.req_post_submit(self.user, i, post_data, _money_unit, self.award_mode,
+                                                 ball_type_post[2])
+                red_bal = select_red_bal(Connection.get_oracle_conn(1), self.user)
+                print(f'紅包餘額: {int(red_bal[0]) / 10000}')
                 break
             except KeyError as e:
                 print(u"輸入值有誤")
@@ -566,91 +345,61 @@ class ApiTestPC(unittest.TestCase):
                 break
 
     @func_time
-    def test_PcLogin(self, source='Pc'):
+    def test_PcLogin(self):
+        """登入測試"""
         print("Enter test_PcLogin")
-        u"登入測試"
-        global user  # 傳給後面 PC 街口案例  request參數
-        global password  # 傳入 werbdriver登入的密碼
-        global post_url  # 非em開頭
-        global em_url  # em開頭
-        global userAgent
-        global envs  # 回傳redis 或 sql 環境變數   ,dev :0, 188:1
-        global cookies_
-        global third_list
-        third_list = ['gns', 'shaba', 'im', 'ky', 'lc', 'city']
-        cookies_ = {}
-        user = self.user
-        account_ = {self.user: '輸入的用戶名'}
-        em_url = self.envConfig.get_em_url()
-        password = str.encode(self.envConfig.get_password())
-        envs = self.envConfig.get_env_id()
-        post_url = self.envConfig.get_post_url()
+        global COOKIE
+        self.en_url = self.envConfig.get_em_url()
 
         param = b'f4a30481422765de945833d10352ea18'
 
-        # 判斷從PC ,ios ,還世 andriod
-        # global userAgent
-        if source == 'Pc':
-            userAgent = Config.UserAgent.PC.value
+        self.header['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
 
-        elif source == 'Android':
-            userAgent = Config.UserAgent.ANDROID.value
+        print("userAgent : " + self.user_agent)
+        print("post_url : " + self.post_url)
+        # while True:
+        r = None
+        try:
+            postData = {
+                "username": self.user,
+                "password": self.md(str.encode(self.envConfig.get_password()), param),
+                "param": param
+            }
+            logger.info(f'postData = {postData}')
+            r = self.SESSION.post(self.post_url + '/login/login', data=postData, headers=self.header)
+            logger.info(f'response = {r.json()}')
+            COOKIE = r.cookies.get_dict()['ANVOID']  # 獲得登入的cookies 字典
+            logger.debug(f'r.cookies.get_dict() = {r.cookies.get_dict()}')
+            self.header['Cookie'] = f'ANVOID={COOKIE}'
+            t = time.strftime('%Y%m%d %H:%M:%S')
+            # msg = (f'登錄帳號: {i},登入身分: {account_[i]}' + u',現在時間:' + t + r.text)
+            print(f'登錄帳號: {self.user}' + u',現在時間:' + t)
+            self.header['Content-Type'] = 'application/json; charset=UTF-8'  # 只有Login使用form, 改回Json
+        except IOError:
+            self.fail(f'測試結果：登入失敗.\n接口回傳：{r.json()}')
 
-        elif source == 'Ios':
-            userAgent = Config.UserAgent.IOS.value
-
-        header = {
-            'User-Agent': userAgent
-        }
-        print("userAgent : " + userAgent)
-        print("post_url : " + post_url)
-        global session
-        while True:
-            try:
-                for i in account_.keys():
-                    postData = {
-                        "username": i,
-                        "password": self.md(password, param),
-                        "param": param
-                    }
-                    session = requests.Session()
-                    r = session.post(post_url + '/login/login', data=postData, headers=header)
-                    cookies = r.cookies.get_dict()  # 獲得登入的cookies 字典
-                    cookies_.setdefault(i, cookies['ANVOID'])
-                    t = time.strftime('%Y%m%d %H:%M:%S')
-                    # msg = (u'登錄帳號: %s,登入身分: %s'%(i,account_[i])+u',現在時間:'+t+r.text)
-                    print(u'登錄帳號: %s' % (i) + u',現在時間:' + t)
-                    print(r.text)
-                    print(r.json()['isSuccess'])
-
-                    # return url
-                break
-            except requests.exceptions.ConnectionError:
-                raise Exception("ConnectionError Exception")
-                break
-
-            except IOError:
-                raise Exception('IOError Exception')
-                break
+    def md(self, _password, _param):
+        m = hashlib.md5()
+        m.update(_password)
+        sr = m.hexdigest()
+        for i in range(3):
+            sr = hashlib.md5(sr.encode()).hexdigest()
+        rx = hashlib.md5(sr.encode() + _param).hexdigest()
+        return rx
 
     def session_post(self, account, third, url, post_data):  # 共用 session post方式 (Pc)
-        header = {
-            'User-Agent': userAgent,
-            'Cookie': 'ANVOID=' + cookies_[account],
-            'Content-Type': 'application/json; charset=UTF-8',
-        }
         try:
-            r = session.post(post_url + url, headers=header, data=json.dumps(post_data))
+            r = self.SESSION.post(self.post_url + url, headers=self.header, data=json.dumps(post_data))
 
             if 'Balance' in url:
-                print('%s, 餘額: %s' % (third, r.json()['balance']))
+                print(f'{third}, 餘額: {r.json()["balance"]}')
             elif 'transfer' in url:
-                if r.json()['status'] == True:
-                    print('帳號 kerrthird001 轉入 %s ,金額:1, 進行中' % third)
+                if r.json()['status']:
+                    print(f'帳號 kerrthird001 轉入 {third} ,金額:1, 進行中')
                 else:
-                    print('%s 轉帳失敗' % third)
+                    print(f'{third} 轉帳失敗')
             elif 'getuserbal' in url:
-                print('4.0 餘額: %s' % r.json()['data'])
+                print(f'4.0 餘額: {r.json()["data"]}')
             # print(title)#強制便 unicode, 不燃顯示在html報告  會有誤
             # print('result: '+statu_code+"\n"+'---------------------')
 
@@ -658,13 +407,8 @@ class ApiTestPC(unittest.TestCase):
             print(u'連線有問題,請稍等')
 
     def session_get(self, user, url_, url):  # 共用 session get方式
-        header = {
-            'User-Agent': userAgent,
-            'Cookie': 'ANVOID=' + cookies_[user],
-            'Content-Type': 'application/json; charset=UTF-8',
-        }
         try:
-            r = session.get(url_ + url, headers=header)
+            r = self.SESSION.get(url_ + url, headers=self.header)
             html = BeautifulSoup(r.text, 'lxml')  # type為 bs4類型
             title = str(html.title)
             statu_code = str(r.status_code)  # int 轉  str
@@ -678,7 +422,7 @@ class ApiTestPC(unittest.TestCase):
 
     @func_time
     def test_PcThirdHome(self):  # 登入第三方頁面,創立帳號
-        u"第三方頁面測試"
+        """第三方頁面測試"""
         threads = []
         third_url = ['gns', 'ag', 'sport', 'shaba', 'lc', 'im', 'ky', 'fhx', 'bc', 'fhll', 'bc']
 
@@ -689,44 +433,42 @@ class ApiTestPC(unittest.TestCase):
                 fhll_dict = {'77104': u'樂利時彩', '77101': u'樂利1.5分彩',
                              '77103': u'樂利六合彩', '77102': u'樂利快3'}
                 for i in fhll_dict.keys():
-                    url = '/fhll/home/%s' % i
+                    url = f'/fhll/home/{i}'
                     # print(url)
                     # print(fhll_dict[i])#列印 中文(因為fhll的title都是一樣)
-                    t = threading.Thread(target=self.session_get, args=(user, post_url, url))
+                    t = threading.Thread(target=self.session_get, args=(self.user, self.post_url, url))
                     threads.append(t)
                     # Joy188Test.session_get(user,post_url,url)# get方法
                 break  # 不再跑到 下面 session_get 的func
             elif i == 'fhx':
                 url = '/fhx/index'
             else:
-                url = '/%s/home' % i
+                url = f'/{i}/home'
             # print(url)
-            t = threading.Thread(target=self.session_get, args=(user, post_url, url))
+            t = threading.Thread(target=self.session_get, args=(self.user, self.post_url, url))
             threads.append(t)
         for i in threads:
             i.start()
         for i in threads:
             i.join()
 
-            # Joy188Test.session_get(user,post_url,url)
-
     @func_time
     def test_PcFFHome(self):
-        u"4.0頁面測試"
+        """4.0頁面測試"""
         threads = []
-        url_188 = ['/fund', '/bet/fuddetail', '/withdraw', '/transfer', '/index/activityMall'
-            , '/ad/noticeList?noticeLevel=2', '/frontCheckIn/checkInIndex', '/frontScoreMall/pointsMall']
+        url_188 = ['/fund', '/bet/fuddetail', '/withdraw', '/transfer', '/index/activityMall',
+                   '/ad/noticeList?noticeLevel=2', '/frontCheckIn/checkInIndex', '/frontScoreMall/pointsMall']
         em_188 = ['/gameUserCenter/queryOrdersEnter', '/gameUserCenter/queryPlans']
         for i in url_188:
             if i in ['/frontCheckIn/checkInIndex', '/frontScoreMall/pointsMall']:
-                self.session_get(user, post_url, i)
+                self.session_get(self.user, self.post_url, i)
             else:
-                t = threading.Thread(target=self.session_get, args=(user, post_url, i))
+                t = threading.Thread(target=self.session_get, args=(self.user, self.post_url, i))
                 threads.append(t)
             # Joy188Test.session_get(user,post_url,i)
         for i in em_188:
             # Joy188Test.session_get(user,em_url,i)
-            t = threading.Thread(target=self.session_get, args=(user, em_url, i))
+            t = threading.Thread(target=self.session_get, args=(self.user, self.en_url, i))
             threads.append(t)
         for i in threads:
             i.start()
@@ -735,203 +477,617 @@ class ApiTestPC(unittest.TestCase):
 
     @func_time
     def test_PcChart(self):
-        "走勢圖測試"
+        """走勢圖測試"""
         ssh_url = ['cqssc', 'hljssc', 'tjssc', 'xjssc', 'llssc', 'txffc', 'btcffc', 'fhjlssc',
                    'jlffc', 'slmmc', 'sd115', 'll115', 'gd115', 'jx115']
         k3_url = ['jsk3', 'ahk3', 'jsdice', 'jldice1', 'jldice2']
         low_url = ['d3', 'v3d']
         fun_url = ['xyft', 'pk10']
         for i in ssh_url:
-            self.session_get(user, em_url, '/game/chart/%s/Wuxing' % i)
+            self.session_get(self.user, self.en_url, f'/game/chart/{i}/Wuxing')
         for i in k3_url:
-            self.session_get(user, em_url, '/game/chart/%s/chart' % i)
+            self.session_get(self.user, self.en_url, f'/game/chart/{i}/chart')
         for i in low_url:
-            self.session_get(user, em_url, '/game/chart/%s/Qiansan' % i)
+            self.session_get(self.user, self.en_url, f'/game/chart/{i}/Qiansan')
         for i in fun_url:
-            self.session_get(user, em_url, '/game/chart/%s/CaipaiweiQianfushi' % i)
-        self.session_get(user, em_url, '/game/chart/p5/p5chart')
-        self.session_get(user, em_url, '/game/chart/ssq/ssq_basic')
-        self.session_get(user, em_url, '/game/chart/kl8/Quwei')
+            self.session_get(self.user, self.en_url, f'/game/chart/{i}/CaipaiweiQianfushi')
+        self.session_get(self.user, self.en_url, '/game/chart/p5/p5chart')
+        self.session_get(self.user, self.en_url, '/game/chart/ssq/ssq_basic')
+        self.session_get(self.user, self.en_url, '/game/chart/kl8/Quwei')
 
     @func_time
     def test_PcThirdBalance(self):
-        '''4.0/第三方餘額'''
+        """4.0/第三方餘額"""
         threads = []
 
-        header = {
-            'User-Agent': userAgent,
-            'Cookie': 'ANVOID=' + cookies_[user]
-        }
-
-        print('帳號: %s' % user)
-        for third in third_list:
+        print(f'帳號: {self.user}')
+        for third in self.third_list:
             if third == 'gns':
                 third_url = '/gns/gnsBalance'
             else:
-                third_url = '/%s/thirdlyBalance' % third
-                # r = session.post(post_url+third_url,headers=header)
-            # print('%s, 餘額: %s'%(third,r.json()['balance']))
-            t = threading.Thread(target=self.session_post, args=(user, third, third_url, ''))
+                third_url = f'/{third}/thirdlyBalance'
+                # r = session.post(post_url+third_url,headers=self.header)
+            # print(f'{third}, 餘額: {r.json()["balance"]}')
+            t = threading.Thread(target=self.session_post, args=(self.user, third, third_url, ''))
             threads.append(t)
-        t = threading.Thread(target=self.session_post, args=(user, '', '/index/getuserbal', ''))
+        t = threading.Thread(target=self.session_post, args=(self.user, '', '/index/getuserbal', ''))
         threads.append(t)
         for i in threads:
             i.start()
         for i in threads:
             i.join()
         '''
-        r = session.post(post_url+'/index/getuserbal',headers=header)
+        r = session.post(post_url+'/index/getuserbal',headers=self.header)
         print('4.0 餘額: %s'%r.json()['data'])
         '''
 
     @func_time
     def test_PcTransferin(self):  # 第三方轉入
-        '''第三方轉入'''
-        header = {
-            'User-Agent': userAgent,
-            'Cookie': 'ANVOID=' + cookies_[user],
-            'Content-Type': 'application/json; charset=UTF-8'
-        }
+        """第三方轉入"""
         post_data = {"amount": 1}
-        statu_dict = {}  # 存放 轉帳的 狀態
-        for third in third_list:
+        status_dict = {}  # 存放 轉帳的 狀態
+        errors = {}
+        for third in self.third_list:
             if third == 'gns':
                 third_url = '/gns/transferToGns'
             else:
-                third_url = '/%s/transferToThirdly' % third
-            r = session.post(post_url + third_url, data=json.dumps(post_data), headers=header)
-
-            # t = threading.Thread(target=Joy188Test.session_post,args=('kerrthird001',third,third_url,post_data))
-            # threads.append(t)
+                third_url = f'/{third}/transferToThirdly'
+            r = self.SESSION.post(self.post_url + third_url, data=json.dumps(post_data), headers=self.header)
+            logger.info(f'r.json() = {r.json()}')
 
             # 判斷轉帳的 狀態
-            if r.json()['status'] == True:
-                print('帳號 %s 轉入 %s ,金額:1, 進行中' % (user, third))
-                status = r.json()['status']
+            if r.json()['status']:
+                print(f'帳號 {self.user} 轉入 {third} ,金額:1, 進行中')
             else:
-                status = r.json()['status']
-                print('%s 轉帳失敗' % third)  # 列出錯誤訊息 ,
+                errors[third] = r.json()
+                print(f'{third} 轉帳失敗')  # 列出錯誤訊息 ,
+            status_dict[third] = r.json()['status']  # 存放 各第三方的轉帳狀態
 
-            statu_dict[third] = status  # 存放 各第三方的轉帳狀態
-        # print(statu_dict)
-
-        for third in statu_dict.keys():
-            if statu_dict[third] == True:  # 判斷轉帳的狀態, 才去要 單號
-                tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=envs, third=third), tran_type=0,
-                                                        third=third,
-                                                        user=user)  # tran_type 0為轉轉入
+        logger.debug(f'status_dict = {status_dict.items()}')
+        for third in status_dict.keys():
+            if status_dict[third]:  # 判斷轉帳的狀態, 才去要 單號
+                tran_result = [0, 0]  # 初始化
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=envs, third=third), tran_type=0,
-                                                            third=third,
-                                                            user=user)  #
+                    tran_result = Connection.thirdly_tran(
+                        Connection.get_mysql_conn(evn=self.envConfig.get_env_id(), third=third),
+                        tran_type=0,
+                        third=third,
+                        user=self.user)  #
                     sleep(1.5)
                     count += 1
+                    # print(f'驗證{third}中 : tran_result = {tran_result}')
+                    if tran_result[1] == '2':
+                        print(f'狀態成功. {third} ,sn 單號: {tran_result[0]}')
+                        break
                     if count == 15:
-                        # print('轉帳狀態失敗')# 如果跑道9次  需確認
-                        pass
-                print('狀態成功. %s ,sn 單號: %s' % (third, tran_result[0]))
+                        errors[third] = tran_result
+                        print('轉帳狀態失敗')  # 如果跑道9次  需確認
+                        break
             else:
                 pass
-
+        for key, value in errors.items():
+            print(f'三方: {key} 轉帳失敗. 接口返回: {value}')
         self.test_PcThirdBalance()
+
+        if errors:
+            self.fail('部分轉帳失敗')
 
     @func_time
     def test_PcTransferout(self):  # 第三方轉回
-        '''第三方轉出'''
-        statu_dict = {}  # 存放 第三方狀態
-        header = {
-            'User-Agent': userAgent,
-            'Cookie': 'ANVOID=' + cookies_[user],
-            'Content-Type': 'application/json; charset=UTF-8'
-        }
+        """第三方轉出"""
+        status_dict = {}  # 存放 第三方狀態
         post_data = {"amount": 1}
-        for third in third_list:
-            url = '/%s/transferToFF' % third
+        errors = {}
+        for third in self.third_list:
+            url = f'/{third}/transferToFF'
 
-            r = session.post(post_url + url, data=json.dumps(post_data), headers=header)
-            if r.json()['status'] == True:
-                print('帳號 %s, %s轉回4.0 ,金額:1, 進行中' % (user, third))
-                status = r.json()['status']
+            r = self.SESSION.post(self.post_url + url, data=json.dumps(post_data), headers=self.header)
+            if r.json()['status']:
+                print(f'帳號 {self.user}, {third} 轉回4.0 ,金額:1, 進行中')
             else:
-                print(third + r.json()['errorMsg'])
-                status = r.json()['status']
-                # print('轉帳接口失敗')
-            statu_dict[third] = status
-
-        for third in statu_dict.keys():
-            if statu_dict[third] == True:
-                tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=envs, third=third), tran_type=1,
-                                                        third=third,
-                                                        user=user)  # tran_type 1 是 轉出
+                logger.error(f'轉帳接口失敗 : errors[{third}] = {r.json()}')
+                errors[third] = r.json()
+                print('轉帳接口失敗')
+            status_dict[third] = r.json()['status']
+        logger.debug(f'status_dict = {status_dict.items()}')
+        for third in status_dict.keys():
+            if status_dict[third]:
+                logger.debug(f'status_dict[{third}]:  # 判斷轉帳的狀態, 才去要 單號 = {status_dict[third]}')
+                tran_result = [0, 0]
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    tran_result = utils.Config.thirdly_tran(utils.Config.my_con(evn=envs, third=third), tran_type=0,
-                                                            third=third,
-                                                            user=user)  #
+                    tran_result = Connection.thirdly_tran(
+                        Connection.get_mysql_conn(evn=self.envConfig.get_env_id(), third=third),
+                        tran_type=0,
+                        third=third,
+                        user=self.user)
                     sleep(1)
                     count += 1
+                    # print(f'驗證{third}中 : tran_result = {tran_result}')
+                    if tran_result[1] == '2':
+                        print(f'狀態成功. {third} ,sn 單號: {tran_result[0]}')
+                        break
                     if count == 9:
-                        # print('轉帳狀態失敗')# 如果跑道9次  需確認
-                        pass
-                print('狀態成功. %s ,sn 單號: %s' % (third, tran_result[0]))
+                        logger.error(f'轉帳狀態失敗 : errors[{third}] = {tran_result}')
+                        errors[third] = tran_result
+                        print('轉帳狀態失敗')  # 如果跑道9次  需確認
+                        break
             else:
                 pass
+        for key, value in errors.items():
+            print(f'三方: {key} 轉帳失敗. 接口返回: {value}')
         self.test_PcThirdBalance()
+        if errors:
+            self.fail('部分轉帳失敗')
 
-    def admin_login(self):
-        global admin_cookie, admin_url, header, cookies
-        admin_cookie = {}
-        header = {
+    @staticmethod
+    def admin_login(env_config):
+        global ADMIN_COOKIE, ADMIN_URL, HEADER, COOKIES
+        ADMIN_COOKIE = {}
+        HEADER = {
             'User-Agent': Config.UserAgent.PC.value,
             'Content-Type': 'application/x-www-form-urlencoded'}
-        admin_data = self.envConfig.get_admin_data()
-        admin_url = self.envConfig.get_admin_url()
+        admin_data = env_config.get_admin_data()
+        ADMIN_URL = env_config.get_admin_url()
         session = requests.Session()
-        r = session.post(admin_url + '/admin/login/login', data=admin_data, headers=header)
-        cookies = r.cookies.get_dict()  # 獲得登入的cookies 字典
-        admin_cookie['admin_cookie'] = cookies['ANVOAID']
-        print(admin_cookie)
-        print('登入後台 , 環境: %s' % admin_url)
+        r = session.post(ADMIN_URL + '/admin/login/login', data=admin_data, headers=HEADER)
+        COOKIES = r.cookies.get_dict()  # 獲得登入的cookies 字典
+        ADMIN_COOKIE['admin_cookie'] = COOKIES['ANVOAID']
+        print(ADMIN_COOKIE)
+        print(f'登入後台 , 環境: {ADMIN_URL}')
         print(r.text)
+        return COOKIES
 
     def test_redEnvelope(self):  # 紅包加壁,審核用
         user = self.user
-        print('用戶: %s' % user)
+        print(f'用戶: {user}')
         red_list = []  # 放交易訂單號id
 
         try:
-            self.select_RedBal(utils.Config.get_conn(envs), user)
-            print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
+            red_bal = select_red_bal(Connection.get_oracle_conn(self.envConfig.get_env_id()), user)
+            print(f'紅包餘額: {int(red_bal[0]) / 10000}')
         except IndexError:
             print('紅包餘額為0')
-        self.admin_login()  # 登入後台
+        self.admin_login(env_config=self.envConfig)  # 登入後台
         data = {"receives": user, "blockType": "2", "lotteryType": "1", "lotteryCodes": "",
                 "amount": "100", "note": "test"}
-        header['Cookie'] = 'ANVOAID=' + admin_cookie['admin_cookie']  # 存放後台cookie
-        header['Content-Type'] = 'application/json'
-        r = session.post(admin_url + '/redAdmin/redEnvelopeApply',  # 後台加紅包街口
-                         data=json.dumps(data), headers=header)
+        HEADER['Cookie'] = 'ANVOAID=' + ADMIN_COOKIE['admin_cookie']  # 存放後台cookie
+        HEADER['Content-Type'] = 'application/json'
+        r = self.SESSION.post(ADMIN_URL + '/redAdmin/redEnvelopeApply',  # 後台加紅包街口
+                              data=json.dumps(data), headers=HEADER)
         if r.json()['status'] == 0:
             print('紅包加幣100')
         else:
             print('失敗')
-        self.select_RedID(utils.Config.get_conn(envs), user)  # 查詢教地訂單號,回傳審核data
+        red_id = select_red_id(Connection.get_oracle_conn(self.envConfig.get_env_id()), user)  # 查詢教地訂單號,回傳審核data
         # print(red_id)
-        red_list.append('%s' % red_id[0])
+        red_list.append(f'{red_id[0]}')
         # print(red_list)
         data = {"ids": red_list, "status": 2}
-        r = session.post(admin_url + '/redAdmin/redEnvelopeConfirm',  # 後台審核街口
-                         data=json.dumps(data), headers=header)
+        r = self.SESSION.post(ADMIN_URL + '/redAdmin/redEnvelopeConfirm',  # 後台審核街口
+                              data=json.dumps(data), headers=HEADER)
         try:
-            logger.info('r.json() : {}'.format(r.json()))
+            logger.info(f'r.json() : {r.json()}')
             if r.json()['status'] == 0:
                 print('審核通過')
         except Exception as e:
             print(r.json()['errorMsg'])
             logger.error(e)
-        self.select_RedBal(utils.Config.get_conn(envs), user)
-        print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
+        red_bal = select_red_bal(Connection.get_oracle_conn(self.envConfig.get_env_id()), user)
+        print(f'紅包餘額: {int(red_bal[0] / 10000)}')
 
     def tearDown(self) -> None:
         pass
+
+
+class ApiTestPC_YFT(unittest.TestCase):
+    """
+    YFT API測試
+    """
+    _session = None
+    env_config = None
+    yft_user = None
+    money_unit = None
+    award_mode = None
+    header = {'User-Agent': Config.UserAgent.PC.value,
+              'Content-Type': 'application/json'}
+
+    def setUp(self):
+        logger.info(f'ApiTestPC setUp : {self._testMethodName}')
+        self.login()
+        logger.info(f'After login. header = {self.header}')
+
+    def __init__(self, case, _env, _user, _money_unit=1, _award_mode=0):
+        """
+        YFT初始化
+        :param case: List
+        :param _env: EnvConfig
+        :param _user: Str
+        :param _money_unit: 1 / 0.1 / 0.01
+        :param _award_mode: 0=預設 / 1=一般 / 2=高獎金
+        """
+        super().__init__(case)
+        logger.info(
+            f'ApiTestPC_YFT __init__ : _env={_env}, _user={_user}, _money_unit={_money_unit}, _award_mode={_award_mode}')
+        self.env_config = _env
+        self.yft_user = _user
+        self.money_unit = _money_unit
+        self.award_mode = _award_mode
+        if self._session is None:
+            self._session = requests.Session()
+
+    def login(self):
+        post_url = '/a/login/login'
+        md = hashlib.md5()
+        md.update(self.env_config.get_password().encode('utf-8'))
+        request = f'{{"account": "{self.yft_user}", "passwd": "{md.hexdigest()}", "timeZone": "GMT+8", "isWap": false, "online": false}} '
+        logger.debug(f'request_body = {request}')
+        response = self._session.post(url=self.env_config.get_post_url() + post_url, data=request, headers=self.header)
+        logger.debug(f'login_url = {self.env_config.get_post_url() + post_url}')
+        logger.debug(f'Login response = {response.content}')
+        if response.cookies['JSESSIONID']:
+            logger.info(f'Cookies = {response.cookies["JSESSIONID"]}')
+            self.header['JSESSIONID'] = response.cookies['JSESSIONID']  # setCookie into header
+        else:
+            self.fail('登入失敗.')
+
+    """時時彩系列"""
+
+    def test_bet_qqffc(self, stop_on_win=True):
+        """
+        QQ分分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['qqffc', 'QQ分分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_hjcqssc(self, stop_on_win=True):
+        """
+        懷舊重慶時時彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['hjcqssc', '懷舊重慶時時彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_ynffc(self, stop_on_win=True):
+        """
+        印尼分分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['ynffc', '印尼分分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_tcffc(self, stop_on_win=True):
+        """
+        騰訊分分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['tcffc', '騰訊分分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_se15fc(self, stop_on_win=True):
+        """
+        首爾1.5分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['se15fc', '首爾1.5分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_yn2fc(self, stop_on_win=True):
+        """
+        印尼2分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['yn2fc', '印尼2分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_xjssc(self, stop_on_win=True):
+        """
+        新疆時時彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['xjssc', '新疆時時彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_tjssc(self, stop_on_win=True):
+        """
+        天津時時彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['tjssc', '天津時時彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_tcdffc(self, stop_on_win=True):
+        """
+        騰訊兩分彩投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['tcdffc', '騰訊兩分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_cqssc(self, stop_on_win=True):
+        """
+        重慶時時彩生肖
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['cqssc', '重慶時時彩生肖']
+        self.bet_trace(game_name, stop_on_win)
+
+    """賽車／飛艇系列"""
+
+    def test_bet_fhxyft(self, stop_on_win=True):
+        """
+        幸運飛艇投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['fhxyft', '鳳凰幸運飛艇']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_bjpk10(self, stop_on_win=True):
+        """
+        PK10投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['bjpk10', '北京PK10']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_djpk10(self, stop_on_win=True):
+        """
+        東京賽車投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['djpk10', '東京賽車']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_xyftpk10(self, stop_on_win=True):
+        """
+        皇家幸運飛艇投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['xyftpk10', '皇家幸運飛艇']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_metftpk10(self, stop_on_win=True):
+        """
+        馬爾他飛艇投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['metftpk10', '馬爾他飛艇']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_xnpk10(self, stop_on_win=True):
+        """
+        悉尼PK10投注
+        牛牛不可高獎金，另外投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['xnpk10', '悉尼PK10']
+        self.bet_trace(game_name, stop_on_win)
+
+    """快三系列"""
+
+    def test_bet_ahk3(self, stop_on_win=True):
+        """
+        安徽快三投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['ahk3', '安徽快三']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_hbk3(self, stop_on_win=True):
+        """
+        湖北快三
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['hbk3', '湖北快三']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_jsk3(self, stop_on_win=True):
+        """
+        江蘇快三投注。
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['jsk3', '江蘇快三']
+        self.bet_trace(game_name, stop_on_win)
+
+    """11選5系列"""
+
+    def test_bet_sd11x5(self, stop_on_win=True):
+        """
+        山東11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['sd11x5', '山東11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_jx11x5(self, stop_on_win=True):
+        """
+        江西11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['jx11x5', '江西11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_sh11x5(self, stop_on_win=True):
+        """
+        上海11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['sh11x5', '上海11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_js11x5(self, stop_on_win=True):
+        """
+        江蘇11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['js11x5', '江蘇11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_gd11x5(self, stop_on_win=True):
+        """
+        廣東11選5投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['gd11x5', '廣東蘇11選5']
+        self.bet_trace(game_name, stop_on_win)
+
+    def get_lottery_info(self, lottery_name):
+        """
+        取得彩種資訊（獎期等）
+        :param lottery_name: 彩種英文ID
+        :return: 返還獎期資訊內容
+        """
+        content = f'{{"lotteryType":"{lottery_name}","timeZone":"GMT+8","isWap":false,"online":false}}'
+        logger.debug(f'get_lottery_info -----> {content}')
+
+        response = self._session.post(url=self.env_config.get_post_url() + '/a/lottery/init', data=content,
+                                      headers=self.header)
+        logger.debug(f'get_lottery_info <----- {response.json()}')
+        return response.json()['content']
+
+    def bet_yft(self, lottery_name, games, is_trace=False, stop_on_win=True):
+        """
+        YFT發起投注
+        :param games: 投注玩法清單，可取自BetContent_yft.py
+        :param lottery_name: 彩種英文ID
+        :param is_trace: 追號與否，影響投注內容需替換的參數
+        :param stop_on_win: 追中即停
+        :return: 投注結果
+        """
+        post_url = '/a/lottery/betV2'
+        lottery_info = self.get_lottery_info(lottery_name)
+
+        from utils.BetContent_yft import game_default
+        import json
+        default = json.loads(game_default)
+        logger.debug(f'default json = {default}')
+        from utils.BetContent_yft import game_dict
+        totalAmount = 0
+        schemeList = []
+        for game in games:
+            if game_dict.get(game) and game not in ('pt333bt02', 'pt137bt02'):  # 排除牛牛
+                schemeList.append(game_dict.get(game)[0])
+                totalAmount += game_dict.get(game)[1]
+        default['currIssueNo'] = lottery_info["chaseableIssueNoList"][0]
+        default['stopOnWon'] = 'null'
+        default['schemeList'] = schemeList
+        default['lotteryType'] = lottery_name
+        default['issueList'] = [1]
+        default['isWap'] = False
+
+        if is_trace:
+            default['issueList'] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            totalAmount *= 10
+            if stop_on_win:
+                default['stopOnWon'] = 'yes'
+            else:
+                default['stopOnWon'] = 'no'
+        if self.money_unit == '0.1':
+            totalAmount *= 0.1
+        elif self.money_unit == '0.01':
+            totalAmount *= 0.01
+
+        default['totalAmount'] = totalAmount
+
+        data = json.dumps(default)
+        data.replace('\'null\'', 'null')
+        data.replace('True', 'true')
+        data.replace('False', 'false')
+
+        logger.debug(f"self.money_unit == '0.1' = {self.money_unit == '0.1'}\n"
+                     f"self.money_unit == '0.01' = {self.money_unit == '0.01'}\n"
+                     f"self.award_mode == '2' = {self.award_mode == '2'}")
+        if self.money_unit == '0.1':
+            logger.debug("self.money_unit == '0.1'")
+            data = data.replace('"potType": "Y"', '"potType": "J"')
+        elif self.money_unit == '0.01':
+            logger.debug("self.money_unit == '0.01'")
+            data = data.replace('"potType": "Y"', '"potType": "F"')
+        if self.award_mode == '2':
+            logger.debug("self.award_mode == '2'")
+            data = data.replace('"doRebate": "yes"', '"doRebate": "no"')
+
+        logger.info(f'Bet content = {data}')
+        bet_response = self._session.post(url=self.env_config.get_post_url() + post_url, data=data,
+                                          headers=self.header)
+        logger.info(f'Bet response = {bet_response.json()}\n')
+        return bet_response.json()
+
+    def bet_trace(self, game_name, stop_on_win):
+        games = get_lottery_games(game_name[0])
+        expected = 'ok'
+        bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
+                                    is_trace=False)
+        assert bet_response['status'] == expected
+        print(
+            f'{game_name[1]}投注追號成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
+                                    is_trace=True)
+        assert bet_response['status'] == expected
+        print(
+            f'{game_name[1]}追號全彩種成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')

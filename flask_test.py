@@ -12,7 +12,6 @@ import json
 import image_test
 import os
 
-import utils.Config
 from autoTest import AutoTest
 from time import sleep
 import threading
@@ -23,22 +22,22 @@ import logging
 from flask import current_app
 import urllib3
 from bs4 import BeautifulSoup
-import twstock, stock
+# import twstock, stock
 import pandas as pd
 import re
-from utils import Config
+from utils import Config, Connection
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
-url_dict = {}  # 存放url 和街口狀態 , 給domain_ 用
+URL_DICT = {}  # 存放url 和街口狀態 , 給domain_ 用
 
 
 def iapi_login(envir):  # iapi 抓取沙巴token
     session = requests.Session()
-    global headerSb
-    global envSb
-    envSb = Config.EnvConfigApp(envir)
-    headerSb = {
+    global HEADERSB
+    global ENVSB
+    ENVSB = Config.EnvConfigApp(envir)
+    HEADERSB = {
         'User-Agent': Config.UserAgent.PC.value,
         'Content-Type': 'application/json'
     }
@@ -55,10 +54,10 @@ def iapi_login(envir):  # iapi 抓取沙巴token
             "sessionId": ''},
         "body": {
             "param": {
-                "username": user + "|" + envSb.get_uuid(),
-                "loginpassSource": envSb.get_login_pass_source(),
+                "username": user + "|" + ENVSB.get_uuid(),
+                "loginpassSource": ENVSB.get_login_pass_source(),
                 "appCode": 1,
-                "uuid": envSb.get_uuid(),
+                "uuid": ENVSB.get_uuid(),
                 "loginIp": 2130706433,
                 "device": 2,
                 "app_id": 9,
@@ -67,24 +66,24 @@ def iapi_login(envir):  # iapi 抓取沙巴token
             }
         }
     }
-    r = session.post(envSb.get_iapi() + '/front/login', data=json.dumps(login_data), headers=headerSb)
+    r = session.post(ENVSB.get_iapi() + '/front/login', data=json.dumps(login_data), headers=HEADERSB)
     # print(r.text)
-    global token
-    token = r.json()['body']['result']['token']
+    global TOKEN
+    TOKEN = r.json()['body']['result']['token']
     # print(token)
 
 
 def sb_game():  # iapi沙巴頁面
     session = requests.Session()
 
-    data = {"head": {"sessionId": token}, "body": {"param": {"CGISESSID": token,
+    data = {"head": {"sessionId": TOKEN}, "body": {"param": {"CGISESSID": TOKEN,
                                                              "loginIp": "10.13.20.57", "types": "1,0,t", "app_id": 9,
                                                              "come_from": "3", "appname": "1"}}}
 
-    r = session.post(envSb.get_iapi() + '/sb/mobile', data=json.dumps(data), headers=headerSb)
+    r = session.post(ENVSB.get_iapi() + '/sb/mobile', data=json.dumps(data), headers=HEADERSB)
     # print(r.text)
-    global sb_url
-    sb_url = r.json()['body']['result']['loginUrl']
+    global SB_URL
+    SB_URL = r.json()['body']['result']['loginUrl']
     cookies = r.cookies.get_dict()
 
 
@@ -93,11 +92,11 @@ def get_sb():  # 沙巴體育
     iapi_login('dev02')
     sb_game()
     # 抓取沙巴,token成功的方式, 先get 在post
-    r = session.get(sb_url + '/', headers=headerSb)
+    r = session.get(SB_URL + '/', headers=HEADERSB)
     cookies = r.cookies.get_dict()
-    r = session.post(sb_url + '/', headers=headerSb)
+    r = session.post(SB_URL + '/', headers=HEADERSB)
 
-    headerSb['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
+    HEADERSB['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
     session = requests.Session()
 
     data = {
@@ -108,10 +107,10 @@ def get_sb():  # 沙巴體育
     }
     url = 'http://smartsbtest.thirdlytest.st402019.com'
     # /Odds/ShowAllOdds ,   /Odds/GetMarket
-    r = session.post(url + '/Odds/ShowAllOdds', headers=headerSb, data=data, cookies=cookies)
+    r = session.post(url + '/Odds/ShowAllOdds', headers=HEADERSB, data=data, cookies=cookies)
 
-    global sb_list
-    sb_list = []
+    global SB_LIST
+    SB_LIST = []
     # print(r.json())
     game = r.json()['Data']['NewMatch']
     game_map = r.json()['Data']['TeamN']
@@ -130,13 +129,13 @@ def get_sb():  # 沙巴體育
             d = datetime.datetime.strptime(date_day[0] + ' ' + date_day[1], '%Y-%m-%d %H:%M:%S')  # date_day 0為年月日, 1為時間
             # print(d)
             game_dict['Etm'] = (d + relativedelta(hours=12)).strftime('%Y-%m-%d %H:%M:%S')  # 加12小時
-        sb_list.append(game_dict)
-    sb_list.sort(key=lambda k: (k.get('Etm', 0)))  # 列表裡包字典, 時間排序
+        SB_LIST.append(game_dict)
+    SB_LIST.sort(key=lambda k: (k.get('Etm', 0)))  # 列表裡包字典, 時間排序
 
-    for i in sb_list:  # list取出各個字點
+    for i in SB_LIST:  # list取出各個字點
         # print(i['MatchId'])#抓出mathch id ,去對應 賠率
         data['Matchid'] = i['MatchId']
-        r = session.post(url + '/Odds/GetMarket', headers=headerSb, data=data, cookies=cookies)
+        r = session.post(url + '/Odds/GetMarket', headers=HEADERSB, data=data, cookies=cookies)
         # print(r.text)
         game_Odd = (r.json()['Data']['NewOdds'])
         # print(game_Odd)
@@ -150,15 +149,15 @@ def get_sb():  # 沙巴體育
 
 
 def date_time():  # 給查詢 獎期to_date時間用, 今天時間
-    global today_time
+    global TODAY_TIME
 
     now = datetime.datetime.now()
     year = now.year
     month = now.month
     day = now.day
-    format_month = '{:02d}'.format(month)
-    format_day = '{:02d}'.format(day)
-    today_time = '%s-%s-%s' % (year, format_month, format_day)
+    format_month = f'{month:02d}'
+    format_day = f"{day:02d}"
+    TODAY_TIME = f'{year}-{format_month}-{format_day}'
 
 
 def test_sport(type_keys='全部'):  # 企鵝網
@@ -170,17 +169,17 @@ def test_sport(type_keys='全部'):  # 企鵝網
     session = requests.Session()
 
     r = session.get('http://live.qq.com' +
-                    '/api/calendar/game_list/%s/%s/%s' % (type_[type_keys], today_time, today_time),
+                    f'/api/calendar/game_list/{type_[type_keys]}/{TODAY_TIME}/{TODAY_TIME}',
                     headers=header)
     # print(r.json())
     # print(r.json())
-    global sport_list
-    sport_list = []  # 存放請求
-    len_game = len(r.json()[today_time])  # 當天遊戲列表長度
+    global SPORT_LIST
+    SPORT_LIST = []  # 存放請求
+    len_game = len(r.json()[TODAY_TIME])  # 當天遊戲列表長度
     # print(r.json()[today_time])
 
     for game in range(len_game):  # 取出長度
-        game_dict = r.json()[today_time][game]
+        game_dict = r.json()[TODAY_TIME][game]
         # print(game_dict)
         play_status = game_dict['play_status']
         # if play_status != '1':#1: 正在 ,2:比完, 3: 還未開打
@@ -199,7 +198,7 @@ def test_sport(type_keys='全部'):  # 企鵝網
             else:
                 pass
         # print(game_new)
-        sport_list.append(game_new)
+        SPORT_LIST.append(game_new)
         # else:
         # pass
     # print(game_new)
@@ -241,26 +240,26 @@ def showbio():  # 提交submit後的頁面顯示
 def sport_():  # 體育比分
     test_sport()
     # return jsonify(game_list)
-    return render_template('sport.html', sport_list=sport_list, today_time=today_time)
+    return render_template('sport.html', sport_list=SPORT_LIST, today_time=TODAY_TIME)
 
 
 @app.route('/sportApi', methods=['GET'])
 def sport_api():  # 體育api
     test_sport()
-    return jsonify(sport_list)
+    return jsonify(SPORT_LIST)
 
 
 @app.route('/sb', methods=['GET'])
 def sb_():
     get_sb()
     date_time()
-    return render_template('sb.html', sb_list=sb_list, today_time=today_time)
+    return render_template('sb.html', sb_list=SB_LIST, today_time=TODAY_TIME)
 
 
 @app.route('/sbApi', methods=['GET'])
 def sb_api():  # 體育api
     get_sb()
-    return jsonify(sb_list)
+    return jsonify(SB_LIST)
 
 
 @app.route('/image', methods=['GET'])
@@ -298,38 +297,48 @@ def auto_test():
             integration_test_pc = request.form.getlist('integration_test_pc')  # 回傳 測試案例data內容
             env_config = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
             red = request.form.get('red_type')  # 紅包選擇
+            award_mode = request.form.get('awardmode')  # 獎金組設置
             money_unit = request.form.get('moneymode')  # 金額模式
+            ignore_name_check = request.form.get('ignore_user_check')
             domain_url = env_config.get_post_url().split('://')[1]  # 後台全局 url 需把 http做切割
+            logger.info(f'ignore_name_check = {ignore_name_check}')
 
-            domain_type = env_config.get_domain_url(env_config.get_env_id(), domain_url)  # 查詢 後台是否有設置 該url
-            # domain_type = Config.domain_type#後台 該url joint_venture 的 類型
+            if env_config.get_env_id() in (0, 1):  # FF4.0 用戶驗證
+                domain_type = env_config.get_joint_venture(env_config.get_env_id(), domain_url)  # 查詢 後台是否有設置 該url
+                logger.debug(f"env_config.id: {env_config.get_env_id()},  red: {red}")
+                user_id = Connection.select_user_id(Connection.get_oracle_conn(env_config.get_env_id()), user_name,
+                                                    domain_type)
+                logger.info(f'user_id : {user_id}')
+            elif ignore_name_check:
+                user_id = ["ignore"]
+            else:  # yft用戶名驗證
+                user_id = Connection.get_user_id_yft(user_name=user_name)
 
-            logger.debug("env_config.id: {},  red: {}".format(env_config.get_env_id(), red))
-
-            # 查詢用戶 user_id,合營
-            user_id = utils.Config.get_user_id(utils.Config.get_conn(env_config.get_env_id()), user_name,
-                                               domain_type)
-            # joint_venture = autoTest.joint_venture #joint_venture 為合營,  0 為一般, 1為合營
 
             test_cases.append(api_test_pc)
             test_cases.append(api_test_app)
             test_cases.append(integration_test_pc)
 
-            logger.info('user_id : {}'.format(user_id))
-            logger.info('user_name : {}'.format(user_name))
-            logger.info("test_cases : {}".format(test_cases))
+            logger.info(f'user_name : {user_name}')
+            logger.info(f"test_cases : {test_cases}")
+            if user_id is None:
+                return '此環境沒有該用戶'
+            elif type(user_id) == str:
+                return user_id
             if len(user_id) > 0:  # user_id 值為空, 代表該DB環境沒有此用戶名, 就不用做接下來的事
                 logger.info(
-                    "AutoTest.suite_test({}, {}, {}, {})".format(test_cases, user_name, env_config.get_domain(), red))
+                    f"AutoTest.suite_test(test_cases={test_cases}, user_name={user_name}, "
+                    f"env_config.get_domain()={env_config.get_domain()}, red={red}), "
+                    f"money_unit={money_unit}, award_mode={award_mode}")
                 AutoTest.suite_test(test_cases, user_name, env_config.get_domain(),
-                                    red, money_unit)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
+                                    red, money_unit, award_mode)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
                 return redirect('report')
             else:
-                raise Exception('此環境沒有該用戶')
+                return '此環境沒有該用戶'
         # return redirect("/report")
     except Exception as e:
         from utils.TestTool import trace_log
-        trace_log(e)
+        print(trace_log(e))
     return render_template('autoTest.html')
 
 
@@ -359,7 +368,7 @@ def benefit():
     if request.method == "POST":
         testInfo = {}  # 存放資廖
         cookies_dict = {}  # 存放cookie
-        global result  # 日工資 data資料
+        global RESULT  # 日工資 data資料
 
         cookies_ = request.cookies  # 目前的改瀏覽器上的cookie
         print(cookies_)
@@ -389,15 +398,15 @@ def benefit():
 
         if benefit_type == 'day':
             test_benefit.game_report_day(user=username, month=int(month), day=int(day), cookies=cookies, env=env)
-            result = test_benefit.result_data
-            print(result)
-            if result['msg'] == '你輸入的日期或姓名不符,請再確認':  # 有cookie, 但cookie失效, 需再重新做
+            RESULT = test_benefit.result_data
+            print(RESULT)
+            if RESULT['msg'] == '你輸入的日期或姓名不符,請再確認':  # 有cookie, 但cookie失效, 需再重新做
                 test_benefit.admin_Login(env)
                 admin_cookie = test_benefit.admin_cookie  # 呼叫  此function ,
                 cookies_dict[env] = admin_cookie['admin_cookie']
                 cookies = admin_cookie['admin_cookie']
                 test_benefit.game_report_day(user=username, month=int(month), day=int(day), cookies=cookies, env=env)
-                result = test_benefit.result_data
+                RESULT = test_benefit.result_data
                 res = redirect('benefit_day')
             else:
                 res = redirect('benefit_day')
@@ -415,7 +424,7 @@ def benefit():
                 now = datetime.datetime.now()
                 day = calendar.monthrange(now.year, int(month))[1]  # 獲取當月 最後一天
             test_benefit.game_report_month(user=username, month=int(month), day=int(day), cookies=cookies, env=env)
-            result = test_benefit.result_data
+            RESULT = test_benefit.result_data
             res = redirect('benefit_month')
             if cookies_dict == {}:
                 pass
@@ -429,17 +438,17 @@ def benefit():
 
 @app.route('/benefit_day', methods=["GET"])
 def benefit_day():
-    return render_template('benefit_day.html', result=result)
+    return render_template('benefit_day.html', result=RESULT)
 
 
 @app.route('/benefit_month', methods=["GET"])
 def benefit_month():
-    return render_template('benefit_month.html', result=result)
+    return render_template('benefit_month.html', result=RESULT)
 
 
 @app.route('/report_APP', methods=["GET", "POST"])  # APP戰報
 def report_APP():
-    global result
+    global RESULT
     if request.method == 'POST':
         envtype = request.form.get('env_type')
         print(envtype)
@@ -448,7 +457,7 @@ def report_APP():
         else:  # 188
             env = 1
         test_lotteryRecord.all_lottery(env)
-        result = test_lotteryRecord.result
+        RESULT = test_lotteryRecord.result
 
         return redirect('report_AppData')
 
@@ -457,7 +466,7 @@ def report_APP():
 
 @app.route('/report_AppData', methods=["GET"])  # APP戰報資料顯示
 def report_AppData():
-    return render_template('report_AppData.html', result=result)
+    return render_template('report_AppData.html', result=RESULT)
 
 
 @app.route('/domain_list', methods=["GET"])  # 域名列表測試,抓取 http://172.16.210.101/domain_list  提供的 網域
@@ -470,18 +479,18 @@ def session_get(url):
     header = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36'
     }
-    global r, url_dict
+    global R, URL_DICT
     try:
-        r = requests.get(url + '/', headers=header, verify=False, timeout=5)
+        R = requests.get(url + '/', headers=header, verify=False, timeout=5)
     except:
         pass
-    url_dict[url] = r.status_code
+    URL_DICT[url] = R.status_code
     # print(url_dict)
 
 
 @app.route('/domain_status', methods=["GET"])
 def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
-    global url_dict
+    global URL_DICT
     urllib3.disable_warnings()  # 解決 會跳出 request InsecureRequestWarning問題
     header = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36'
@@ -489,17 +498,17 @@ def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
     r = requests.get('http://66dca985.ngrok.io' + '/domain_list', headers=header)
     # print(r.text)
     soup = BeautifulSoup(r.text, 'lxml')
-    url_dict = {}  # 存放url 和 皆口狀態
+    URL_DICT = {}  # 存放url 和 皆口狀態
     try:  # 過濾 從頁面上抓取的url, 有些沒帶http
         for i in soup.find_all('table', {'class': 'domain_table'}):
             for a in i.find_all('a'):
                 if 'http' not in a.text:
                     url = 'http://' + a.text
-                    url_dict[url] = ''  # 先存訪到url_dict
+                    URL_DICT[url] = ''  # 先存訪到url_dict
                 else:  # 這邊提供的  頁面 不用做額外處理, 就是 a.text
-                    url_dict[a.text] = ''
+                    URL_DICT[a.text] = ''
         threads = []
-        for url_key in url_dict:
+        for url_key in URL_DICT:
             threads.append(threading.Thread(target=session_get, args=(url_key,)))
         for i in threads:
             i.start()
@@ -509,8 +518,8 @@ def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
         pass
     except urllib3.exceptions.NewConnectionError as e:
         print(e)
-    print(url_dict)
-    return url_dict
+    print(URL_DICT)
+    return URL_DICT
     # return render_template('domain_status.html',url_dict=url_dict)
 
 
@@ -526,7 +535,7 @@ def stock_search():
                 stock.stock_selectname(stock.kerr_conn(), stock_name)  # 找出相關資訊
                 stock_detail2 = stock.stock_detail2
                 if len(stock_detail2) == 0:  # 名稱營收db為空的, 就不列印營收資訊
-                    return ('沒有該股票名稱: %s' % stock_name)
+                    raise Exception(f'沒有該股票名稱: {stock_name}')
                 else:  # DB有找到該名稱 ,
                     stock_deatil2 = stock.stock_detail2
                     print(stock_deatil2)
@@ -551,7 +560,7 @@ def stock_search():
                     latest_low = stock.latest_low
                     latest_volume = stock.latest_volume
                 except KeyError:
-                    return ('沒有該股票號碼: %s' % stock_num)  # yahoo沒有,DB正常就不會有
+                    raise Exception(f'沒有該股票號碼: {stock_num}')  # yahoo沒有,DB正常就不會有
                 stock.stock_selectnum(stock.kerr_conn(), int(stock_num))  # 有股號後, 從mysql 抓出更多資訊
                 stock_detail2 = stock.stock_detail2
                 if len(stock_detail2) == 0:  # 營收db為空的,但 yahoo查詢是有該股的, 就不列印營收資訊 ,
@@ -584,7 +593,7 @@ def stock_search():
                     }
             now_hour = datetime.datetime.now().hour  # 現在時間 :時
             weekday = datetime.date.today().weekday() + 1  # 現在時間 :周, 需加1 , 禮拜一為0
-            print('現在時數: %s,禮拜:%s' % (now_hour, weekday))
+            print(f'現在時數: {now_hour},禮拜:{weekday}')
             if now_hour > 14 or weekday in [6, 7]:
                 print('大於最後成交時間或者六日,不再做更新股價')
             else:
@@ -671,16 +680,16 @@ def stock_search2():
 
 
 def game_map():  # 玩法 和 說明 mapping
-    global game_explan, game_playtype  # 說明, 玩法
-    if '五星' in game_playtype:
-        if game_playtype in ['复式', '单式']:
-            game_explan = '五個號碼順續需全相同'
-        elif '组选120' in game_playtype:
-            game_explan = '五個號碼相同,順續無需相同(開獎號無重覆號碼)'
+    global GAME_EXPLAN, GAME_PLAYTYPE  # 說明, 玩法
+    if '五星' in GAME_PLAYTYPE:
+        if GAME_PLAYTYPE in ['复式', '单式']:
+            GAME_EXPLAN = '五個號碼順續需全相同'
+        elif '组选120' in GAME_PLAYTYPE:
+            GAME_EXPLAN = '五個號碼相同,順續無需相同(開獎號無重覆號碼)'
 
     else:
-        game_explan = 'test'
-    return game_explan
+        GAME_EXPLAN = 'test'
+    return GAME_EXPLAN
 
 
 @app.route('/stock_search3', methods=["POST"])
@@ -690,36 +699,33 @@ def stock_search3():
 
 
 def status_style(val):  # 判斷狀態,來顯示顏色屬性 , 給 game_order 裡的order_status用
+    color = None
     if val == '中獎':
         color = 'blue'
     elif val == '未中獎':
         color = 'red'
     else:
-        pass
-    return ('color:%s' % color)
+        raise Exception('參數錯誤')
+    return (f'color:{color}')
 
 
 @app.route('/game_result', methods=["GET", "POST"])  # 查詢方案紀錄定單號
 def game_result():
-    global game_explan, game_playtype
+    global GAME_EXPLAN, GAME_PLAYTYPE
     cookies_dict = {}  # 存放cookie,避免一隻 登入後台
     if request.method == "POST":
         game_code = request.form.get('game_code')  # 訂單號
         game_type = request.form.get('game_type')  # 玩法
-        env = request.form.get('env_type')  # 環境
+        env = Config.EnvConfig(request.form.get('env_type'))  # 環境
         cookies_ = request.cookies  # 瀏覽器上的cookie
         print(cookies_)
-        if env == 'dev02':  # 傳給DB 環境 get_conn(env)用
-            envs = 0
-        else:
-            envs = 1
         if game_code != '':  # game_code 不為空,代表前台 是輸入 訂單號
-            AutoTest.ApiTestPC.select_gameResult(utils.Config.get_conn(envs), game_code)  # 傳回此方法.找出相關 訂單細節
-            game_detail = AutoTest.game_detail  # 將 global  game_detail 宣告變數 遊戲訂單的 內容
-            if len(game_detail[game_code]) == 0:
+            game_detail = Connection.select_game_result(conn=Connection.get_oracle_conn(env.get_env_id()),
+                                                        result=game_code)  # 傳回此方法.找出相關 訂單細節
+            if len(game_detail) == 0:
                 return "此環境沒有此訂單號"
             else:
-                game_status = game_detail[game_code][1]  # 需判斷  訂單狀態
+                game_status = game_detail[1]  # 需判斷  訂單狀態
                 if game_status == 1:
                     game_status = '等待開獎'
                 elif game_status == 2:
@@ -730,9 +736,9 @@ def game_result():
                     game_status = '撤銷'
                 else:
                     game_status = '待確認'
-                game_amount = float(game_detail[game_code][2] / 10000)  # 投注金額  需在除 1萬
-                game_retaward = float(game_detail[game_code][10] / 10000)  # 反點獎金 需除1萬
-                game_moneymode = game_detail[game_code][12]  # 元角分模式 , 1:元, 2: 角
+                game_amount = float(game_detail[2] / 10000)  # 投注金額  需在除 1萬
+                game_retaward = float(game_detail[10] / 10000)  # 反點獎金 需除1萬
+                game_moneymode = game_detail[12]  # 元角分模式 , 1:元, 2: 角
                 if game_moneymode == 1:
                     game_moneymode = '元'
                 elif game_moneymode == 2:
@@ -741,21 +747,25 @@ def game_result():
                     game_moneymode = '分'
 
                 # 遊戲玩法 : 後三 + 不定位+ 一碼不定位 , 並回傳給 game_map 來做 mapping
-                game_playtype = game_detail[game_code][4] + game_detail[game_code][5] + game_detail[game_code][6]
-                print("玩法: %s" % game_playtype)
+                GAME_PLAYTYPE = game_detail[4] + game_detail[5] + game_detail[6]
+                print(f"玩法: {GAME_PLAYTYPE}")
 
-                game_award = float(game_detail[game_code][13] / 10000)  # 中獎獎金
-                AutoTest.return_env(envs)  # 呼叫環境變數, 傳給 登入後台用
-                print(AutoTest.env_)
+                game_award = float(game_detail[13] / 10000)  # 中獎獎金
 
+                header = None
+                session = None
+                lotteryid = None
+                award_id = None
                 if env not in cookies_.keys():
                     print("瀏覽器上 還沒有後台cookie,需登入")
-                    AutoTest.ApiTestPC.admin_login()
-                    award_id = game_detail[game_code][17]  # 獎金id, 傳后查詢尋是哪個獎金組
-                    lotteryid = game_detail[game_code][14]  # 採種Id 傳給 後台 查詢哪個彩種
+                    AutoTest.ApiTestPC.admin_login(env_config=env)
+                    award_id = game_detail[17]  # 獎金id, 傳后查詢尋是哪個獎金組
+                    lotteryid = game_detail[14]  # 採種Id 傳給 後台 查詢哪個彩種
                     session = requests.Session()
-                    header = AutoTest.header  # 後台 登入header
-                    cookie = AutoTest.cookies['ANVOAID']  # 後台登入 cookie
+                    header = {
+                        'User-Agent': Config.UserAgent.PC.value,
+                        'Content-Type': 'application/x-www-form-urlencoded'}  # 後台 登入header
+                    cookie = AutoTest.ApiTestPC.admin_login(env_config=env)['ANVOAID']  # 後台登入 cookie
 
                     res = redirect('game_result')
                     res.set_cookie(env, cookie)  # 存放cookie
@@ -766,29 +776,31 @@ def game_result():
                 else:
                     print("瀏覽器已經存在cookie,無須登入")
                     cookie = cookies_[env]
+                    """若進入else, header / session / lotteryid / award_id 如何初始化?"""
+
                 header['Cookie'] = 'ANVOAID=' + cookie  # 存放後台cookie
                 # header['Content-Type'] ='application/json'
-                r = session.get(AutoTest.admin_url + "/gameoa/queryGameAward?lotteryId=%s&awardId=%s&status=1" % (
-                    lotteryid, award_id)
-                                , headers=header)  # 登入後台 查詢 用戶獎金值
+                r = session.get(
+                    env.get_admin_url() + f"/gameoa/queryGameAward?lotteryId={lotteryid}&awardId={award_id}&status=1"
+                    , headers=header)  # 登入後台 查詢 用戶獎金值
                 # print(r.text)
                 soup = BeautifulSoup(r.text, 'lxml')
-                if game_detail[game_code][16] == 0:  # 理論獎金為0, 代表一個完髮有可能有不同獎金
+                bonus = []
+                if game_detail[16] == 0:  # 理論獎金為0, 代表一個完髮有可能有不同獎金
                     print('有多獎金玩法')
-                    point_id = str(game_detail[game_code][15])
-                    bonus = []
-                    for i in soup.find_all('span', id=re.compile("^(%s)" % point_id)):
+                    point_id = str(game_detail[15])
+                    for i in soup.find_all('span', id=re.compile(f"^({point_id})")):
                         bonus.append(float(i.text))  # 有多個獎金
                     bonus = " ".join([str(x) for x in bonus])  # 原本bonus裡面裝 float  .需list裡轉成字元,
 
                     # bonus = "".join(bonus)# dataframe 不能支援list
                 else:
-                    point_id = str(game_detail[game_code][15]) + "_" + str(
-                        game_detail[game_code][16])  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
-                    for i in soup.find_all('span', id=re.compile("^(%s)" % point_id)):  # {'id':point_id}):
+                    point_id = str(game_detail[15]) + "_" + str(
+                        game_detail[16])  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
+                    for i in soup.find_all('span', id=re.compile(f"^({point_id})")):  # {'id':point_id}):
                         bonus = float(i.text)
                 print(bonus, point_id)
-                game_awardmode = game_detail[game_code][9]  # 是否為高獎金
+                game_awardmode = game_detail[9]  # 是否為高獎金
                 if game_awardmode == 1:
                     game_awardmode = '否'
                 elif game_awardmode == 2:
@@ -796,18 +808,18 @@ def game_result():
                     bonus = game_retaward + bonus  # 高獎金的話, 獎金 模式 + 反點獎金
                 # print(bonus)
                 game_map()  # 呼叫玩法說明
-                data = {"遊戲訂單號": game_code, "訂單時間": game_detail[game_code][0], "中獎狀態": game_status,
-                        "投注金額": game_amount, "投注彩種": game_detail[game_code][3],
-                        "投注玩法": game_playtype,
-                        "投注內容": game_detail[game_code][7], "獎金組": game_detail[game_code][8], "獎金模式": bonus,
-                        "獎金模式狀態": game_awardmode, "反點獎金": game_retaward, "投注倍數": game_detail[game_code][11],
-                        "元角分模式": game_moneymode, "中獎獎金": game_award, "遊戲說明": game_explan
+                data = {"遊戲訂單號": game_code, "訂單時間": game_detail[0], "中獎狀態": game_status,
+                        "投注金額": game_amount, "投注彩種": game_detail[3],
+                        "投注玩法": GAME_PLAYTYPE,
+                        "投注內容": game_detail[7], "獎金組": game_detail[8], "獎金模式": bonus,
+                        "獎金模式狀態": game_awardmode, "反點獎金": game_retaward, "投注倍數": game_detail[11],
+                        "元角分模式": game_moneymode, "中獎獎金": game_award, "遊戲說明": GAME_EXPLAN
                         }
-                global frame
-                frame = pd.DataFrame(data, index=[0])
-                print(frame)
+                global FRAME
+                FRAME = pd.DataFrame(data, index=[0])
+                print(FRAME)
                 # return frame
-                return frame.to_html()
+                return FRAME.to_html()
         elif game_type != '':  # game_type 不為空,拜表前台輸入 指定玩法
             if "_" in game_type:  # 把頁面輸入  _   去除
                 print('有_需移除')
@@ -824,9 +836,9 @@ def game_result():
                 print('輸入玩法 有空格需去除掉')
                 game_type = game_type.replace(' ', '')
             print(game_type)
-            AutoTest.ApiTestPC.select_gameorder(utils.Config.get_conn(envs), '%' + game_type + '%')
-            game_order = AutoTest.game_order
-            len_order = AutoTest.len_order
+            temp = Connection.select_game_order(Connection.get_oracle_conn(env.get_env_id()), '%' + game_type + '%')
+            game_order = temp[0]
+            len_order = temp[1]
             # print(game_order)
             order_list = []  # 因為可能有好幾個訂單,  傳入 dataframe 需為列表 ,訂單
             order_time = []  # 時間
@@ -858,10 +870,10 @@ def game_result():
             # print(order_list)
             data = {"訂單號": order_list, "用戶名": order_user, "投注時間": order_time, "投注彩種": order_lottery, "投注玩法": order_type,
                     "投注內容": order_detail, "開獎號碼": order_record, "中獎狀態": order_status}
-            frame = pd.DataFrame(data)
+            FRAME = pd.DataFrame(data)
             # test = frame.style.applymap(status_style)#增加狀態顏色 ,這是for jupyter_notebook可以直接使用
-            print(frame)
-            return frame.to_html()
+            print(FRAME)
+            return FRAME.to_html()
 
     return render_template('game_result.html')
 
@@ -870,39 +882,31 @@ def game_result():
 def user_acitve():  # 驗證第三方有校用戶
     if request.method == "POST":
         user = request.form.get('user')
-        env = request.form.get('env_type')
+        env = Config.EnvConfig(request.form.get('env_type'))
         joint_type = request.form.get('joint_type')
-        if env == 'dev02':
-            envs = 0
-        elif env == 'joy188':
-            envs = 1
-        else:
-            envs = 2
 
-        userid = AutoTest.ApiTestPC.select_user_id(AutoTest.ApiTestPC.get_conn(envs), user)
+        userid = Connection.select_user_id(Connection.get_oracle_conn(env.get_env_id()), user)
         # 查詢用戶 userid
         print(user, env)
         if len(userid) == 0:
-            return ("此環境沒有該用戶")
+            raise Exception("此環境沒有該用戶")
         else:
-            AutoTest.ApiTestPC.select_activeAPP(AutoTest.ApiTestPC.get_conn(envs), user)
+            active_app = Connection.select_active_app(Connection.get_oracle_conn(env.get_env_id()), user)
             # 查詢APP有效用戶 是否有值  ,沒值 代表 沒投注
 
-            active_app = AutoTest.active_app  # 呼叫 此變數
             # print(active_user)
             bind_card = []  # 綁卡列表.可能超過多張
             card_number = []  # 該綁卡,有被多少張數綁定,但段 是否為有效性
             # print(active_app)
 
-            AutoTest.ApiTestPC.select_activeFund(AutoTest.ApiTestPC.get_conn(envs), user)  # 當月充值
-            user_fund = AutoTest.user_fund
+            user_fund = Connection.select_active_fund(Connection.get_oracle_conn(env.get_env_id()), user)  # 當月充值
             print(user_fund)
 
-            AutoTest.ApiTestPC.select_activeCard(AutoTest.ApiTestPC.get_conn(envs), user, envs)  # 查詢綁卡數量
-            card_num = AutoTest.card_num  # 綁卡 和 該卡榜定幾張
+            card_num = Connection.select_active_card(Connection.get_oracle_conn(env.get_env_id()), user,
+                                                     env.get_env_id())  # 查詢綁卡數量
 
             if len(active_app) == 0:  # 非有效用戶,也代表 APP 有效用戶表沒資料(舊式沒投注)
-                print("%s用戶 為非有效用戶" % user)
+                print(f"{user}用戶 為非有效用戶")
 
                 active_submit = 0  # 有效投注
                 is_active = "否"  # 有效用戶值
@@ -930,15 +934,15 @@ def user_acitve():  # 驗證第三方有校用戶
             else:  # 這邊長度非0, 是select_activeAPP 這方法,有值, 需判斷 is_active 是否為1
                 if active_app[2] == 0:  # 列表[1] = is_active,  值 0 非有效
                     is_active = "否"  # active_user[0][1]
-                    print("%s用戶 為非有效用戶" % user)
+                    print(f"{user}用戶 為非有效用戶")
                 else:
                     is_active = "是"  # active_user[0][1]
-                    print("%s用戶 為有效用戶" % user)
+                    print(f"{user}用戶 為有效用戶")
                 active_submit = active_app[3]
 
                 # autoTest.Joy188Test.select_activeFund(autoTest.Joy188Test.get_conn(envs),user)#當月充值
 
-                if user_fund[0] == None:  # 確認沒充值
+                if user_fund[0] is None:  # 確認沒充值
                     real_charge = 0
                 else:
                     real_charge = float(user_fund[0]) / 10000  # 抓充值表, 顯示充值金額
@@ -970,16 +974,10 @@ def user_acitve():  # 驗證第三方有校用戶
 @app.route('/app_bet', methods=["POST"])
 def app_bet():
     user = request.form.get('user')
-    env = request.form.get('env_type')
+    env = Config.EnvConfig(request.form.get('env_type'))
     joint = request.form.get('joint_type')
-    if env == 'dev02':
-        envs = 0
-    elif env == 'joy188':
-        envs = 1
-    else:
-        envs = 2
-    AutoTest.ApiTestPC.select_AppBet(AutoTest.ApiTestPC.get_conn(envs), user)  # APP代理中心,銷量/盈虧
-    app_bet = AutoTest.app_bet  # 銷量/盈虧
+
+    app_bet = Connection.select_app_bet(Connection.get_oracle_conn(env.get_env_id()), user)  # APP代理中心,銷量/盈虧
     third_list = []  # 存放第三方列表
     active_bet = []  # 第三方有效投注
     third_prize = []  # 第三方獎金
@@ -1052,7 +1050,7 @@ def url_token():
         # print(token,env,id_,joint_type,domain)
         if token not in ['', None]:  # token 直不為空, 代表頁面輸入的是token
             print('頁面輸入token')
-            token_url = Config.get_url_token(Config.get_conn(int(env)), token, joint_type)
+            token_url = Connection.select_url_token(Connection.get_oracle_conn(int(env)), token, joint_type)
             print(token_url)
             user = []
             user_url = []
@@ -1064,7 +1062,7 @@ def url_token():
             data = {'用戶名': user, '開戶連結': user_url}
         elif id_ not in ['', None]:
             print('頁面輸入id')
-            token_url = Config.get_url_token(Config.get_conn(int(env)), id_, joint_type)
+            token_url = Connection.select_url_token(Connection.get_oracle_conn(int(env)), id_, joint_type)
             print(token_url)
             user = []
             user_url = []
@@ -1076,12 +1074,13 @@ def url_token():
             len_data = [0]  # 輸入ID 查 連結, ID 為唯一直
         elif user not in ['', None]:  # 頁面輸入 用戶名 查詢用戶從哪開出
             print('頁面輸入用戶名')
-            user_url = Config.get_user_url(Config.get_conn(int(env)), user, 2, joint_type)
+            user_url = Connection.select_user_url(Connection.get_oracle_conn(int(env)), user, 2, joint_type)
             print(user_url)
             if len(user_url) == 0:  # user_url 有可能找不到 ,再從 user_customer 的refere去找
-                user_url = Config.get_user_url(Config.get_conn(int(env)), user, joint_type)  # 檢查環境是否有這用戶
+                user_url = Connection.select_user_url(Connection.get_oracle_conn(int(env)), user,
+                                                      joint_type)  # 檢查環境是否有這用戶
                 if not user_url:
-                    raise Exception('{}環境沒有該用戶: {}'.format(env_type, user))
+                    raise Exception(f'{env_type}環境沒有該用戶: {user}')
 
                 data = {'用戶名': user, '用戶從此連結開出': '被刪除'}
                 frame = pd.DataFrame(data, index=[0])
@@ -1091,7 +1090,7 @@ def url_token():
             elif user_url[0][4] != -1:  # '失效'
                 print('連結失效,從referer找')
                 days = '是'  # user_url 找不到的連結 ,一定失效或被刪除
-                user_url = Config.get_user_url(Config.get_conn(int(env)), user, 0)
+                user_url = Connection.select_user_url(Connection.get_oracle_conn(int(env)), user, 0)
                 print(user_url)
             else:  # 這邊代表  user_url 是有值,  在去從days 判斷是否失效
                 if user_url[0][4] == -1:
@@ -1109,21 +1108,21 @@ def url_token():
                     if 'www2' in domain:
                         pass
                     else:
-                        domain = 'www2.%s.com'%domain
+                        domain = f'www2.{domain}.com'
                 elif any(s in domain for s in ['com','www']):# 網域名稱 有帶 www /com 不用額外更動
                     pass #  後續可以 對 開頭是否有 http ,尾不是 com  去做處理
                 else: # 沒有帶  www
                     
                     if any(s in domain for s in ['fh888','fh666']):
-                        domain = 'www.%s.bet'%domain
+                        domain = f'www.{domain}.bet'
                     else:
-                        domain = 'www.%s.com'%domain
+                        domain = f'www.{domain}.com'
                 '''
                 print(domain)
                 # env = domain_keys[domain][1]#  1 為環境 ,0 為預設連結
             except KeyError:  #
-                return ('沒有該連結')
-            domain_url = Config.get_domain_default_url(Config.get_conn(int(env)), domain)
+                raise KeyError('沒有該連結')
+            domain_url = Connection.select_domain_default_url(Connection.get_oracle_conn(int(env)), domain)
             print(domain_url)
             if len(domain_url) != 0:  # 代表該預名 在後台全局管理有做設置
                 domain_admin = '是'  # 後台是否有設定 該domain
@@ -1159,14 +1158,14 @@ def url_token():
             else:  # 就走預設的設定
                 try:
                     if domain_keys[domain][1] != int(env):
-                        return ("該環境沒有此domain")
+                        raise Exception("該環境沒有此domain")
                     domain_admin = '否'
                     admin_url = '無'  # 後台沒設置
                     url = domain_keys[domain][0]  # 沒設定 ,為空, 走預設連結
                     register_status = domain_keys[domain][2]
                     env_type = domain_keys[domain][3] + "/" + env_type  # 後台沒設置, 就從domain_keys 原本 預設的規則走
                 except KeyError:
-                    return ('沒有該連結')
+                    raise KeyError('沒有該連結')
 
                 data = {"網域名": domain, '環境': env_type, '後台是否有設置該網域': domain_admin, '預設連結': url,
                         '預設註冊按紐': register_status}
@@ -1176,7 +1175,7 @@ def url_token():
             print(frame)
             return frame.to_html()
         except ValueError:
-            return ('DATA有錯誤')
+            raise ValueError('DATA有錯誤')
     return render_template('url_token.html')
 
 
@@ -1186,7 +1185,7 @@ def sun_user2():  # 查詢太陽成 指定domain
         env = request.form.get('env_type')
         domain = request.form.get('domain_type')
         print(env, domain)
-        sun_user = Config.get_sun_user(Config.get_conn(int(env)), '', 2, domain)
+        sun_user = Connection.select_sun_user(Connection.get_oracle_conn(int(env)), '', 2, domain)
         print(sun_user)
 
         data = {'域名': [sun_user[i][0] for i in sun_user.keys()],
@@ -1196,7 +1195,7 @@ def sun_user2():  # 查詢太陽成 指定domain
                 '狀態': ['下架' if sun_user[i][4] == 1 else '正常' for i in sun_user.keys()],
                 '備註': [sun_user[i][5] for i in sun_user.keys()],
                 '連結失效性': ['失效' if sun_user[i][6] != -1 else '正常' for i in sun_user.keys()],
-                '註冊數量': ['0' if sun_user[i][7] == None else int(sun_user[i][7]) for i in sun_user.keys()]
+                '註冊數量': ['0' if sun_user[i][7] is None else int(sun_user[i][7]) for i in sun_user.keys()]
                 }
         frame = pd.DataFrame(data, index=[i for i in sun_user.keys()])
         print(frame)
@@ -1228,12 +1227,12 @@ def sun_user():  # 太陽成用戶 找尋
         else:
             type_ = ''  # 查詢 指定用戶
         print(type_)
-        sun_user = Config.get_sun_user(Config.get_conn(int(env)), user, type_, domain)  # 太陽/申博用戶
+        sun_user = Connection.select_sun_user(Connection.get_oracle_conn(int(env)), user, type_, domain)  # 太陽/申博用戶
         print(sun_user)
         if len(sun_user) == 0:
             if type_ == 1:
                 raise Exception('目前還沒有成功轉移用戶')
-            raise Exception('{}沒有該用戶 : {}'.format(env_name + domain_type, user))
+            raise Exception(f'{env_name + domain_type}沒有該用戶 : {user}')
         if type_ != 1:  # 指定用戶
             user = sun_user[0][0]
             phone = sun_user[0][1]
@@ -1244,7 +1243,7 @@ def sun_user():  # 太陽成用戶 找尋
                 tran_status = '未完成'
             tran_time = sun_user[0][5]
             index_len = [0]
-            user_id = Config.get_user_id(Config.get_conn(int(env)), user, int(domain))  # 4.0 資料庫
+            user_id = Connection.select_user_id(Connection.get_oracle_conn(int(env)), user, int(domain))  # 4.0 資料庫
             '''
             if len(userid) == 0:# 代表該4.0環境沒有該用戶
                 FF_memo = '無'
@@ -1283,15 +1282,15 @@ def fund_activity():  # 充值紅包 查詢
         user = request.form.get('user')
         env = request.form.get('env_type')
         print(user, env)
-        user_id = Config.get_user_id(Config.get_conn(int(env)), user)  # 查詢頁面上 該環境是否有這用戶
+        user_id = Connection.select_user_id(Connection.get_oracle_conn(int(env)), user)  # 查詢頁面上 該環境是否有這用戶
         if len(user_id) == 0:
             raise Exception('該環境沒有此用戶')
-        red_able = Config.get_red_fund(Config.get_conn(int(env)), user)  # 先確認 是否領取過紅包
+        red_able = Connection.select_red_fund(Connection.get_oracle_conn(int(env)), user)  # 先確認 是否領取過紅包
         print(red_able)
 
         fund_list = []  # 存放各充值表的 紀錄 ,總共四個表
         for i in range(4):
-            red_able = Config.get_red_fund(Config.get_conn(int(env)), user, i)
+            red_able = Connection.select_red_fund(Connection.get_oracle_conn(int(env)), user, i)
             fund_list.append(red_able)
         # begin_mission = AutoTest.fund_# 新守任務表
         print(fund_list)
@@ -1312,13 +1311,13 @@ def fund_activity():  # 充值紅包 查詢
             if len(fund_data) == 0:
                 msg2 = '無紀錄'
             else:
-                msg2 = '{}'.format(fund_data[0])
+                msg2 = f'{fund_data[0]}'
                 fund_log = fund_log + 1  #
             logger.info('fund_activity -> msg = {}, msg2 = {}'.format(msg, msg2))
             data[msg] = msg2
 
-        logger.warning('fund_activity ->red_able = {}'.format(red_able))
-        logger.warning('fund_activity ->fund_list = {}'.format(fund_list))
+        logger.warning(f'fund_activity ->red_able = {red_able}')
+        logger.warning(f'fund_activity ->fund_list = {fund_list}')
         if len(red_able) == 0:  # 紅包還沒領取
             red_able = '否'
             if fund_log == 0:  # 代表沒成功
@@ -1330,9 +1329,9 @@ def fund_activity():  # 充值紅包 查詢
             activity_able = "符合資格"
         data['紅包是否領取'] = '紅包金 : {}'.format(red_able)
         data['充直紅包活動'] = activity_able
-        logger.info('fund_activity -> data = {}'.format(data))
+        logger.info(f'fund_activity -> data = {data}')
         frame = pd.DataFrame(data, index=[0])
-        logger.info('fund_activity -> frame = {}'.format(frame))
+        logger.info(f'fund_activity -> frame = {frame}')
 
         return frame.to_html()
     return render_template('fund_activity.html')
@@ -1362,7 +1361,7 @@ def handle_http_exception(error):
         'description': error.description,
         'stack_trace': traceback.format_exc()
     }
-    log_msg = f"HTTPException {error_dict.code}, Description: {error_dict.description}, Stack trace: {error_dict.stack_trace}"
+    log_msg = f"HTTPException {error_dict['code']}, Description: {error_dict['description']}, Stack trace: {error_dict['stack_trace']}"
     logger.log(msg=log_msg)
     response = jsonify(error_dict)
     response.status_code = error.code
