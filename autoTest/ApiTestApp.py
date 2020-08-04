@@ -1384,13 +1384,18 @@ class ApiTestAPP_YFT(unittest.TestCase):
         expected = 'ok'
         bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
                                     is_trace=False)
-        assert bet_response['status'] == expected
-        print(
-            f'{game_name[1]}投注追號成功。　訂單編號：{bet_response["content"]["orderNo"]}'
-            f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        if bet_response['status'] == expected:
+            print(
+                f'{game_name[1]}投注追號成功。　訂單編號：{bet_response["content"]["orderNo"]}'
+                f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        else:
+            self.fail(f'投注失敗，接口返回：{bet_response}')
+
         bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
                                     is_trace=True)
-        assert bet_response['status'] == expected
-        print(
-            f'{game_name[1]}追號全彩種成功。　訂單編號：{bet_response["content"]["orderNo"]}'
-            f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        if bet_response['status'] == expected:
+            print(
+                f'{game_name[1]}追號全彩種成功。　訂單編號：{bet_response["content"]["orderNo"]}'
+                f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        else:
+            self.fail(f'投注失敗，接口返回：{bet_response}')

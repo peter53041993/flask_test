@@ -84,7 +84,7 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mo
         runner = HTMLTestRunner.HTMLTestRunner(
             stream=fp,
             title=u'測試報告',
-            description=f'環境: {env_config},帳號: {user_name}',
+            description=f'環境: {env_config.get_domain()},　　帳號: {user_name}',
         )
         logger.debug(">>>>>>>>Test Start.<<<<<<<<")
         runner.run(suite)

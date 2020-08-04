@@ -55,12 +55,13 @@
             if (check === 0) {
                 alert("你未勾選任何項目");
                 return false;//不要提交表單
-            } else if (check > 20) {
-                console.log('check : ' + check)
-                alert("PC自動化案例,不建議和街口案例一起, 抱歉");
-                $('#Pc_driver').children(':checkbox').prop('checked', this.checked);
-                location.reload();
-            } else if ($('#username').val() === '') {
+            }
+            {#else if (check > 20) {#}
+            {#    console.log('check : ' + check)#}
+            {#    alert("PC自動化案例,不建議和街口案例一起, 抱歉");#}
+            {#    $('#Pc_driver').children(':checkbox').prop('checked', this.checked);#}
+            {#    location.reload();}#}
+            else if ($('#username').val() === '') {
                 alert('請輸入用戶名')
                 location.reload();
             } else if (driver_check > 3) {

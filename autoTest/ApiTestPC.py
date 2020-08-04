@@ -395,7 +395,7 @@ class ApiTestPC(unittest.TestCase):
                 print(f'{third}, 餘額: {r.json()["balance"]}')
             elif 'transfer' in url:
                 if r.json()['status']:
-                    print(f'帳號 kerrthird001 轉入 {third} ,金額:1, 進行中')
+                    print(f'帳號 kerrthird001 轉入 {third} ,金額:1, 狀態碼:{r.json()["status"]}')
                 else:
                     print(f'{third} 轉帳失敗')
             elif 'getuserbal' in url:
@@ -499,8 +499,8 @@ class ApiTestPC(unittest.TestCase):
     def test_PcThirdBalance(self):
         """4.0/第三方餘額"""
         threads = []
-
-        print(f'帳號: {self.user}')
+        print('------------------------------------------------------------------------')
+        print(f'開始確認帳號: {self.user} 三方餘額')
         for third in self.third_list:
             if third == 'gns':
                 third_url = '/gns/gnsBalance'
@@ -537,7 +537,7 @@ class ApiTestPC(unittest.TestCase):
 
             # 判斷轉帳的 狀態
             if r.json()['status']:
-                print(f'帳號 {self.user} 轉入 {third} ,金額:1, 進行中')
+                print(f'帳號 {self.user} 轉入 {third} ,金額:1, 狀態碼:{r.json()["status"]}')
             else:
                 errors[third] = r.json()
                 print(f'{third} 轉帳失敗')  # 列出錯誤訊息 ,
@@ -562,12 +562,13 @@ class ApiTestPC(unittest.TestCase):
                         break
                     if count == 15:
                         errors[third] = tran_result
-                        print('轉帳狀態失敗')  # 如果跑道9次  需確認
+                        # print(f'{third} : 轉帳狀態失敗')  # 如果跑道9次  需確認
                         break
             else:
                 pass
         for key, value in errors.items():
             print(f'三方: {key} 轉帳失敗. 接口返回: {value}')
+
         self.test_PcThirdBalance()
 
         if errors:
@@ -584,7 +585,7 @@ class ApiTestPC(unittest.TestCase):
 
             r = self.SESSION.post(self.post_url + url, data=json.dumps(post_data), headers=self.header)
             if r.json()['status']:
-                print(f'帳號 {self.user}, {third} 轉回4.0 ,金額:1, 進行中')
+                print(f'帳號 {self.user}, {third} 轉回4.0 ,金額:1, 狀態碼:{r.json()["status"]}')
             else:
                 logger.error(f'轉帳接口失敗 : errors[{third}] = {r.json()}')
                 errors[third] = r.json()
@@ -611,7 +612,7 @@ class ApiTestPC(unittest.TestCase):
                     if count == 9:
                         logger.error(f'轉帳狀態失敗 : errors[{third}] = {tran_result}')
                         errors[third] = tran_result
-                        print('轉帳狀態失敗')  # 如果跑道9次  需確認
+                        # print(f'{third} : 轉帳狀態失敗')  # 如果跑道9次  需確認
                         break
             else:
                 pass
@@ -1083,11 +1084,16 @@ class ApiTestPC_YFT(unittest.TestCase):
         expected = 'ok'
         bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
                                     is_trace=False)
-        assert bet_response['status'] == expected
-        print(
-            f'{game_name[1]}投注追號成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        if bet_response['status'] == expected:
+            print(
+                f'{game_name[1]}投注追號成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        else:
+            self.fail(f'投注失敗，接口返回：{bet_response}')
+
         bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
                                     is_trace=True)
-        assert bet_response['status'] == expected
-        print(
-            f'{game_name[1]}追號全彩種成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        if bet_response['status'] == expected:
+            print(
+                f'{game_name[1]}追號全彩種成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        else:
+            self.fail(f'投注失敗，接口返回：{bet_response}')
