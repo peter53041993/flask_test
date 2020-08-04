@@ -26,6 +26,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import re
 from utils import Config, Connection
+from utils.Connection import PostgresqlConnection
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
@@ -312,8 +313,8 @@ def auto_test():
             elif ignore_name_check:
                 user_id = ["ignore"]
             else:  # yft用戶名驗證
-                user_id = Connection.get_user_id_yft(user_name=user_name)
-
+                conn = PostgresqlConnection()
+                user_id = conn.get_user_id_yft(user_name=user_name)
 
             test_cases.append(api_test_pc)
             test_cases.append(api_test_app)

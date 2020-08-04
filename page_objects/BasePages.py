@@ -38,7 +38,7 @@ class BasePage:
         :param last_page: 上一個頁面的POM物件，需繼承自BasePage，若不為空則以此物件參數進行初始化、沿用參數
         """
         if last_page:
-            self.env_config = last_page.env_config
+            self.env_config = last_page._env_config
             self.driver = last_page.driver
             self.user = last_page.user
             self.password = last_page.password

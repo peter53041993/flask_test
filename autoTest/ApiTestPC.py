@@ -10,7 +10,7 @@ import time
 
 from utils import Config, Logger, Connection
 from utils.Config import LotteryData, func_time
-from utils.Connection import select_issue, select_red_id, select_red_bal, get_lottery_games
+from utils.Connection import select_issue, select_red_id, select_red_bal
 
 logger = Logger.create_logger(r"\AutoTest", 'auto_test_pc')
 COOKIE = None  # 以全域變數儲存，以利在各測試間共用
@@ -687,10 +687,11 @@ class ApiTestPC_YFT(unittest.TestCase):
     YFT API測試
     """
     _session = None
-    env_config = None
-    yft_user = None
-    money_unit = None
-    award_mode = None
+    _env_config = None
+    _user = None
+    _money_unit = None
+    _award_mode = None
+    _conn = None
     header = {'User-Agent': Config.UserAgent.PC.value,
               'Content-Type': 'application/json'}
 
@@ -699,33 +700,34 @@ class ApiTestPC_YFT(unittest.TestCase):
         self.login()
         logger.info(f'After login. header = {self.header}')
 
-    def __init__(self, case, _env, _user, _money_unit=1, _award_mode=0):
+    def __init__(self, case, env_config, user, conn, money_unit=1, _award_mode=0):
         """
         YFT初始化
         :param case: List
-        :param _env: EnvConfig
-        :param _user: Str
-        :param _money_unit: 1 / 0.1 / 0.01
+        :param env_config: EnvConfig
+        :param user: Str
+        :param money_unit: 1 / 0.1 / 0.01
         :param _award_mode: 0=預設 / 1=一般 / 2=高獎金
         """
         super().__init__(case)
         logger.info(
-            f'ApiTestPC_YFT __init__ : _env={_env}, _user={_user}, _money_unit={_money_unit}, _award_mode={_award_mode}')
-        self.env_config = _env
-        self.yft_user = _user
-        self.money_unit = _money_unit
-        self.award_mode = _award_mode
+            f'ApiTestPC_YFT __init__ : _env={env_config}, _user={user}, _money_unit={money_unit}, _award_mode={_award_mode}')
+        self._env_config = env_config
+        self._user = user
+        self._money_unit = money_unit
+        self._award_mode = _award_mode
+        self._conn = conn
         if self._session is None:
             self._session = requests.Session()
 
     def login(self):
         post_url = '/a/login/login'
         md = hashlib.md5()
-        md.update(self.env_config.get_password().encode('utf-8'))
-        request = f'{{"account": "{self.yft_user}", "passwd": "{md.hexdigest()}", "timeZone": "GMT+8", "isWap": false, "online": false}} '
+        md.update(self._env_config.get_password().encode('utf-8'))
+        request = f'{{"account": "{self._user}", "passwd": "{md.hexdigest()}", "timeZone": "GMT+8", "isWap": false, "online": false}} '
         logger.debug(f'request_body = {request}')
-        response = self._session.post(url=self.env_config.get_post_url() + post_url, data=request, headers=self.header)
-        logger.debug(f'login_url = {self.env_config.get_post_url() + post_url}')
+        response = self._session.post(url=self._env_config.get_post_url() + post_url, data=request, headers=self.header)
+        logger.debug(f'login_url = {self._env_config.get_post_url() + post_url}')
         logger.debug(f'Login response = {response.content}')
         if response.cookies['JSESSIONID']:
             logger.info(f'Cookies = {response.cookies["JSESSIONID"]}')
@@ -1006,7 +1008,7 @@ class ApiTestPC_YFT(unittest.TestCase):
         content = f'{{"lotteryType":"{lottery_name}","timeZone":"GMT+8","isWap":false,"online":false}}'
         logger.debug(f'get_lottery_info -----> {content}')
 
-        response = self._session.post(url=self.env_config.get_post_url() + '/a/lottery/init', data=content,
+        response = self._session.post(url=self._env_config.get_post_url() + '/a/lottery/init', data=content,
                                       headers=self.header)
         logger.debug(f'get_lottery_info <----- {response.json()}')
         return response.json()['content']
@@ -1048,9 +1050,9 @@ class ApiTestPC_YFT(unittest.TestCase):
                 default['stopOnWon'] = 'yes'
             else:
                 default['stopOnWon'] = 'no'
-        if self.money_unit == '0.1':
+        if self._money_unit == '0.1':
             totalAmount *= 0.1
-        elif self.money_unit == '0.01':
+        elif self._money_unit == '0.01':
             totalAmount *= 0.01
 
         default['totalAmount'] = totalAmount
@@ -1060,27 +1062,27 @@ class ApiTestPC_YFT(unittest.TestCase):
         data.replace('True', 'true')
         data.replace('False', 'false')
 
-        logger.debug(f"self.money_unit == '0.1' = {self.money_unit == '0.1'}\n"
-                     f"self.money_unit == '0.01' = {self.money_unit == '0.01'}\n"
-                     f"self.award_mode == '2' = {self.award_mode == '2'}")
-        if self.money_unit == '0.1':
+        logger.debug(f"self.money_unit == '0.1' = {self._money_unit == '0.1'}\n"
+                     f"self.money_unit == '0.01' = {self._money_unit == '0.01'}\n"
+                     f"self.award_mode == '2' = {self._award_mode == '2'}")
+        if self._money_unit == '0.1':
             logger.debug("self.money_unit == '0.1'")
             data = data.replace('"potType": "Y"', '"potType": "J"')
-        elif self.money_unit == '0.01':
+        elif self._money_unit == '0.01':
             logger.debug("self.money_unit == '0.01'")
             data = data.replace('"potType": "Y"', '"potType": "F"')
-        if self.award_mode == '2':
+        if self._award_mode == '2':
             logger.debug("self.award_mode == '2'")
             data = data.replace('"doRebate": "yes"', '"doRebate": "no"')
 
         logger.info(f'Bet content = {data}')
-        bet_response = self._session.post(url=self.env_config.get_post_url() + post_url, data=data,
+        bet_response = self._session.post(url=self._env_config.get_post_url() + post_url, data=data,
                                           headers=self.header)
         logger.info(f'Bet response = {bet_response.json()}\n')
         return bet_response.json()
 
     def bet_trace(self, game_name, stop_on_win):
-        games = get_lottery_games(game_name[0])
+        games = self._conn.get_lottery_games(game_name[0])
         expected = 'ok'
         bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
                                     is_trace=False)
