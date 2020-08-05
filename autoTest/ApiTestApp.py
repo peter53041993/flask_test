@@ -10,9 +10,7 @@ import random
 import requests
 import time
 
-from utils import Config, Logger, Connection
-from utils.BetContent_yft import iapi_default
-from utils.Connection import get_order_code_iapi, select_issue, select_bet_type_code, PostgresqlConnection
+from utils import Config, Logger
 from utils.TestTool import trace_log
 from utils.Config import LotteryData, func_time
 
@@ -22,25 +20,23 @@ YFT_SIGN = None
 
 class ApiTestApp(unittest.TestCase):
     u'APP接口測試'
-    envConfig = None
-    USER = None
-    red_type = None
-    # loggerApiTest = None
-    userAgent = Config.UserAgent.PC.value
-    header = None
+    __slots__ = '_env_config', '_user', '_red_type', '_userAgent', '_header', '_conn_oracle', '_conn_mysql'
 
     def setUp(self):
         logger.info(f'ApiTestApp setUp : {self._testMethodName}')
 
-    def __init__(self, case_, env_, user_, red_type_):
+    def __init__(self, case_, env_config, user, red_type, oracle, mysql):
         super().__init__(case_)
         # if not loggerApiTest:
         #     loggerApiTest = loggerApiTest.create_loggerApiTest(r"\ApiTestApp")
-        self.envConfig = env_
-        self.user = user_
-        self.red_type = red_type_
-        self.header = {
-            'User-Agent': self.userAgent,
+        self._env_config = env_config
+        self._user = user
+        self._red_type = red_type
+        self._userAgent = Config.UserAgent.PC.value
+        self._conn_oracle = oracle
+        self._conn_mysql = mysql
+        self._header = {
+            'User-Agent': self._userAgent,
             'Content-Type': 'application/json'
         }
         logger.info('ApiTestApp __init__.')
@@ -48,7 +44,7 @@ class ApiTestApp(unittest.TestCase):
     @func_time
     def test_AppLogin(self):
         u"APP登入測試"
-        account_ = {self.user: '輸入的用戶名'}
+        account_ = {self._user: '輸入的用戶名'}
         global TOKEN_, USERID_
         TOKEN_ = {}
         USERID_ = {}
@@ -56,11 +52,11 @@ class ApiTestApp(unittest.TestCase):
         # 判斷用戶是dev或188,  uuid和loginpasssource為固定值
         global ENV_ID, ENV_IAPI  # envs : DB環境 用, env 環境 url ,request url 用, domin_url APP開戶 參數用
 
-        ENV_IAPI = self.envConfig.get_iapi()
-        ENV_ID = self.envConfig.get_env_id()
-        uuid = self.envConfig.get_uuid()
-        login_pass_source = self.envConfig.get_login_pass_source()
-        joint_venture = self.envConfig.get_joint_venture_by_domain()
+        ENV_IAPI = self._env_config.get_iapi()
+        ENV_ID = self._env_config.get_env_id()
+        uuid = self._env_config.get_uuid()
+        login_pass_source = self._env_config.get_login_pass_source()
+        joint_venture = self._env_config.get_joint_venture_by_domain()
 
         # 登入request的json
         for i in account_.keys():
@@ -84,9 +80,9 @@ class ApiTestApp(unittest.TestCase):
                 }
             }
             print("Joy188Test3 Start")
-            print(login_data)
+            # print(login_data)
             try:
-                r = requests.post(ENV_IAPI + '/front/login', data=json.dumps(login_data), headers=self.header)
+                r = requests.post(ENV_IAPI + '/front/login', data=json.dumps(login_data), headers=self._header)
                 logger.info(f'login request response = {r.json()}')
                 token = r.json()['body']['result']['token']
                 user_id = r.json()['body']['result']['userid']
@@ -99,7 +95,7 @@ class ApiTestApp(unittest.TestCase):
                 logger.error(trace_log(e))
                 self.fail(u"登入失敗")
             # user_list.setdefault(userid,token)
-        self.get_token(ENV_ID, self.user)
+        self.get_token(ENV_ID, self._user)
 
     def get_token(self, envs, user):
         redis_conn = self.get_rediskey(envs)
@@ -127,7 +123,7 @@ class ApiTestApp(unittest.TestCase):
         u"APP投注"
         global USER
 
-        USER = self.user  # 業面用戶登入
+        USER = self._user  # 業面用戶登入
         t = time.strftime('%Y%m%d %H:%M:%S')
         print(f'投注帳號: {USER}, 現在時間: {t}')
         try:
@@ -147,14 +143,14 @@ class ApiTestApp(unittest.TestCase):
                 else:
                     lottery_id = LotteryData.lottery_dict[i][1]
 
-                    issue = select_issue(Connection.get_oracle_conn(ENV_ID), lottery_id)  # 目前彩種的獎棋
+                    issue = self._conn_oracle.select_issue(lottery_id)  # 目前彩種的獎棋
                     # print(issue,issueName)
                     now = int(time.time() * 1000)  # 時間戳
                     ball_type_post = self.game_type(i)  # 玩法和內容,0為玩法名稱, 1為投注內容
                     methodid = ball_type_post[0].replace('.', '')  # ex: housan.zhuiam.fushi , 把.去掉
 
                     # 找出對應的玩法id
-                    bet_type = select_bet_type_code(Connection.get_oracle_conn(ENV_ID), lottery_id, methodid)
+                    bet_type = self._conn_oracle.select_bet_type_code(lottery_id, methodid)
 
                     data_ = {"head":
                                  {"sessionId": TOKEN_[USER]},
@@ -172,8 +168,8 @@ class ApiTestApp(unittest.TestCase):
                                                 "userIp": 168627247, "channelId": 402, "traceStop": 0}}}
                     session = requests.session()
 
-                    r = session.post(self.envConfig.get_post_url() + 'game/buy', data=json.dumps(data_),
-                                     headers=self.header)
+                    r = session.post(self._env_config.get_post_url() + 'game/buy', data=json.dumps(data_),
+                                     headers=self._header)
 
                     if r.json()['head']['status'] == 0:  # status0 為投注成功
                         print(f'{LotteryData.lottery_dict[i][0]} 投注成功')
@@ -182,7 +178,7 @@ class ApiTestApp(unittest.TestCase):
                         print(f"投注金額 : {2 * MUL}, 投注倍數: {MUL}")  # mul 為game_type方法對甕倍數
                         # print(r.json())
                         orderid = (r.json()['body']['result']['orderId'])
-                        order_code = get_order_code_iapi(Connection.get_oracle_conn(ENV_ID), orderid)  # 找出對應ordercode
+                        order_code = self._conn_oracle.get_order_code_iapi(orderid)  # 找出對應ordercode
                         # print(f'orderid: {orderid}')
                         print(f'投注單號: {order_code[-1]}')
                         print('------------------------------')
@@ -316,7 +312,7 @@ class ApiTestApp(unittest.TestCase):
 
     def test_AppOpenLink(self):
         """APP開戶/註冊"""
-        user = self.user
+        user = self._user
         if ENV_ID == 1:  # 188 環境
             data_ = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": "",
                               "sessionId": TOKEN_[user]}, "body": {"pager": {"startNo": "1", "endNo": "99999"},
@@ -788,7 +784,7 @@ class ApiTestApp(unittest.TestCase):
                           "needContact": "N", "authenCellphone": "N", "showRegisterBtn": "Y"}}}
         logger.info(f"link = {ENV_IAPI + '/information/doRetSetting'}")
         r = requests.post(ENV_IAPI + '/information/doRetSetting', data=json.dumps(data_),
-                          headers=self.header)  # 儲存連結反點,生成連結
+                          headers=self._header)  # 儲存連結反點,生成連結
         print(r.content)
         logger.info(r.content)
         if r.json()['head']['status'] == 0:
@@ -799,7 +795,7 @@ class ApiTestApp(unittest.TestCase):
                                         "appname": "1"}, "pager": {"startNo": "", "endNo": ""}}}
 
             r = requests.post(ENV_IAPI + '/information/openLinkList', data=json.dumps(data_),
-                              headers=self.header)  # 找出開戶連結后的註冊id,回傳註冊
+                              headers=self._header)  # 找出開戶連結后的註冊id,回傳註冊
             # print(r.json())
             result = r.json()['body']['result']['list'][0]
             global REGCODE, TOKEN, EXP, PID
@@ -813,7 +809,7 @@ class ApiTestApp(unittest.TestCase):
         else:
             self.fail('創立失敗')
         user_random = random.randint(1, 100000)  # 隨機生成 頁面輸入 用戶名 + 隨機數 的下級
-        new_user = self.user + str(user_random)
+        new_user = self._user + str(user_random)
         data_ = {"head": {"sowner": "", "rowner": "", "msn": "", "msnsn": "", "userId": "", "userAccount": ""},
                  # 開戶data
                  "body": {
@@ -822,14 +818,14 @@ class ApiTestApp(unittest.TestCase):
                                "pid": int(PID), "qq": '',
                                "ip": "192.168.2.18", "app_id": "10", "come_from": "4", "appname": "1"},
                      "pager": {"startNo": "", "endNo": ""}}}
-        if self.envConfig in ['dev02', 'joy188']:  # 一般 4.0  data 不用帶 joint_venture
+        if self._env_config in ['dev02', 'joy188']:  # 一般 4.0  data 不用帶 joint_venture
             pass
-        elif self.envConfig in ['fh82dev02', 'teny2020dev02', 'joy188.teny2020', 'joy188.195353']:  # 合營版
+        elif self._env_config in ['fh82dev02', 'teny2020dev02', 'joy188.teny2020', 'joy188.195353']:  # 合營版
             data_['body']['param']['jointVenture'] = 1
         else:  # 歡樂棋牌
             data_['body']['param']['jointVenture'] = 2
 
-        r = requests.post(ENV_IAPI + '/user/register', data=json.dumps(data_), headers=self.header)
+        r = requests.post(ENV_IAPI + '/user/register', data=json.dumps(data_), headers=self._header)
         if r.json()['head']['status'] == 0:
             print(f'{new_user} 註冊成功')
         else:
@@ -853,14 +849,14 @@ class ApiTestApp(unittest.TestCase):
                                                                                             "endNo": ""}}}
         return data
 
-    def APP_SessionPost(self, third, url, post_data):  # 共用 session post方式 (Pc)
-        self.header = {
-            'User-Agent': self.userAgent,
+    def APP_SessionPost(self, third: str, url: str, post_data):  # 共用 session post方式 (Pc)
+        self._header = {
+            'User-Agent': self._userAgent,
             'Content-Type': 'application/json; charset=UTF-8',
         }
         try:
             session = requests.Session()
-            response = session.post(ENV_IAPI + f'/{third}/{url}', headers=self.header, data=json.dumps(post_data))
+            response = session.post(ENV_IAPI + f'/{third}/{url}', headers=self._header, data=json.dumps(post_data))
 
             if 'balance' in url:
                 balance = response.json()['body']['result']['balance']
@@ -876,7 +872,7 @@ class ApiTestApp(unittest.TestCase):
     def test_AppBalance(self):
         """APP 4.0/第三方餘額"""
         threads = []
-        user = self.user
+        user = self._user
         data_ = self.balance_data(user)
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
         print(f'帳號: {user}')
@@ -904,8 +900,8 @@ class ApiTestApp(unittest.TestCase):
     @func_time
     def test_ApptransferIn(self):
         """APP轉入"""
-        data_ = self.amount_data(self.user)
-        print(f'帳號: {self.user}')
+        data_ = self.amount_data(self._user)
+        print(f'帳號: {self._user}')
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
         third_failed = {}
         for third in third_list:
@@ -914,7 +910,7 @@ class ApiTestApp(unittest.TestCase):
             if third == 'gns':
                 tran_url = 'Gns'
             response = requests.post(ENV_IAPI + f'/{third}/transferTo{tran_url}', data=json.dumps(data_),
-                                     headers=self.header)
+                                     headers=self._header)
             logger.info('test_ApptransferIn third = {third}, response = {response.content}')
             status = response.json()['body']['result']['status']
             if status == 'Y':
@@ -930,9 +926,10 @@ class ApiTestApp(unittest.TestCase):
             count = 0
             logger.info(f'tran_result : {tran_result}')
             while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=ENV_ID, third=third), tran_type=0,
-                                                      third=third,
-                                                      user=self.user)  #
+                tran_result = self._conn_mysql.thirdly_tran(
+                    tran_type=0,
+                    third=third,
+                    user=self._user)
                 logger.info(f'tran_result : {tran_result}')
                 sleep(0.5)
                 count += 1
@@ -953,12 +950,12 @@ class ApiTestApp(unittest.TestCase):
     @func_time
     def test_ApptransferOut(self):
         """APP轉出"""
-        data_ = self.amount_data(self.user)
-        print(f'帳號: {self.user}')
+        data_ = self.amount_data(self._user)
+        print(f'帳號: {self._user}')
         third_list = ['gns', 'sb', 'im', 'ky', 'lc', 'city']
         third_failed = {}
         for third in third_list:  # PC 沙巴 是 shaba , iapi 是 sb
-            response = requests.post(ENV_IAPI + f'/{third}/transferToFF', data=json.dumps(data_), headers=self.header)
+            response = requests.post(ENV_IAPI + f'/{third}/transferToFF', data=json.dumps(data_), headers=self._header)
             logger.info(f'test_ApptransferOut : third = {third}, response = {response.content}')
             status = response.json()['body']['result']['status']
             if status == 'Y':
@@ -971,15 +968,11 @@ class ApiTestApp(unittest.TestCase):
             logger.info(f'{third} 轉出開始')
             if third == 'sb':
                 third = 'shaba'
-            tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=ENV_ID, third=third), tran_type=1,
-                                                  third=third,
-                                                  user=self.user)  # 先確認資料轉帳傳泰
+            tran_result = self._conn_mysql.thirdly_tran(tran_type=1, third=third, user=self._user)  # 先確認資料轉帳傳泰
             count = 0
             logger.info(f'tran_result : {tran_result}')
             while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                tran_result = Connection.thirdly_tran(Connection.get_mysql_conn(evn=ENV_ID, third=third), tran_type=1,
-                                                      third=third,
-                                                      user=self.user)  #
+                tran_result = self._conn_mysql.thirdly_tran(tran_type=1, third=third, user=self._user)
                 logger.info(f'tran_result : {tran_result}')
                 sleep(1)
                 count += 1
@@ -1004,16 +997,8 @@ class ApiTestAPP_YFT(unittest.TestCase):
     """
     YFT APP API測試
     """
-    api_url = '/app/call'
-    iapi_default = json.loads(iapi_default)
-    _session = None
-    _env_config = None
-    _user = None
-    _money_unit = None
-    _award_mode = None
-    _conn = None
-    header = {'User-Agent': Config.UserAgent.PC.value,
-              'Content-Type': 'application/json'}
+    __slots__ = '_api_url', '_iapi_default', '_session', '_env_config', '_user', '_money_unit',\
+                '_award_mode', '_conn_postgre', '_header'
 
     def setUp(self):
         global YFT_SIGN
@@ -1025,11 +1010,15 @@ class ApiTestAPP_YFT(unittest.TestCase):
         super().__init__(case)
         logger.info(
             f'ApiTestAPP_YFT __init__ : _env={env_config}, _user={user}, _money_unit={money_unit}, _award_mode={award_mode}')
+        self._api_url = '/app/call'
         self._env_config = env_config
         self._user = user
         self._money_unit = money_unit
         self._award_mode = award_mode
-        self._conn = conn
+        self._conn_postgre = conn
+        self._header = {'User-Agent': Config.UserAgent.PC.value,
+                        'Content-Type': 'application/json'}
+        self._iapi_default = json.loads(self._iapi_default)
         if self._session is None:
             self._session = requests.Session()
 
@@ -1038,14 +1027,14 @@ class ApiTestAPP_YFT(unittest.TestCase):
 
         md = hashlib.md5()
         md.update(self._env_config.get_password().encode('utf-8'))
-        data = self.iapi_default
+        data = self._iapi_default
         data['callType'] = call_type
         data[
             "content"] = f'{{"passwd":"{md.hexdigest()}","account":"{self._user}","uuid":"DF4D21DD8B87A5A84F5EE57122CCB06F6D14CFE6"}}'
-        response = self._session.post(url=self._env_config.get_post_url() + self.api_url, data=json.dumps(data),
-                                      headers=self.header)
+        response = self._session.post(url=self._env_config.get_post_url() + self._api_url, data=json.dumps(data),
+                                      headers=self._header)
         response_json = json.loads(response.content)
-        logger.debug(f'login_url = {self._env_config.get_post_url() + self.api_url}')
+        logger.debug(f'login_url = {self._env_config.get_post_url() + self._api_url}')
         logger.debug(f'Login response = {response.content}')
         logger.debug(f'Cookies = {response_json["content"]["sign"]}')
         if response_json["content"]["sign"]:
@@ -1310,15 +1299,15 @@ class ApiTestAPP_YFT(unittest.TestCase):
         :return: 返還獎期資訊內容
         """
         call_type = 'get_bet_issue_info'
-        data = self.iapi_default
+        data = self._iapi_default
         data['callType'] = call_type
         if YFT_SIGN is None:
             raise Exception('Sign is None.')
         data['sign'] = YFT_SIGN
         data['content'] = {"lotteryType": lottery_name}
         logger.debug(f'data = {json.dumps(data)}')
-        response = self._session.post(url=self._env_config.get_post_url() + self.api_url, data=json.dumps(data),
-                                      headers=self.header)
+        response = self._session.post(url=self._env_config.get_post_url() + self._api_url, data=json.dumps(data),
+                                      headers=self._header)
         logger.debug(f'lottery_info response = {response.content}')
         return response.json()['content']
 
@@ -1335,7 +1324,7 @@ class ApiTestAPP_YFT(unittest.TestCase):
         lottery_info = self.get_lottery_info(lottery_name)
 
         import json
-        default = self.iapi_default
+        default = self._iapi_default
         from utils.BetContent_yft import game_dict
         totalAmount = 0
         schemeList = []
@@ -1376,13 +1365,13 @@ class ApiTestAPP_YFT(unittest.TestCase):
             data.replace('"doRebate": "yes"', '"doRebate": "no"')
 
         logger.info(f'Bet content = {data}')
-        bet_response = self._session.post(url=self._env_config.get_post_url() + self.api_url, data=data,
-                                          headers=self.header)
+        bet_response = self._session.post(url=self._env_config.get_post_url() + self._api_url, data=data,
+                                          headers=self._header)
         logger.info(f'Bet response = {bet_response.json()}\n')
         return bet_response.json()
 
     def bet_trace(self, game_name, stop_on_win):
-        games = self._conn.get_lottery_games(game_name[0])
+        games = self._conn_postgre.get_lottery_games(game_name[0])
         expected = 'ok'
         bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
                                     is_trace=False)

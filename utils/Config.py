@@ -6,10 +6,8 @@ from typing import Dict
 from selenium.webdriver.chrome.options import Options
 from enum import Enum
 # 各檔路徑
-from utils import Logger
-from utils.TestTool import trace_log
 
-from utils.Connection import get_oracle_conn, select_domain_default_url
+from utils.Connection import OracleConnection
 
 project_path = str(pathlib.Path(__file__).parent.parent.absolute())  # 專案路徑
 # project_path = os.path.abspath('.')  # 專案路徑
@@ -166,8 +164,10 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
-    def get_joint_venture(self, env, domain):
-        domain_urls = select_domain_default_url(get_oracle_conn(int(env)), domain)  # 先去全局 找是否有設定 該domain
+    def get_joint_venture(self, domain):
+        conn = OracleConnection(self.get_env_id())
+        domain_urls = conn.select_domain_default_url(domain)  # 先去全局 找是否有設定 該domain
+        conn.close_conn()
         if not domain_urls:  # 若無對應domain_url, default domain type = 0 ?
             return 0
 

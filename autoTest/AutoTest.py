@@ -1,15 +1,13 @@
 import datetime
 import os
-import pathlib
 import unittest
 import HTMLTestRunner
-import time
 
 from autoTest.ApiTestApp import ApiTestApp, ApiTestAPP_YFT
 from autoTest.ApiTestPC import ApiTestPC, ApiTestPC_YFT
 from autoTest.IntegrationTestWeb import IntegrationTestWeb
 from utils import Config
-from utils.Connection import PostgresqlConnection
+from utils.Connection import PostgresqlConnection, OracleConnection, MysqlConnection
 from utils.Logger import create_logger
 from utils.TestTool import trace_log
 
@@ -42,23 +40,26 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mo
     _env_config_app = Config.EnvConfigApp(test_env)
     _env_app_config = Config.EnvConfigApp(test_env)
     _suite_list = []
-    _test_list = ['cqssc', 'xjssc', 'hljssc', 'shssl', 'tjssc', 'txffc', 'fhjlssc', 'fhcqc', 'fhxjc', '3605fc', 'btcffc',
-                 'llssc', '360ffc', 'jlffc', 'v3d']
-    _conn = None
-
+    _test_list = ['cqssc', 'xjssc', 'hljssc', 'shssl', 'tjssc', 'txffc', 'fhjlssc', 'fhcqc', 'fhxjc', '3605fc',
+                  'btcffc', 'llssc', '360ffc', 'jlffc', 'v3d']
     logger.debug(f'autoTest test_cases : {test_cases}')
     try:
         suite = unittest.TestSuite()
+        _conn = None
+        _conn2 = None
 
         logger.info(f"suite_test with test_cases : {test_cases}")
 
         if _env_config.get_env_id() in (0, 1):
+            _conn = OracleConnection(_env_config.get_env_id())
+            _conn2 = MysqlConnection(_env_config.get_env_id())
             for case in test_cases[0]:
                 _suite_list.append(
-                    ApiTestPC(case=case, _env=_env_config, _user=user_name, _red_type=is_use_red, _money_unit=money_unit,
-                              _award_mode=award_mode))
+                    ApiTestPC(case=case, env_config=_env_config, _user=user_name, red_type=is_use_red,
+                              money_unit=money_unit, award_mode=award_mode, oracle=_conn, mysql=_conn2))
             for case in test_cases[1]:
-                _suite_list.append(ApiTestApp(case_=case, env_=_env_config_app, user_=user_name, red_type_=is_use_red))
+                _suite_list.append(ApiTestApp(case_=case, env_config=_env_config_app, user=user_name,
+                                              red_type=is_use_red, oracle=_conn, mysql=_conn2))
             for case in test_cases[2]:
                 if case == 'test_plan':
                     for lottery in _test_list:
@@ -71,11 +72,11 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mo
         elif _env_config.get_env_id() == 11:  # 若為YFT測試案例
             _conn = PostgresqlConnection()  # 建立共用的DB連線
             for case in test_cases[0]:
-                _suite_list.append(ApiTestPC_YFT(case=case, env_config=_env_config, user=user_name, money_unit=money_unit,
-                                                 _award_mode=award_mode, conn=_conn))
+                _suite_list.append(ApiTestPC_YFT(case=case, env_config=_env_config, user=user_name,
+                                                 money_unit=money_unit, _award_mode=award_mode, conn=_conn))
             for case in test_cases[1]:
-                _suite_list.append(ApiTestAPP_YFT(case=case, env_config=_env_config, user=user_name, money_unit=money_unit,
-                                                 award_mode=award_mode, conn=_conn))
+                _suite_list.append(ApiTestAPP_YFT(case=case, env_config=_env_config, user=user_name,
+                                                  money_unit=money_unit, award_mode=award_mode, conn=_conn))
 
         logger.info(f"測試內容 suite_list : {_suite_list}")
 
@@ -92,7 +93,9 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mo
         logger.debug(">>>>>>>>Test Start.<<<<<<<<")
         runner.run(suite)
         logger.debug(">>>>>>>>Test End.<<<<<<<<")
+
         fp.close()
-        _conn.close_conn()  # 關閉共用的DB連線
+        _conn.close_conn()
+        _conn2.close_conn()
     except Exception as e:
         logger.error(trace_log(e))
