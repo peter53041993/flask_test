@@ -25,7 +25,8 @@ from bs4 import BeautifulSoup
 # import twstock, stock
 import pandas as pd
 import re
-from utils import Config, Connection
+from utils import Config
+from utils.Connection import PostgresqlConnection, OracleConnection
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
@@ -304,16 +305,17 @@ def auto_test():
             logger.info(f'ignore_name_check = {ignore_name_check}')
 
             if env_config.get_env_id() in (0, 1):  # FF4.0 用戶驗證
-                domain_type = env_config.get_joint_venture(env_config.get_env_id(), domain_url)  # 查詢 後台是否有設置 該url
+                conn = OracleConnection(env_config.get_env_id())
+                domain_type = env_config.get_joint_venture(domain_url)  # 查詢 後台是否有設置 該url
                 logger.debug(f"env_config.id: {env_config.get_env_id()},  red: {red}")
-                user_id = Connection.select_user_id(Connection.get_oracle_conn(env_config.get_env_id()), user_name,
-                                                    domain_type)
+                user_id = conn.select_user_id(user_name, domain_type)
                 logger.info(f'user_id : {user_id}')
+                conn.close_conn()
             elif ignore_name_check:
                 user_id = ["ignore"]
             else:  # yft用戶名驗證
-                user_id = Connection.get_user_id_yft(user_name=user_name)
-
+                conn = PostgresqlConnection()
+                user_id = conn.get_user_id_yft(user_name=user_name)
 
             test_cases.append(api_test_pc)
             test_cases.append(api_test_app)
@@ -718,10 +720,10 @@ def game_result():
         game_type = request.form.get('game_type')  # 玩法
         env = Config.EnvConfig(request.form.get('env_type'))  # 環境
         cookies_ = request.cookies  # 瀏覽器上的cookie
+        conn = OracleConnection(env.get_env_id())
         print(cookies_)
         if game_code != '':  # game_code 不為空,代表前台 是輸入 訂單號
-            game_detail = Connection.select_game_result(conn=Connection.get_oracle_conn(env.get_env_id()),
-                                                        result=game_code)  # 傳回此方法.找出相關 訂單細節
+            game_detail = conn.select_game_result(result=game_code)  # 傳回此方法.找出相關 訂單細節
             if len(game_detail) == 0:
                 return "此環境沒有此訂單號"
             else:
@@ -836,7 +838,7 @@ def game_result():
                 print('輸入玩法 有空格需去除掉')
                 game_type = game_type.replace(' ', '')
             print(game_type)
-            temp = Connection.select_game_order(Connection.get_oracle_conn(env.get_env_id()), '%' + game_type + '%')
+            temp = conn.select_game_order('%' + game_type + '%')
             game_order = temp[0]
             len_order = temp[1]
             # print(game_order)
@@ -873,8 +875,8 @@ def game_result():
             FRAME = pd.DataFrame(data)
             # test = frame.style.applymap(status_style)#增加狀態顏色 ,這是for jupyter_notebook可以直接使用
             print(FRAME)
+            conn.close_conn()
             return FRAME.to_html()
-
     return render_template('game_result.html')
 
 
@@ -883,15 +885,16 @@ def user_acitve():  # 驗證第三方有校用戶
     if request.method == "POST":
         user = request.form.get('user')
         env = Config.EnvConfig(request.form.get('env_type'))
+        conn = OracleConnection(env_id=env.get_env_id())
         joint_type = request.form.get('joint_type')
 
-        userid = Connection.select_user_id(Connection.get_oracle_conn(env.get_env_id()), user)
+        userid = conn.select_user_id(user)
         # 查詢用戶 userid
         print(user, env)
         if len(userid) == 0:
             raise Exception("此環境沒有該用戶")
         else:
-            active_app = Connection.select_active_app(Connection.get_oracle_conn(env.get_env_id()), user)
+            active_app = conn.select_active_app(user)
             # 查詢APP有效用戶 是否有值  ,沒值 代表 沒投注
 
             # print(active_user)
@@ -899,11 +902,10 @@ def user_acitve():  # 驗證第三方有校用戶
             card_number = []  # 該綁卡,有被多少張數綁定,但段 是否為有效性
             # print(active_app)
 
-            user_fund = Connection.select_active_fund(Connection.get_oracle_conn(env.get_env_id()), user)  # 當月充值
+            user_fund = conn.select_active_fund(user)  # 當月充值
             print(user_fund)
 
-            card_num = Connection.select_active_card(Connection.get_oracle_conn(env.get_env_id()), user,
-                                                     env.get_env_id())  # 查詢綁卡數量
+            card_num = conn.select_active_card(user, env.get_env_id())  # 查詢綁卡數量
 
             if len(active_app) == 0:  # 非有效用戶,也代表 APP 有效用戶表沒資料(舊式沒投注)
                 print(f"{user}用戶 為非有效用戶")
@@ -965,7 +967,7 @@ def user_acitve():  # 驗證第三方有校用戶
 
             frame = pd.DataFrame(data, index=['是否為有效用戶'])
             print(frame)
-
+            conn.close_conn()
             return frame.to_html()
 
     return render_template('user_active.html')
@@ -975,9 +977,10 @@ def user_acitve():  # 驗證第三方有校用戶
 def app_bet():
     user = request.form.get('user')
     env = Config.EnvConfig(request.form.get('env_type'))
+    conn = OracleConnection(env_id=env.get_env_id())
     joint = request.form.get('joint_type')
 
-    app_bet = Connection.select_app_bet(Connection.get_oracle_conn(env.get_env_id()), user)  # APP代理中心,銷量/盈虧
+    app_bet = conn.select_app_bet(user)  # APP代理中心,銷量/盈虧
     third_list = []  # 存放第三方列表
     active_bet = []  # 第三方有效投注
     third_prize = []  # 第三方獎金
@@ -1007,6 +1010,7 @@ def app_bet():
             "備註": third_memo}
     frame = pd.DataFrame(data, index=third_list)
     print(frame)
+    conn.close_conn()
     return frame.to_html()
 
 
@@ -1039,6 +1043,7 @@ def url_token():
         user = request.form.get('user')
         env = request.form.get('env_type')
         joint_type = request.form.get('joint_type')
+        conn = OracleConnection(env_id=int(env))
         # print(env)
         if env == '0':
             env_type = '02'
@@ -1050,7 +1055,7 @@ def url_token():
         # print(token,env,id_,joint_type,domain)
         if token not in ['', None]:  # token 直不為空, 代表頁面輸入的是token
             print('頁面輸入token')
-            token_url = Connection.select_url_token(Connection.get_oracle_conn(int(env)), token, joint_type)
+            token_url = conn.select_url_token(token, joint_type)
             print(token_url)
             user = []
             user_url = []
@@ -1062,7 +1067,7 @@ def url_token():
             data = {'用戶名': user, '開戶連結': user_url}
         elif id_ not in ['', None]:
             print('頁面輸入id')
-            token_url = Connection.select_url_token(Connection.get_oracle_conn(int(env)), id_, joint_type)
+            token_url = conn.select_url_token(id_, joint_type)
             print(token_url)
             user = []
             user_url = []
@@ -1074,11 +1079,10 @@ def url_token():
             len_data = [0]  # 輸入ID 查 連結, ID 為唯一直
         elif user not in ['', None]:  # 頁面輸入 用戶名 查詢用戶從哪開出
             print('頁面輸入用戶名')
-            user_url = Connection.select_user_url(Connection.get_oracle_conn(int(env)), user, 2, joint_type)
+            user_url = conn.select_user_url(user, 2, joint_type)
             print(user_url)
             if len(user_url) == 0:  # user_url 有可能找不到 ,再從 user_customer 的refere去找
-                user_url = Connection.select_user_url(Connection.get_oracle_conn(int(env)), user,
-                                                      joint_type)  # 檢查環境是否有這用戶
+                user_url = conn.select_user_url(user, joint_type)  # 檢查環境是否有這用戶
                 if not user_url:
                     raise Exception(f'{env_type}環境沒有該用戶: {user}')
 
@@ -1090,7 +1094,7 @@ def url_token():
             elif user_url[0][4] != -1:  # '失效'
                 print('連結失效,從referer找')
                 days = '是'  # user_url 找不到的連結 ,一定失效或被刪除
-                user_url = Connection.select_user_url(Connection.get_oracle_conn(int(env)), user, 0)
+                user_url = conn.select_user_url(user, 0)
                 print(user_url)
             else:  # 這邊代表  user_url 是有值,  在去從days 判斷是否失效
                 if user_url[0][4] == -1:
@@ -1122,7 +1126,7 @@ def url_token():
                 # env = domain_keys[domain][1]#  1 為環境 ,0 為預設連結
             except KeyError:  #
                 raise KeyError('沒有該連結')
-            domain_url = Connection.select_domain_default_url(Connection.get_oracle_conn(int(env)), domain)
+            domain_url = conn.select_domain_default_url(domain)
             print(domain_url)
             if len(domain_url) != 0:  # 代表該預名 在後台全局管理有做設置
                 domain_admin = '是'  # 後台是否有設定 該domain
@@ -1173,8 +1177,10 @@ def url_token():
         try:
             frame = pd.DataFrame(data, index=len_data)
             print(frame)
+            conn.close_conn()
             return frame.to_html()
         except ValueError:
+            conn.close_conn()
             raise ValueError('DATA有錯誤')
     return render_template('url_token.html')
 
@@ -1183,9 +1189,10 @@ def url_token():
 def sun_user2():  # 查詢太陽成 指定domain
     if request.method == 'POST':
         env = request.form.get('env_type')
+        conn = OracleConnection(env_id=int(env))
         domain = request.form.get('domain_type')
         print(env, domain)
-        sun_user = Connection.select_sun_user(Connection.get_oracle_conn(int(env)), '', 2, domain)
+        sun_user = conn.select_sun_user('', 2, domain)
         print(sun_user)
 
         data = {'域名': [sun_user[i][0] for i in sun_user.keys()],
@@ -1199,6 +1206,7 @@ def sun_user2():  # 查詢太陽成 指定domain
                 }
         frame = pd.DataFrame(data, index=[i for i in sun_user.keys()])
         print(frame)
+        conn.close_conn()
         return frame.to_html()
     else:
         raise Exception('錯誤')
@@ -1210,6 +1218,7 @@ def sun_user():  # 太陽成用戶 找尋
         user = request.form.get('user')
         env = request.form.get('env_type')
         domain = request.form.get('domain_type')
+        conn = OracleConnection(env_id=int(env))
         print(user, env, domain)
         if env == '0':
             env_name = 'dev'
@@ -1227,7 +1236,7 @@ def sun_user():  # 太陽成用戶 找尋
         else:
             type_ = ''  # 查詢 指定用戶
         print(type_)
-        sun_user = Connection.select_sun_user(Connection.get_oracle_conn(int(env)), user, type_, domain)  # 太陽/申博用戶
+        sun_user = conn.select_sun_user(user, type_, domain)  # 太陽/申博用戶
         print(sun_user)
         if len(sun_user) == 0:
             if type_ == 1:
@@ -1243,7 +1252,7 @@ def sun_user():  # 太陽成用戶 找尋
                 tran_status = '未完成'
             tran_time = sun_user[0][5]
             index_len = [0]
-            user_id = Connection.select_user_id(Connection.get_oracle_conn(int(env)), user, int(domain))  # 4.0 資料庫
+            user_id = conn.select_user_id(user, int(domain))  # 4.0 資料庫
             '''
             if len(userid) == 0:# 代表該4.0環境沒有該用戶
                 FF_memo = '無'
@@ -1272,6 +1281,7 @@ def sun_user():  # 太陽成用戶 找尋
             data = {'環境/類型': env_name + domain_type, '用戶名': user, '電話號碼': phone, '轉移狀態': tran_status, '轉移時間': tran_time}
         frame = pd.DataFrame(data, index=index_len)
         print(frame)
+        conn.close_conn()
         return frame.to_html()
     return render_template('sun_user.html')
 
@@ -1281,16 +1291,17 @@ def fund_activity():  # 充值紅包 查詢
     if request.method == "POST":
         user = request.form.get('user')
         env = request.form.get('env_type')
+        conn = OracleConnection(env_id=int(env))
         print(user, env)
-        user_id = Connection.select_user_id(Connection.get_oracle_conn(int(env)), user)  # 查詢頁面上 該環境是否有這用戶
+        user_id = conn.select_user_id(user)  # 查詢頁面上 該環境是否有這用戶
         if len(user_id) == 0:
             raise Exception('該環境沒有此用戶')
-        red_able = Connection.select_red_fund(Connection.get_oracle_conn(int(env)), user)  # 先確認 是否領取過紅包
+        red_able = conn.select_red_fund(user)  # 先確認 是否領取過紅包
         print(red_able)
 
         fund_list = []  # 存放各充值表的 紀錄 ,總共四個表
         for i in range(4):
-            red_able = Connection.select_red_fund(Connection.get_oracle_conn(int(env)), user, i)
+            red_able = conn.select_red_fund(user, i)
             fund_list.append(red_able)
         # begin_mission = AutoTest.fund_# 新守任務表
         print(fund_list)
@@ -1333,6 +1344,7 @@ def fund_activity():  # 充值紅包 查詢
         frame = pd.DataFrame(data, index=[0])
         logger.info(f'fund_activity -> frame = {frame}')
 
+        conn.close_conn()
         return frame.to_html()
     return render_template('fund_activity.html')
 

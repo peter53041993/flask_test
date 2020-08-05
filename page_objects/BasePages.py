@@ -7,7 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-import utils.Connection
+from utils.Connection import OracleConnection
 from utils.Logger import create_logger
 from selenium import webdriver
 from selenium.webdriver.remote.command import Command
@@ -38,9 +38,9 @@ class BasePage:
         :param last_page: 上一個頁面的POM物件，需繼承自BasePage，若不為空則以此物件參數進行初始化、沿用參數
         """
         if last_page:
-            self.env_config = last_page.env_config
+            self.env_config = last_page._env_config
             self.driver = last_page.driver
-            self.user = last_page.user
+            self.user = last_page._user
             self.password = last_page.password
             self.logger = last_page.logger
         else:
@@ -206,12 +206,10 @@ class RegPage(BasePage):
 
     def __init__(self, last_page: BasePage):
         super().__init__(last_page=last_page)
-        user_id = utils.Connection.get_sql_exec(self.env_config.get_env_id(),
-
-                                      "select id from user_customer where account = '{}'".format(self.user))
+        conn = OracleConnection(self.env_config.get_env_id())
+        user_id = conn.get_sql_exec("select id from user_customer where account = '{}'".format(self.user))
         self.logger.info("user_id = {}".format(user_id[0]))
-        reg_url = utils.Connection.get_sql_exec(self.env_config.get_env_id(),
-                                      "select url from user_url where days = -1 and creator = '{}'".format(user_id[0]))
+        reg_url = conn.get_sql_exec("select url from user_url where days = -1 and creator = '{}'".format(user_id[0]))
         self.logger.info("reg_url = {}".format(reg_url[0]))
         self.link = "/register?{url}".format(url=reg_url[0])
 

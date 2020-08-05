@@ -13,82 +13,47 @@ from utils.Logger import create_logger
 logger = create_logger(log_folder='/logger', log_name='Connection')
 
 
-def get_oracle_conn(env):  # 連結數據庫 env 0: dev02 , 1:188
-    if env == 2:
-        username = 'rdquery'
-        service_name = 'gamenxsXDB'
-    else:
-        username = 'firefog'
-        service_name = ''
-    oracle_ = {'password': ['LF64qad32gfecxPOJ603', 'JKoijh785gfrqaX67854', 'eMxX8B#wktFZ8V'],
-               'ip': ['10.13.22.161', '10.6.1.41', '10.6.1.31'],
-               'sid': ['firefog', 'game', '']}
-    conn = cx_Oracle.connect(username, oracle_['password'][env], oracle_['ip'][env] + ':1521/' +
-                             oracle_['sid'][env] + service_name)
-    return conn
+class OracleConnection:
+    __slots__ = '_env_id', '_conn'
 
+    def __init__(self, env_id: int):
+        self._conn = None
+        self._env_id = env_id
 
-def get_postgre_conn(sql):
-    try:
-        logger.info('get_postgre_conn start.')
-        with SSHTunnelForwarder(
-                ('18.144.130.142', 22),
-                ssh_private_key="C:\\Users\\Wen\\Documents\\03_SQL\\YFT\\qa.pem",
-                ssh_username="centos",
-                remote_bind_address=('localhost', 5432)) as server:
-            logger.info('SSHTunnelForwarder start.')
-            # trace_logger = sshtunnel.create_logger(loglevel="TRACE")
-            server.daemon_forward_servers = True
-            server.start()
-            logger.info("server connected")
+    def _get_oracle_conn(self):  # 連結數據庫 env 0: dev02 , 1:188
+        if self._conn is not None:
+            return self._conn
+        if self._env_id == 2:
+            username = 'rdquery'
+            service_name = 'gamenxsXDB'
+        else:
+            username = 'firefog'
+            service_name = ''
+        oracle_ = {'password': ['LF64qad32gfecxPOJ603', 'JKoijh785gfrqaX67854', 'eMxX8B#wktFZ8V'],
+                   'ip': ['10.13.22.161', '10.6.1.41', '10.6.1.31'],
+                   'sid': ['firefog', 'game', '']}
+        logger.info(f"oracle_.get('password')[0] = {oracle_.get('password')[0]}")
+        logger.info(f"oracle_.get('password')[self._env_id] = {oracle_.get('password')[self._env_id]}")
+        logger.info(f"  oracle_.get('ip')[self._env_id] + ':1521/' = {oracle_.get('ip')[self._env_id] + ':1521/'}")
+        logger.info(f"  oracle_.get('sid')[self._env_id] + service_name = {oracle_.get('sid')[self._env_id] + service_name}")
+        self._conn = cx_Oracle.connect(username, oracle_.get('password')[self._env_id],
+                                       oracle_.get('ip')[self._env_id] + ':1521/' +
+                                       oracle_.get('sid')[self._env_id] + service_name)
+        return self._conn
 
-            local_port = str(server.local_bind_port)
-            logger.info(f'local_port = {local_port}')
-            engine = create_engine('postgresql://admin:LfCnkYSHu4UCSPf49-Xy45Ymgvq1qY@127.0.0.1:' + local_port + '/lux')
-            logger.info("database connected")
+    def get_sql_exec(self, sql):
+        logger.info(f'get_sql_exec : sql = {sql}')
+        cursor = self._get_oracle_conn().cursor()
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        result = []
 
-            response_list = []
-            logger.info(f'sql = {sql}')
-            result = pandas.read_sql(sql, engine)
-            engine.dispose()
-            for value in result.values:
-                response_list.append(value[0])
-            server.stop()
-            return response_list
-    except sshtunnel.BaseSSHTunnelForwarderError:
-        return 'SSH連線失敗'
-    except MaxRetryError:
-        return '連線逾時'
+        for i in rows:
+            result.append(i[0])
+        return result
 
-
-def get_user_id_yft(user_name):
-    id_list = get_postgre_conn(f"SELECT UID FROM USER_BASIC WHERE ACCOUNT = '{user_name}'")
-    logger.info(f'user_id = {id_list}')
-    return id_list
-
-
-def get_lottery_games(lottery):
-    sql = f"select (play_type||bet_type) as games from lottery_play_info where lottery_type = '{lottery}' and delete_flag = 'no'"
-    response = get_postgre_conn(sql)
-    logger.info(f'{lottery} games = {response}')
-    return response
-
-
-def get_sql_exec(env, sql):
-    logger.info(f'get_sql_exec : sql = {sql}')
-    cursor = get_oracle_conn(env).cursor()
-    cursor.execute(sql)
-    rows = cursor.fetchall()
-    result = []
-
-    for i in rows:
-        result.append(i[0])
-    cursor.close()
-    return result
-
-
-def select_domain_default_url(conn, domain):
-    with conn.cursor() as cursor:
+    def select_domain_default_url(self, domain):
+        cursor = self._get_oracle_conn().cursor()
         sql = "select GDL.domain, GDL.agent, UU.url, GDL.register_display, GDL.app_download_display, GDL.domain_type, GDL.status " \
               "from GLOBAL_DOMAIN_LIST GDL " \
               "inner join user_url UU on GDL.register_url_id = UU.id " \
@@ -100,12 +65,11 @@ def select_domain_default_url(conn, domain):
         for num, data in enumerate(rows):
             domain_urls.append(list(data))
         logger.info(f'get domain_urls = {domain_urls}')
-    conn.close()
-    return domain_urls
+        cursor.close()
+        return domain_urls
 
-
-def select_url_token(conn, token, joint_venture):  # 輸入 token 查詢 連結
-    with conn.cursor() as cursor:
+    def select_url_token(self, token, joint_venture):  # 輸入 token 查詢 連結
+        cursor = self._get_oracle_conn().cursor()
         if len(token) == 4:  # 代表是用 註冊碼  ,4位
             sql = "select UC.account,UU.url " \
                   "from user_customer UC " \
@@ -122,21 +86,20 @@ def select_url_token(conn, token, joint_venture):  # 輸入 token 查詢 連結
         token_url = []
         for num, user in enumerate(rows):
             token_url.append(list(user))
-    conn.close()
-    return token_url
+        cursor.close()
+        return token_url
 
+    def select_sun_user(self, user, type_, domain):
+        if domain == '1':  # 申博
+            come_from = 'sunGame138'
+            note = '申博138'
+        elif domain == '0':  # 太陽城
+            come_from = 'sunGame'
+            note = '太阳城'
+        else:
+            raise Exception('get_sun_user 無對應domain')
 
-def select_sun_user(conn, user, type_, domain):
-    if domain == '1':  # 申博
-        come_from = 'sunGame138'
-        note = '申博138'
-    elif domain == '0':  # 太陽城
-        come_from = 'sunGame'
-        note = '太阳城'
-    else:
-        raise Exception('get_sun_user 無對應domain')
-
-    with conn.cursor() as cursor:
+        cursor = self._get_oracle_conn().cursor()
         if type_ == 1:  # 1 查詢轉移的用戶
             sql = "select account, cellphone, transfer_status, transfer_date " \
                   "from sun_game_user " \
@@ -158,12 +121,11 @@ def select_sun_user(conn, user, type_, domain):
         sun_user = []
         for num, tuple_ in enumerate(rows):  # i 生成tuple
             sun_user[num] = list(tuple_)
-    conn.close()
-    return sun_user
+        cursor.close()
+        return sun_user
 
-
-def select_user_url(conn, _user, _type=1, _joint_type=''):  # 用戶的 連結 ,type= 1 找用戶本身開戶連結, 0 找用戶的從哪個連結開出
-    with conn.cursor() as cursor:
+    def select_user_url(self, _user, _type=1, _joint_type=''):  # 用戶的 連結 ,type= 1 找用戶本身開戶連結, 0 找用戶的從哪個連結開出
+        cursor = self._get_oracle_conn().cursor()
         user_url = []
         if _type == 1:  # 這邊user參數 為 userid , test_applycenter()方法使用
             sql = "select url " \
@@ -183,18 +145,11 @@ def select_user_url(conn, _user, _type=1, _joint_type=''):  # 用戶的 連結 ,
         rows = cursor.fetchall()
         for num, url in enumerate(rows):
             user_url.append(list(url))
-        # if isinstance(user_url, list) is True:  # 為list
-        #     for i in rows:
-        #         user_url.append(i[0])
-        # else:  # user_url 為dict
-        #     for num, _user in enumerate(rows):
-        #         user_url[num] = list(_user)
-    conn.close()
-    return user_url
+        cursor.close()
+        return user_url
 
-
-def select_user_id(conn, account_, joint_type=None):
-    with conn.cursor() as cursor:
+    def select_user_id(self, account_: str, joint_type: int = None):
+        cursor = self._get_oracle_conn().cursor()
         if joint_type is None:
             sql = "select id " \
                   "from user_customer " \
@@ -211,12 +166,11 @@ def select_user_id(conn, account_, joint_type=None):
         for i in rows:
             print(f'i : {i}')
             user_id.append(i[0])
-    conn.close()
-    return user_id
+        cursor.close()
+        return user_id
 
-
-def select_red_fund(conn, user, type_=None):  # 充值 紅包 查尋  各充值表
-    with conn.cursor() as cursor:
+    def select_red_fund(self, user, type_=None):  # 充值 紅包 查尋  各充值表
+        cursor = self._get_oracle_conn().cursor()
         if type_ == 0:  # 新手任務
             sql = "select UC.account,BM.cancel_reason " \
                   "from BEGIN_MISSION BM " \
@@ -248,72 +202,11 @@ def select_red_fund(conn, user, type_=None):  # 充值 紅包 查尋  各充值�
         fund_ = []
         for index, data in enumerate(rows):
             fund_.append(list(data))
-    conn.close()
-    return fund_
+        cursor.close()
+        return fund_
 
-
-def get_mysql_conn(evn, third):  # 第三方  mysql連線
-    third_dict = {'lc': ['lcadmin', ['cA28yF#K=yx*RPHC', 'XyH]#xk76xY6e+bV'], 'ff_lc'],
-                  'ky': ['kyadmin', ['ALtfN#F7Zj%AxXgs=dT9', 'kdT4W3#dEug3$pMM#z7q'], 'ff_ky'],
-                  'city': ['761cityadmin', ['KDpTqUeRH7s-s#D*7]mY', 'bE%ytPX$5nU3c9#d'], 'ff_761city'],
-                  'im': ['imadmin', ['D97W#$gdh=b39jZ7Px', 'nxDe2yt7XyuZ@CcNSE'], 'ff_im'],
-                  'shaba': ['sbadmin', ['UHRkbvu[2%N=5U*#P3JR', 'aR8(W294XV5KQ!Zf#"v9'], 'ff_sb'],
-                  'bbin': ['bbinadmin', 'Csyh*P#jB3y}EyLxtg', 'ff_bbin'],
-                  'gns': ['gnsadmin', 'Gryd#aCPWCkT$F4pmn', 'ff_gns']
-                  }
-    if evn == 0:  # dev
-        ip = '10.13.22.151'
-    elif evn == 1:  # 188
-        ip = '10.6.32.147'
-    else:
-        raise Exception('evn 錯誤')
-
-    user_ = third_dict[third][0]
-    db_ = third_dict[third][2]
-
-    if third == 'gns':  # gns只有一個 測試環境
-        password_ = third_dict[third][1]
-        ip = '10.6.32.147'  # gns Db 只有 188
-    else:
-        password_ = third_dict[third][1][evn]
-
-    db = pymysql.connect(
-        host=ip,
-        user=user_,
-        passwd=password_,
-        db=db_)
-    return db
-
-
-def thirdly_tran(db, tran_type, third, user) -> list:
-    cur = db.cursor()
-    # third 判斷 第三方 是那個 ,gns table 名稱不同
-    if third in ['lc', 'ky', 'city', 'im', 'shaba']:
-        table_name = 'THIRDLY_TRANSCATION_LOG'
-        if tran_type == 0:  # 轉入
-            trans_name = 'FIREFROG_TO_THIRDLY'
-        else:  # 轉出
-            trans_name = 'THIRDLY_TO_FIREFROG'
-    elif third == 'gns':
-        table_name = 'GNS_TRANSCATION_LOG'
-        if tran_type == 0:  # gns轉入
-            trans_name = 'FIREFROG_TO_GNS'
-        else:
-            trans_name = 'GNS_TO_FIREFROG'
-    else:
-        print('第三方 名稱錯誤')
-
-    sql = f"SELECT SN,STATUS FROM {table_name} WHERE FF_ACCOUNT = '{user}'\
-    AND CREATE_DATE > DATE(NOW()) AND TRANS_NAME= '{trans_name}'"
-
-    cur.execute(sql)
-    for row in cur.fetchall():
-        result = [row[0], row[1]]
-        return result
-
-
-def select_domain_url(conn, domain) -> Dict[int, list]:  # 查詢 全局管理 後台設置的domain ,連結設置 (因為生產 沒權限,看不到)
-    with conn.cursor() as cursor:
+    def select_domain_url(self, domain) -> Dict[int, list]:  # 查詢 全局管理 後台設置的domain ,連結設置 (因為生產 沒權限,看不到)
+        cursor = self._get_oracle_conn().cursor()
         sql = f"select a.domain,a.agent,b.url,a.register_display,a.app_download_display,a.domain_type,a.status from  \
         GLOBAL_DOMAIN_LIST a inner join user_url b \
         on a.register_url_id = b.id  where a.domain like '%{domain}%' "
@@ -323,12 +216,11 @@ def select_domain_url(conn, domain) -> Dict[int, list]:  # 查詢 全局管理 �
         for num, url in enumerate(rows):
             domain_url[num] = list(url)
         # print(domain_url)
-    conn.close()
-    return domain_url
+        cursor.close()
+        return domain_url
 
-
-def select_game_result(conn, result) -> list:  # 查詢用戶訂單號, 回傳訂單各個資訊
-    with conn.cursor() as cursor:
+    def select_game_result(self, result) -> list:  # 查詢用戶訂單號, 回傳訂單各個資訊
+        cursor = self._get_oracle_conn().cursor()
         sql = f"select a.order_time,a.status,a.totamount,f.lottery_name,\
         c.group_code_title,c.set_code_title,c.method_code_title,\
         b.bet_detail,e.award_name,b.award_mode,b.ret_award,b.multiple,b.money_mode,b.evaluate_win\
@@ -351,12 +243,11 @@ def select_game_result(conn, result) -> list:  # 查詢用戶訂單號, 回傳�
             for i in tuple_:
                 # print(i)
                 detail_list.append(i)
-    conn.close()
-    return detail_list
+        cursor.close()
+        return detail_list
 
-
-def select_game_order(conn, play_type):  # 輸入玩法,找尋訂單
-    with conn.cursor() as cursor:
+    def select_game_order(self, play_type):  # 輸入玩法,找尋訂單
+        cursor = self._get_oracle_conn().cursor()
         sql = f"select f.lottery_name,a.order_time,a.order_code,\
         c.group_code_title,c.set_code_title,c.method_code_title,a.status,g.account,b.bet_detail,h.number_record\
         from((((((\
@@ -383,12 +274,11 @@ def select_game_order(conn, play_type):  # 輸入玩法,找尋訂單
             order_list.append(list(tuple_))  # 把tuple 轉乘list  ,然後放入  order_list
             game_order[index] = order_list[index]  # 字典 index 為 key ,  order_list 為value
         # print(game_order)
-    conn.close()
-    return [game_order, len_order]
+        cursor.close()
+        return [game_order, len_order]
 
-
-def select_active_app(conn, user):  # 查詢APP 是否為有效用戶表
-    with conn.cursor() as cursor:
+    def select_active_app(self, user):  # 查詢APP 是否為有效用戶表
+        cursor = self._get_oracle_conn().cursor()
         sql = f"select *  from USER_CENTER_THIRDLY_ACTIVE where \
         create_date >=  trunc(sysdate,'mm') and user_id in \
         ( select id from user_customer where account = '{user}')"
@@ -400,12 +290,11 @@ def select_active_app(conn, user):  # 查詢APP 是否為有效用戶表
                 # print(i)
                 active_app.append(i)
         # print(active_app,len(active_app))
-    conn.close()
-    return active_app
+        cursor.close()
+        return active_app
 
-
-def select_app_bet(conn, user):  # 查詢APP 代理中心 銷量
-    with conn.cursor() as cursor:
+    def select_app_bet(self, user):  # 查詢APP 代理中心 銷量
+        cursor = self._get_oracle_conn().cursor()
         app_bet = {}
         for third in ['ALL', 'LC', 'KY', 'CITY', 'GNS', 'FHLL', 'BBIN', 'IM', 'SB', 'AG']:
             if third == 'ALL':
@@ -427,12 +316,11 @@ def select_app_bet(conn, user):  # 查詢APP 代理中心 銷量
                 app_bet[third] = new_
 
         print(app_bet)
-    conn.close()
-    return app_bet
+        cursor.close()
+        return app_bet
 
-
-def select_active_card(conn, user, envs):  # 查詢綁卡是否有重複綁
-    with conn.cursor() as cursor:
+    def select_active_card(self, user, envs):  # 查詢綁卡是否有重複綁
+        cursor = self._get_oracle_conn().cursor()
         if envs == 2:  # 生產另外一張表
             sql = f"SELECT bank_number, count(id) FROM rd_view_user_bank \
             WHERE bank_number in (SELECT bank_number FROM rd_view_user_bank WHERE account = '{user}' \
@@ -449,12 +337,11 @@ def select_active_card(conn, user, envs):  # 查詢綁卡是否有重複綁
         for index, tuple_ in enumerate(rows):
             card_num[index] = list(tuple_)
         # print(card_num)
-    conn.close()
-    return card_num
+        cursor.close()
+        return card_num
 
-
-def select_active_fund(conn, user):  # 查詢當月充值金額
-    with conn.cursor() as cursor:
+    def select_active_fund(self, user):  # 查詢當月充值金額
+        cursor = self._get_oracle_conn().cursor()
         sql = f"select sum(real_charge_amt) from fund_charge where status=2 and apply_time > trunc(sysdate,'mm')  \
               and user_id in ( select id from user_customer where account = '{user}')"
         cursor.execute(sql)
@@ -465,15 +352,14 @@ def select_active_fund(conn, user):  # 查詢當月充值金額
             for i in tuple_:
                 # print(i)
                 user_fund.append(i)
-    conn.close()
-    return user_fund
+        cursor.close()
+        return user_fund
 
-
-def select_issue(conn, lottery_id):  # 查詢正在銷售的 期號
-    # Joy188Test.date_time()
-    # today_time = '2019-06-10'#for 預售中 ,抓當天時間來比對,會沒獎期
-    try:
-        with conn.cursor() as cursor:
+    def select_issue(self, lottery_id):  # 查詢正在銷售的 期號
+        # Joy188Test.date_time()
+        # today_time = '2019-06-10'#for 預售中 ,抓當天時間來比對,會沒獎期
+        try:
+            cursor = self._get_oracle_conn().cursor()
             sql = f"select web_issue_code,issue_code from game_issue where lotteryid = '{lottery_id}' and sysdate between sale_start_time and sale_end_time"
 
             cursor.execute(sql)
@@ -489,14 +375,13 @@ def select_issue(conn, lottery_id):  # 查詢正在銷售的 期號
                 for i in rows:  # i 生成tuple
                     issueName.append(i[0])
                     issue.append(i[1])
-        conn.close()
-        return {'issueName': issueName, 'issue': issue}
-    except:
-        pass
+            cursor.close()
+            return {'issueName': issueName, 'issue': issue}
+        except:
+            pass
 
-
-def select_red_id(conn, user):  # 紅包加壁  的訂單號查詢 ,用來審核用
-    with conn.cursor() as cursor:
+    def select_red_id(self, user):  # 紅包加壁  的訂單號查詢 ,用來審核用
+        cursor = self._get_oracle_conn().cursor()
         sql = f"SELECT ID FROM RED_ENVELOPE_LIST WHERE status=1 and \
         USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='{user}')"
         cursor.execute(sql)
@@ -505,12 +390,11 @@ def select_red_id(conn, user):  # 紅包加壁  的訂單號查詢 ,用來審核
         red_id = []
         for i in rows:  # i 生成tuple
             red_id.append(i[0])
-    conn.close()
-    return red_id
+        cursor.close()
+        return red_id
 
-
-def select_red_bal(conn, user) -> list:
-    with conn.cursor() as cursor:
+    def select_red_bal(self, user) -> list:
+        cursor = self._get_oracle_conn().cursor()
         sql = f"SELECT bal FROM RED_ENVELOPE WHERE \
         USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='{user}')"
         cursor.execute(sql)
@@ -519,12 +403,11 @@ def select_red_bal(conn, user) -> list:
         red_bal = []
         for i in rows:  # i 生成tuple
             red_bal.append(i[0])
-    conn.close()
-    return red_bal
+        cursor.close()
+        return red_bal
 
-
-def get_order_code_iapi(conn, orderid):  # 從iapi投注的orderid對應出 order_code 方案編號
-    with conn.cursor() as cursor:
+    def get_order_code_iapi(self, orderid):  # 從iapi投注的orderid對應出 order_code 方案編號
+        cursor = self._get_oracle_conn().cursor()
         sql = f"select order_code from game_order where id in (select orderid from game_slip where orderid = '{orderid}')"
 
         cursor.execute(sql)
@@ -533,12 +416,11 @@ def get_order_code_iapi(conn, orderid):  # 從iapi投注的orderid對應出 orde
         order_code = []
         for i in rows:  # i 生成tuple
             order_code.append(i[0])
-    conn.close()
-    return order_code
+        cursor.close()
+        return order_code
 
-
-def select_bet_type_code(conn, lottery_id, game_type):  # 從game_type 去對應玩法的數字,給app投注使用
-    with conn.cursor() as cursor:
+    def select_bet_type_code(self, lottery_id, game_type):  # 從game_type 去對應玩法的數字,給app投注使用
+        cursor = self._get_oracle_conn().cursor()
         sql = f"select bet_type_code from game_bettype_status where lotteryid = '{lottery_id}' and group_code_name||set_code_name||method_code_name = '{game_type}'"
 
         cursor.execute(sql)
@@ -547,5 +429,142 @@ def select_bet_type_code(conn, lottery_id, game_type):  # 從game_type 去對應
         bet_type = []
         for i in rows:  # i 生成tuple
             bet_type.append(i[0])
-    conn.close()
-    return bet_type
+        cursor.close()
+        return bet_type
+
+    def close_conn(self):
+        if self._conn is not None:
+            self._conn.close()
+
+
+class MysqlConnection:
+    __slots__ = '_env_id', '_conn', '_third'
+
+    def __init__(self, env_id: int):
+        self._env_id = env_id
+        self._conn = None
+        self._third = None
+
+    def get_mysql_conn(self, third: str):  # 第三方  mysql連線
+        if self._third == third:
+            return self._conn
+
+        self.close_conn()
+        self._third = third
+        third_dict = {'lc': ['lcadmin', ['cA28yF#K=yx*RPHC', 'XyH]#xk76xY6e+bV'], 'ff_lc'],
+                      'ky': ['kyadmin', ['ALtfN#F7Zj%AxXgs=dT9', 'kdT4W3#dEug3$pMM#z7q'], 'ff_ky'],
+                      'city': ['761cityadmin', ['KDpTqUeRH7s-s#D*7]mY', 'bE%ytPX$5nU3c9#d'], 'ff_761city'],
+                      'im': ['imadmin', ['D97W#$gdh=b39jZ7Px', 'nxDe2yt7XyuZ@CcNSE'], 'ff_im'],
+                      'shaba': ['sbadmin', ['UHRkbvu[2%N=5U*#P3JR', 'aR8(W294XV5KQ!Zf#"v9'], 'ff_sb'],
+                      'bbin': ['bbinadmin', 'Csyh*P#jB3y}EyLxtg', 'ff_bbin'],
+                      'gns': ['gnsadmin', 'Gryd#aCPWCkT$F4pmn', 'ff_gns']
+                      }
+        if self._env_id == 0:  # dev
+            ip = '10.13.22.151'
+        elif self._env_id == 1:  # 188
+            ip = '10.6.32.147'
+        else:
+            raise Exception('evn 錯誤')
+
+        user_ = third_dict[third][0]
+        db_ = third_dict[third][2]
+
+        if third == 'gns':  # gns只有一個 測試環境
+            password_ = third_dict[third][1]
+            ip = '10.6.32.147'  # gns Db 只有 188
+        else:
+            password_ = third_dict[third][1][self._env_id]
+
+        self._conn = pymysql.connect(
+            host=ip,
+            user=user_,
+            passwd=password_,
+            db=db_)
+        return self._conn
+
+    def thirdly_tran(self, tran_type: int, third: str, user: str) -> list:
+        logger.info(f'tran_type = {tran_type}, third = {third}, user = {user}')
+        cur = self.get_mysql_conn(third).cursor()
+        # third 判斷 第三方 是那個 ,gns table 名稱不同
+        if third in ['lc', 'ky', 'city', 'im', 'shaba']:
+            table_name = 'THIRDLY_TRANSCATION_LOG'
+            if tran_type == 0:  # 轉入
+                trans_name = 'FIREFROG_TO_THIRDLY'
+            else:  # 轉出
+                trans_name = 'THIRDLY_TO_FIREFROG'
+        elif third == 'gns':
+            table_name = 'GNS_TRANSCATION_LOG'
+            if tran_type == 0:  # gns轉入
+                trans_name = 'FIREFROG_TO_GNS'
+            else:
+                trans_name = 'GNS_TO_FIREFROG'
+        else:
+            print('第三方 名稱錯誤')
+        sql = f"SELECT SN,STATUS FROM {table_name} WHERE FF_ACCOUNT = '{user}' AND CREATE_DATE > DATE(NOW()) AND TRANS_NAME= '{trans_name}'"
+        logger.info(f'sql = {sql}')
+
+        result = []
+        cur.execute(sql)
+        for row in cur.fetchall():
+            result = [row[0], row[1]]
+            logger.info(result)
+        cur.close()
+        return result
+
+    def close_conn(self):
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None
+
+
+class PostgresqlConnection:
+
+    def __init__(self):
+        pass
+
+    def _get_postgre_conn(self, sql):
+        try:
+            logger.info('get_postgre_conn start.')
+            with SSHTunnelForwarder(
+                    ('18.144.130.142', 22),
+                    ssh_private_key="C:\\Users\\Wen\\Documents\\03_SQL\\YFT\\qa.pem",
+                    ssh_username="centos",
+                    remote_bind_address=('localhost', 5432)) as server:
+                logger.info('SSHTunnelForwarder start.')
+                # trace_logger = sshtunnel.create_logger(loglevel="TRACE")
+                server.daemon_forward_servers = True
+                server.start()
+                logger.info("server connected")
+
+                local_port = str(server.local_bind_port)
+                logger.info(f'local_port = {local_port}')
+                engine = create_engine(
+                    'postgresql://admin:LfCnkYSHu4UCSPf49-Xy45Ymgvq1qY@127.0.0.1:' + local_port + '/lux')
+                logger.info("database connected")
+
+                response_list = []
+                logger.info(f'sql = {sql}')
+                result = pandas.read_sql(sql, engine)
+                engine.dispose()
+                for value in result.values:
+                    response_list.append(value[0])
+                server.stop()
+                return response_list
+        except sshtunnel.BaseSSHTunnelForwarderError:
+            return 'SSH連線失敗'
+        except MaxRetryError:
+            return '連線逾時'
+
+    def get_user_id_yft(self, user_name):
+        id_list = self._get_postgre_conn(f"SELECT UID FROM USER_BASIC WHERE ACCOUNT = '{user_name}'")
+        logger.info(f'user_id = {id_list}')
+        return id_list
+
+    def get_lottery_games(self, lottery):
+        sql = f"select (play_type||bet_type) as games from lottery_play_info where lottery_type = '{lottery}' and delete_flag = 'no'"
+        response = self._get_postgre_conn(sql)
+        logger.info(f'{lottery} games = {response}')
+        return response
+
+    def close_conn(self):
+        pass

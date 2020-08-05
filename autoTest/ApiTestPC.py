@@ -8,9 +8,8 @@ import json
 import requests
 import time
 
-from utils import Config, Logger, Connection
+from utils import Config, Logger
 from utils.Config import LotteryData, func_time
-from utils.Connection import select_issue, select_red_id, select_red_bal, get_lottery_games
 
 logger = Logger.create_logger(r"\AutoTest", 'auto_test_pc')
 COOKIE = None  # 以全域變數儲存，以利在各測試間共用
@@ -20,42 +19,37 @@ MUL_ = None
 
 class ApiTestPC(unittest.TestCase):
     """PC接口測試"""
-    envConfig = None
-    user = None
-    red_type = None
-    money_unit = None
-    award_mode = None
-    user_agent = Config.UserAgent.PC.value
-    header = {  # 預設Header格式
-        'User-Agent': Config.UserAgent.PC.value,
-        'Content-Type': 'application/json; charset=UTF-8'
-    }
-    post_url = None
-    en_url = None
+    __slots__ = '_env_config', '_user', '_red_type', '_money_unit', '_award_mode', \
+                '_header', '_post_url', '_en_url', '_third_list'
     SESSION = requests.Session()
-    third_list = ['gns', 'shaba', 'im', 'ky', 'lc', 'city']
 
     def setUp(self):
         logger.info(f'ApiTestPC setUp : {self._testMethodName}')
 
-    def __init__(self, case, _env, _user, _red_type, _money_unit, _award_mode):
+    def __init__(self, case, env_config, _user, red_type, money_unit, award_mode, oracle, mysql):
         super().__init__(case)
         global COOKIE
-        self.envConfig = _env
-        self.user = _user
-        self.red_type = _red_type
-        self.money_unit = _money_unit
-        self.award_mode = _award_mode
-        self.post_url = self.envConfig.get_post_url()
-        self.en_url = self.envConfig.get_em_url()
-        logger.info('ApiTestPC __init__.')
-        logger.info(f'case = {case}')
+        self._env_config = env_config
+        self._user = _user
+        self._red_type = red_type
+        self._money_unit = money_unit
+        self._award_mode = award_mode
+        self._post_url = self._env_config.get_post_url()
+        self._en_url = self._env_config.get_em_url()
+        self._header = {  # 預設Header格式
+            'User-Agent': Config.UserAgent.PC.value,
+            'Content-Type': 'application/json; charset=UTF-8'
+        }
+        self._third_list = ['gns', 'shaba', 'im', 'ky', 'lc', 'city']
+        self._conn_mysql = mysql
+        self._conn_oracle = oracle
         if COOKIE:  # 若已有Cookie則加入Header
-            self.header['Cookie'] = f'ANVOID={COOKIE}'
+            logger.info('已有Cookie')
+            self._header['Cookie'] = f'ANVOID={COOKIE}'
 
     def web_issue_code(self, lottery):  # 頁面產生  獎期用法,  取代DB連線問題
         now_time = int(time.time())
-        r = self.SESSION.get(self.en_url + f'/gameBet/{lottery}/lastNumber?_={now_time}', headers=self.header)
+        r = self.SESSION.get(self._en_url + f'/gameBet/{lottery}/lastNumber?_={now_time}', headers=self._header)
         try:
             return r.json()['issueCode']
         except:
@@ -65,7 +59,7 @@ class ApiTestPC(unittest.TestCase):
 
     def plan_num(self, evn, lottery, plan_len):  # 追號生成
         plan_ = []  # 存放 多少 長度追號的 list
-        issue = select_issue(Connection.get_oracle_conn(evn), LotteryData.lottery_dict[lottery][1])
+        issue = self._conn_oracle.select_issue(LotteryData.lottery_dict[lottery][1])
         for i in range(plan_len):
             plan_.append({"number": issue.get('issueName')[i], "issueCode": issue.get('issue')[i], "multiple": 1})
         return plan_
@@ -197,8 +191,8 @@ class ApiTestPC(unittest.TestCase):
 
         award_mode_dict = {0: u"非一般模式", 1: u"非高獎金模式", 2: u"高獎金"}
         money_dict = {1: u"元模式", 0.1: u"分模式", 0.01: u"角模式"}
-        r = self.SESSION.post(self.en_url + '/gameBet/' + lottery + '/submit',
-                              data=json.dumps(data_), headers=self.header)
+        r = self.SESSION.post(self._en_url + '/gameBet/' + lottery + '/submit',
+                              data=json.dumps(data_), headers=self._header)
         try:
             msg = (r.json()['msg'])
             mode = money_dict[money_unit]
@@ -220,7 +214,7 @@ class ApiTestPC(unittest.TestCase):
                 else:  # 系統內部錯誤
                     print(r.json()['msg'])
             else:  # 投注成功
-                if self.red_type == 'yes':
+                if self._red_type == 'yes':
                     content_ = f'{lottery_name} \n' \
                                f' 投注單號: {project_id} \n' \
                                f' {MUL_}\n' \
@@ -244,7 +238,7 @@ class ApiTestPC(unittest.TestCase):
         """投注測試"""
         _money_unit = 1  # 初始元模式
 
-        if self.red_type == 'yes':
+        if self._red_type == 'yes':
             print('使用紅包投注')
         else:
             print('不使用紅包投注')
@@ -255,13 +249,13 @@ class ApiTestPC(unittest.TestCase):
                     global MUL
                     ball_type_post = self.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
 
-                    if self.money_unit == '1':  # 使用元模式
+                    if self._money_unit == '1':  # 使用元模式
                         _money_unit = 1
-                    elif self.money_unit == '2':  # 使用角模式
+                    elif self._money_unit == '2':  # 使用角模式
                         _money_unit = 0.1
 
                     if i == 'btcctp':
-                        self.award_mode = 2
+                        self._award_mode = 2
                         MUL = Config.random_mul(1)  # 不支援倍數,所以random參數為1
                     elif i == 'bjkl8':
                         MUL = Config.random_mul(5)  # 北京快樂8
@@ -269,7 +263,7 @@ class ApiTestPC(unittest.TestCase):
                         MUL = Config.random_mul(5)
 
                     elif i in ['btcffc', 'xyft']:
-                        self.award_mode = 2
+                        self._award_mode = 2
                     elif i in LotteryData.lottery_sb:  # 骰寶只支援  元模式
                         _money_unit = 1
 
@@ -290,7 +284,7 @@ class ApiTestPC(unittest.TestCase):
                         traceWinStop = 0
                         traceStopValue = -1
                     else:  # 追號
-                        plan_ = self.plan_num(self.envConfig.get_env_id(), i, Config.random_mul(30))  # 隨機生成 50期內的比數
+                        plan_ = self.plan_num(self._env_config.get_env_id(), i, Config.random_mul(30))  # 隨機生成 50期內的比數
                         print(f'追號, 期數:{len(plan_)}')
                         isTrace = 1
                         traceWinStop = 1
@@ -302,7 +296,7 @@ class ApiTestPC(unittest.TestCase):
                     post_data = {"gameType": i, "isTrace": isTrace, "traceWinStop": traceWinStop,
                                  "traceStopValue": traceWinStop,
                                  "balls": [{"id": 1, "ball": ball_type_post[1], "type": ball_type_post[0],
-                                            "moneyunit": _money_unit, "multiple": MUL, "awardMode": self.award_mode,
+                                            "moneyunit": _money_unit, "multiple": MUL, "awardMode": self._award_mode,
                                             "num": 1}], "orders": plan_, "amount": len_ * amount}  # 不使用紅包
 
                     post_data_lhc = {"balls": [{"id": 1, "moneyunit": _money_unit, "multiple": 1, "num": 1,
@@ -320,21 +314,21 @@ class ApiTestPC(unittest.TestCase):
                                     "orders": plan_}
 
                     if i in 'lhc':
-                        self.req_post_submit(self.user, 'lhc', post_data_lhc, _money_unit, self.award_mode,
+                        self.req_post_submit(self._user, 'lhc', post_data_lhc, _money_unit, self._award_mode,
                                              ball_type_post[2])
 
                     elif i in LotteryData.lottery_sb:
-                        self.req_post_submit(self.user, i, post_data_sb, _money_unit, self.award_mode,
+                        self.req_post_submit(self._user, i, post_data_sb, _money_unit, self._award_mode,
                                              ball_type_post[2])
                     else:
-                        if self.red_type == 'yes':  # 紅包投注
+                        if self._red_type == 'yes':  # 紅包投注
                             post_data['redDiscountAmount'] = 2  # 增加紅包參數
-                            self.req_post_submit(self.user, i, post_data, _money_unit, self.award_mode,
+                            self.req_post_submit(self._user, i, post_data, _money_unit, self._award_mode,
                                                  ball_type_post[2])
                         else:
-                            self.req_post_submit(self.user, i, post_data, _money_unit, self.award_mode,
+                            self.req_post_submit(self._user, i, post_data, _money_unit, self._award_mode,
                                                  ball_type_post[2])
-                red_bal = select_red_bal(Connection.get_oracle_conn(1), self.user)
+                red_bal = self._conn_oracle.select_red_bal(self._user)
                 print(f'紅包餘額: {int(red_bal[0]) / 10000}')
                 break
             except KeyError as e:
@@ -349,32 +343,31 @@ class ApiTestPC(unittest.TestCase):
         """登入測試"""
         print("Enter test_PcLogin")
         global COOKIE
-        self.en_url = self.envConfig.get_em_url()
+        self._en_url = self._env_config.get_em_url()
 
         param = b'f4a30481422765de945833d10352ea18'
 
-        self.header['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
+        self._header['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
 
-        print("userAgent : " + self.user_agent)
-        print("post_url : " + self.post_url)
+        print("post_url : " + self._post_url)
         # while True:
         r = None
         try:
             postData = {
-                "username": self.user,
-                "password": self.md(str.encode(self.envConfig.get_password()), param),
+                "username": self._user,
+                "password": self.md(str.encode(self._env_config.get_password()), param),
                 "param": param
             }
             logger.info(f'postData = {postData}')
-            r = self.SESSION.post(self.post_url + '/login/login', data=postData, headers=self.header)
+            r = self.SESSION.post(self._post_url + '/login/login', data=postData, headers=self._header)
             logger.info(f'response = {r.json()}')
             COOKIE = r.cookies.get_dict()['ANVOID']  # 獲得登入的cookies 字典
             logger.debug(f'r.cookies.get_dict() = {r.cookies.get_dict()}')
-            self.header['Cookie'] = f'ANVOID={COOKIE}'
+            self._header['Cookie'] = f'ANVOID={COOKIE}'
             t = time.strftime('%Y%m%d %H:%M:%S')
             # msg = (f'登錄帳號: {i},登入身分: {account_[i]}' + u',現在時間:' + t + r.text)
-            print(f'登錄帳號: {self.user}' + u',現在時間:' + t)
-            self.header['Content-Type'] = 'application/json; charset=UTF-8'  # 只有Login使用form, 改回Json
+            print(f'登錄帳號: {self._user}' + u',現在時間:' + t)
+            self._header['Content-Type'] = 'application/json; charset=UTF-8'  # 只有Login使用form, 改回Json
         except IOError:
             self.fail(f'測試結果：登入失敗.\n接口回傳：{r.json()}')
 
@@ -389,7 +382,7 @@ class ApiTestPC(unittest.TestCase):
 
     def session_post(self, account, third, url, post_data):  # 共用 session post方式 (Pc)
         try:
-            r = self.SESSION.post(self.post_url + url, headers=self.header, data=json.dumps(post_data))
+            r = self.SESSION.post(self._post_url + url, headers=self._header, data=json.dumps(post_data))
 
             if 'Balance' in url:
                 print(f'{third}, 餘額: {r.json()["balance"]}')
@@ -408,7 +401,7 @@ class ApiTestPC(unittest.TestCase):
 
     def session_get(self, user, url_, url):  # 共用 session get方式
         try:
-            r = self.SESSION.get(url_ + url, headers=self.header)
+            r = self.SESSION.get(url_ + url, headers=self._header)
             html = BeautifulSoup(r.text, 'lxml')  # type為 bs4類型
             title = str(html.title)
             statu_code = str(r.status_code)  # int 轉  str
@@ -436,7 +429,7 @@ class ApiTestPC(unittest.TestCase):
                     url = f'/fhll/home/{i}'
                     # print(url)
                     # print(fhll_dict[i])#列印 中文(因為fhll的title都是一樣)
-                    t = threading.Thread(target=self.session_get, args=(self.user, self.post_url, url))
+                    t = threading.Thread(target=self.session_get, args=(self._user, self._post_url, url))
                     threads.append(t)
                     # Joy188Test.session_get(user,post_url,url)# get方法
                 break  # 不再跑到 下面 session_get 的func
@@ -445,7 +438,7 @@ class ApiTestPC(unittest.TestCase):
             else:
                 url = f'/{i}/home'
             # print(url)
-            t = threading.Thread(target=self.session_get, args=(self.user, self.post_url, url))
+            t = threading.Thread(target=self.session_get, args=(self._user, self._post_url, url))
             threads.append(t)
         for i in threads:
             i.start()
@@ -461,14 +454,14 @@ class ApiTestPC(unittest.TestCase):
         em_188 = ['/gameUserCenter/queryOrdersEnter', '/gameUserCenter/queryPlans']
         for i in url_188:
             if i in ['/frontCheckIn/checkInIndex', '/frontScoreMall/pointsMall']:
-                self.session_get(self.user, self.post_url, i)
+                self.session_get(self._user, self._post_url, i)
             else:
-                t = threading.Thread(target=self.session_get, args=(self.user, self.post_url, i))
+                t = threading.Thread(target=self.session_get, args=(self._user, self._post_url, i))
                 threads.append(t)
             # Joy188Test.session_get(user,post_url,i)
         for i in em_188:
             # Joy188Test.session_get(user,em_url,i)
-            t = threading.Thread(target=self.session_get, args=(self.user, self.en_url, i))
+            t = threading.Thread(target=self.session_get, args=(self._user, self._en_url, i))
             threads.append(t)
         for i in threads:
             i.start()
@@ -484,33 +477,33 @@ class ApiTestPC(unittest.TestCase):
         low_url = ['d3', 'v3d']
         fun_url = ['xyft', 'pk10']
         for i in ssh_url:
-            self.session_get(self.user, self.en_url, f'/game/chart/{i}/Wuxing')
+            self.session_get(self._user, self._en_url, f'/game/chart/{i}/Wuxing')
         for i in k3_url:
-            self.session_get(self.user, self.en_url, f'/game/chart/{i}/chart')
+            self.session_get(self._user, self._en_url, f'/game/chart/{i}/chart')
         for i in low_url:
-            self.session_get(self.user, self.en_url, f'/game/chart/{i}/Qiansan')
+            self.session_get(self._user, self._en_url, f'/game/chart/{i}/Qiansan')
         for i in fun_url:
-            self.session_get(self.user, self.en_url, f'/game/chart/{i}/CaipaiweiQianfushi')
-        self.session_get(self.user, self.en_url, '/game/chart/p5/p5chart')
-        self.session_get(self.user, self.en_url, '/game/chart/ssq/ssq_basic')
-        self.session_get(self.user, self.en_url, '/game/chart/kl8/Quwei')
+            self.session_get(self._user, self._en_url, f'/game/chart/{i}/CaipaiweiQianfushi')
+        self.session_get(self._user, self._en_url, '/game/chart/p5/p5chart')
+        self.session_get(self._user, self._en_url, '/game/chart/ssq/ssq_basic')
+        self.session_get(self._user, self._en_url, '/game/chart/kl8/Quwei')
 
     @func_time
     def test_PcThirdBalance(self):
         """4.0/第三方餘額"""
         threads = []
         print('------------------------------------------------------------------------')
-        print(f'開始確認帳號: {self.user} 三方餘額')
-        for third in self.third_list:
+        print(f'開始確認帳號: {self._user} 三方餘額')
+        for third in self._third_list:
             if third == 'gns':
                 third_url = '/gns/gnsBalance'
             else:
                 third_url = f'/{third}/thirdlyBalance'
                 # r = session.post(post_url+third_url,headers=self.header)
             # print(f'{third}, 餘額: {r.json()["balance"]}')
-            t = threading.Thread(target=self.session_post, args=(self.user, third, third_url, ''))
+            t = threading.Thread(target=self.session_post, args=(self._user, third, third_url, ''))
             threads.append(t)
-        t = threading.Thread(target=self.session_post, args=(self.user, '', '/index/getuserbal', ''))
+        t = threading.Thread(target=self.session_post, args=(self._user, '', '/index/getuserbal', ''))
         threads.append(t)
         for i in threads:
             i.start()
@@ -527,17 +520,17 @@ class ApiTestPC(unittest.TestCase):
         post_data = {"amount": 1}
         status_dict = {}  # 存放 轉帳的 狀態
         errors = {}
-        for third in self.third_list:
+        for third in self._third_list:
             if third == 'gns':
                 third_url = '/gns/transferToGns'
             else:
                 third_url = f'/{third}/transferToThirdly'
-            r = self.SESSION.post(self.post_url + third_url, data=json.dumps(post_data), headers=self.header)
+            r = self.SESSION.post(self._post_url + third_url, data=json.dumps(post_data), headers=self._header)
             logger.info(f'r.json() = {r.json()}')
 
             # 判斷轉帳的 狀態
             if r.json()['status']:
-                print(f'帳號 {self.user} 轉入 {third} ,金額:1, 狀態碼:{r.json()["status"]}')
+                print(f'帳號 {self._user} 轉入 {third} ,金額:1, 狀態碼:{r.json()["status"]}')
             else:
                 errors[third] = r.json()
                 print(f'{third} 轉帳失敗')  # 列出錯誤訊息 ,
@@ -549,11 +542,10 @@ class ApiTestPC(unittest.TestCase):
                 tran_result = [0, 0]  # 初始化
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    tran_result = Connection.thirdly_tran(
-                        Connection.get_mysql_conn(evn=self.envConfig.get_env_id(), third=third),
+                    tran_result = self._conn_mysql.thirdly_tran(
                         tran_type=0,
                         third=third,
-                        user=self.user)  #
+                        user=self._user)  #
                     sleep(1.5)
                     count += 1
                     # print(f'驗證{third}中 : tran_result = {tran_result}')
@@ -580,12 +572,12 @@ class ApiTestPC(unittest.TestCase):
         status_dict = {}  # 存放 第三方狀態
         post_data = {"amount": 1}
         errors = {}
-        for third in self.third_list:
+        for third in self._third_list:
             url = f'/{third}/transferToFF'
 
-            r = self.SESSION.post(self.post_url + url, data=json.dumps(post_data), headers=self.header)
+            r = self.SESSION.post(self._post_url + url, data=json.dumps(post_data), headers=self._header)
             if r.json()['status']:
-                print(f'帳號 {self.user}, {third} 轉回4.0 ,金額:1, 狀態碼:{r.json()["status"]}')
+                print(f'帳號 {self._user}, {third} 轉回4.0 ,金額:1, 狀態碼:{r.json()["status"]}')
             else:
                 logger.error(f'轉帳接口失敗 : errors[{third}] = {r.json()}')
                 errors[third] = r.json()
@@ -598,11 +590,10 @@ class ApiTestPC(unittest.TestCase):
                 tran_result = [0, 0]
                 count = 0
                 while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
-                    tran_result = Connection.thirdly_tran(
-                        Connection.get_mysql_conn(evn=self.envConfig.get_env_id(), third=third),
+                    tran_result = self._conn_mysql.thirdly_tran(
                         tran_type=0,
                         third=third,
-                        user=self.user)
+                        user=self._user)
                     sleep(1)
                     count += 1
                     # print(f'驗證{third}中 : tran_result = {tran_result}')
@@ -641,16 +632,16 @@ class ApiTestPC(unittest.TestCase):
         return COOKIES
 
     def test_redEnvelope(self):  # 紅包加壁,審核用
-        user = self.user
+        user = self._user
         print(f'用戶: {user}')
         red_list = []  # 放交易訂單號id
 
         try:
-            red_bal = select_red_bal(Connection.get_oracle_conn(self.envConfig.get_env_id()), user)
+            red_bal = self._conn_oracle.select_red_bal(user)
             print(f'紅包餘額: {int(red_bal[0]) / 10000}')
         except IndexError:
             print('紅包餘額為0')
-        self.admin_login(env_config=self.envConfig)  # 登入後台
+        self.admin_login(env_config=self._env_config)  # 登入後台
         data = {"receives": user, "blockType": "2", "lotteryType": "1", "lotteryCodes": "",
                 "amount": "100", "note": "test"}
         HEADER['Cookie'] = 'ANVOAID=' + ADMIN_COOKIE['admin_cookie']  # 存放後台cookie
@@ -661,7 +652,7 @@ class ApiTestPC(unittest.TestCase):
             print('紅包加幣100')
         else:
             print('失敗')
-        red_id = select_red_id(Connection.get_oracle_conn(self.envConfig.get_env_id()), user)  # 查詢教地訂單號,回傳審核data
+        red_id = self._conn_oracle.select_red_id(user)  # 查詢教地訂單號,回傳審核data
         # print(red_id)
         red_list.append(f'{red_id[0]}')
         # print(red_list)
@@ -675,7 +666,7 @@ class ApiTestPC(unittest.TestCase):
         except Exception as e:
             print(r.json()['errorMsg'])
             logger.error(e)
-        red_bal = select_red_bal(Connection.get_oracle_conn(self.envConfig.get_env_id()), user)
+        red_bal = self._conn_oracle.select_red_bal(user)
         print(f'紅包餘額: {int(red_bal[0] / 10000)}')
 
     def tearDown(self) -> None:
@@ -687,10 +678,11 @@ class ApiTestPC_YFT(unittest.TestCase):
     YFT API測試
     """
     _session = None
-    env_config = None
-    yft_user = None
-    money_unit = None
-    award_mode = None
+    _env_config = None
+    _user = None
+    _money_unit = None
+    _award_mode = None
+    _conn = None
     header = {'User-Agent': Config.UserAgent.PC.value,
               'Content-Type': 'application/json'}
 
@@ -699,33 +691,34 @@ class ApiTestPC_YFT(unittest.TestCase):
         self.login()
         logger.info(f'After login. header = {self.header}')
 
-    def __init__(self, case, _env, _user, _money_unit=1, _award_mode=0):
+    def __init__(self, case, env_config, user, conn, money_unit=1, _award_mode=0):
         """
         YFT初始化
         :param case: List
-        :param _env: EnvConfig
-        :param _user: Str
-        :param _money_unit: 1 / 0.1 / 0.01
+        :param env_config: EnvConfig
+        :param user: Str
+        :param money_unit: 1 / 0.1 / 0.01
         :param _award_mode: 0=預設 / 1=一般 / 2=高獎金
         """
         super().__init__(case)
         logger.info(
-            f'ApiTestPC_YFT __init__ : _env={_env}, _user={_user}, _money_unit={_money_unit}, _award_mode={_award_mode}')
-        self.env_config = _env
-        self.yft_user = _user
-        self.money_unit = _money_unit
-        self.award_mode = _award_mode
+            f'ApiTestPC_YFT __init__ : _env={env_config}, _user={user}, _money_unit={money_unit}, _award_mode={_award_mode}')
+        self._env_config = env_config
+        self._user = user
+        self._money_unit = money_unit
+        self._award_mode = _award_mode
+        self._conn = conn
         if self._session is None:
             self._session = requests.Session()
 
     def login(self):
         post_url = '/a/login/login'
         md = hashlib.md5()
-        md.update(self.env_config.get_password().encode('utf-8'))
-        request = f'{{"account": "{self.yft_user}", "passwd": "{md.hexdigest()}", "timeZone": "GMT+8", "isWap": false, "online": false}} '
+        md.update(self._env_config.get_password().encode('utf-8'))
+        request = f'{{"account": "{self._user}", "passwd": "{md.hexdigest()}", "timeZone": "GMT+8", "isWap": false, "online": false}} '
         logger.debug(f'request_body = {request}')
-        response = self._session.post(url=self.env_config.get_post_url() + post_url, data=request, headers=self.header)
-        logger.debug(f'login_url = {self.env_config.get_post_url() + post_url}')
+        response = self._session.post(url=self._env_config.get_post_url() + post_url, data=request, headers=self.header)
+        logger.debug(f'login_url = {self._env_config.get_post_url() + post_url}')
         logger.debug(f'Login response = {response.content}')
         if response.cookies['JSESSIONID']:
             logger.info(f'Cookies = {response.cookies["JSESSIONID"]}')
@@ -1006,7 +999,7 @@ class ApiTestPC_YFT(unittest.TestCase):
         content = f'{{"lotteryType":"{lottery_name}","timeZone":"GMT+8","isWap":false,"online":false}}'
         logger.debug(f'get_lottery_info -----> {content}')
 
-        response = self._session.post(url=self.env_config.get_post_url() + '/a/lottery/init', data=content,
+        response = self._session.post(url=self._env_config.get_post_url() + '/a/lottery/init', data=content,
                                       headers=self.header)
         logger.debug(f'get_lottery_info <----- {response.json()}')
         return response.json()['content']
@@ -1048,9 +1041,9 @@ class ApiTestPC_YFT(unittest.TestCase):
                 default['stopOnWon'] = 'yes'
             else:
                 default['stopOnWon'] = 'no'
-        if self.money_unit == '0.1':
+        if self._money_unit == '0.1':
             totalAmount *= 0.1
-        elif self.money_unit == '0.01':
+        elif self._money_unit == '0.01':
             totalAmount *= 0.01
 
         default['totalAmount'] = totalAmount
@@ -1060,27 +1053,27 @@ class ApiTestPC_YFT(unittest.TestCase):
         data.replace('True', 'true')
         data.replace('False', 'false')
 
-        logger.debug(f"self.money_unit == '0.1' = {self.money_unit == '0.1'}\n"
-                     f"self.money_unit == '0.01' = {self.money_unit == '0.01'}\n"
-                     f"self.award_mode == '2' = {self.award_mode == '2'}")
-        if self.money_unit == '0.1':
+        logger.debug(f"self.money_unit == '0.1' = {self._money_unit == '0.1'}\n"
+                     f"self.money_unit == '0.01' = {self._money_unit == '0.01'}\n"
+                     f"self.award_mode == '2' = {self._award_mode == '2'}")
+        if self._money_unit == '0.1':
             logger.debug("self.money_unit == '0.1'")
             data = data.replace('"potType": "Y"', '"potType": "J"')
-        elif self.money_unit == '0.01':
+        elif self._money_unit == '0.01':
             logger.debug("self.money_unit == '0.01'")
             data = data.replace('"potType": "Y"', '"potType": "F"')
-        if self.award_mode == '2':
+        if self._award_mode == '2':
             logger.debug("self.award_mode == '2'")
             data = data.replace('"doRebate": "yes"', '"doRebate": "no"')
 
         logger.info(f'Bet content = {data}')
-        bet_response = self._session.post(url=self.env_config.get_post_url() + post_url, data=data,
+        bet_response = self._session.post(url=self._env_config.get_post_url() + post_url, data=data,
                                           headers=self.header)
         logger.info(f'Bet response = {bet_response.json()}\n')
         return bet_response.json()
 
     def bet_trace(self, game_name, stop_on_win):
-        games = get_lottery_games(game_name[0])
+        games = self._conn.get_lottery_games(game_name[0])
         expected = 'ok'
         bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
                                     is_trace=False)
