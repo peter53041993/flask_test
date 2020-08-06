@@ -29,7 +29,7 @@ document.writeln("        </button>");
 document.writeln("        <div class=\'dropdown-menu\'>");
 document.writeln("          <a class=\'dropdown-item\' href=\'game_result\'>玩法/遊戲單號</a>");
 document.writeln("          <a class=\'dropdown-item\' href=\'user_active\'>有效用戶/第三方銷量</a>");
-document.writeln("          <a class=\'dropdown-item\' href=\'url_token\'>註冊碼/註冊連結</a>");
+document.writeln("          <a class=\'dropdown-item\' href=\'url_token\'>註冊碼/註冊連結/用戶資訊</a>");
 document.writeln("          <a class=\'dropdown-item\' href=\'sun_user\'>太陽成/申博用戶</a>");
 document.writeln("        </div>");
 document.writeln("    </div>");
@@ -43,3 +43,15 @@ document.writeln("        <button type=\'button\' class=\'btn btn-warning\'  onc
 document.writeln("          股票");
 document.writeln("        </button>");
 document.writeln("    </div>");
+document.writeln("    <div class=\'btn-group\'>");
+document.writeln("        <button type=\'button\' class=\'btn btn-danger\'  onclick=location.href=\'/api_test\'>");
+document.writeln("          API測試");
+document.writeln("        </button>");
+document.writeln("    </div>");
+ 
+function pretty(js_path,split_){ //dataframe調整 文字版面 , js_path為element js定位, split_: 切各字元
+    game_explan = document.querySelector(js_path)//
+    explan_1 = game_explan.textContent.split(split_)[0]//用 #來分割
+    explan_2 = game_explan.textContent.split(split_)[1]// #後
+    game_explan.innerHTML = explan_1 + "<br>" +"<span>"+split_+explan_2+"</span>" //換行 ,增加span
+}
