@@ -5,7 +5,7 @@ import AutoTest
 
 # ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
 path1=os.path.abspath('.')
-chromeDriver_Path = path1 + "\\chromedriver.exe"
+chromeDriver_Path = path1 + "\\chromedriver_83.exe"
 # report.html 絕對路徑
 reportHtml_Path = path1 + "\\templates\\report.html"  
 
@@ -70,7 +70,7 @@ class EnvConfig:
         elif self.env_domain in self.joyDomains + self.hyDomains + self.joySunDomains:
             return "amberrd"
         elif self.env_domain in self.productDomains:
-            return "tsuta0425"
+            return "real$0823"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
@@ -81,6 +81,9 @@ class EnvConfig:
             return 0
         elif self.env_domain in self.joyDomains + self.joySunDomains + self.hyDomains:
             return 1
+        elif self.env_domain in self.productDomains:
+            return 2
+        
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
@@ -115,7 +118,7 @@ class EnvConfig:
             print("全局後台沒設置")
             if self.env_domain is None:
                 raise Exception('env 環境未初始化')
-            elif self.env_domain in ['dev02', 'joy188']:
+            elif self.env_domain in ['dev02', 'joy188','fh968']:
                 return 0
             elif self.env_domain in ['fh82dev02', 'teny2020dev02', 'joy188.teny2020', 'joy188.195353']:
                 return 1
