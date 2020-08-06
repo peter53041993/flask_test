@@ -1,0 +1,104 @@
+
+{% extends "base.html" %}
+{% block title %}API測試{% endblock %}
+{%block head %}
+{{ super() }}
+<style type="text/css">
+#id{border-radius: 22px;}
+p{margin-top: 1%;}
+textarea{vertical-align: middle;}
+.ui-label,label[for=data_able]{color: #bf22da;}
+</style>
+{% endblock %}  
+{% block script %}
+<script type="text/javascript">
+    function check(){
+        $("#status").val('')
+        $("#detail").val('')
+        
+        //alert('請稍後');
+        $.ajax({
+            url:"/api_test",
+            type:"POST",
+            //dataType: "json",
+            headers:{
+                    Accept:"application/json; charset=utf-8"
+                },
+            data:$("#form1").serialize(),
+            success:function(data){
+                //var result =data;
+                if (data=='該環境沒有此用戶'){
+                    alert('該環境沒有此用戶');
+                    return false;
+                }
+                console.log(data);
+                $("#status").val(data['status'])
+                $("#detail").val(data['data'])
+                prettyPrint('#detail')
+            }
+
+            })
+        } 
+    function prettyPrint(id_name) {
+        var og_data = $(id_name).val()
+        try{
+            var obj = JSON.parse(og_data);
+            var pretty = JSON.stringify(obj, undefined, 4);
+            $(id_name).val(pretty);
+            return false;
+        }
+        catch (e){
+            if(id_name=='#request_data'){
+                alert('格式有誤');
+                return false; 
+            }
+        }
+        }
+</script>
+<script>
+    $(document).ready(function(){
+        $('#request').css('display','none');
+        $('#data_able').change(function(){
+            if ($('#data_able').prop('checked') == false){//data勾選取消
+                $('#request').css('display','none');
+            }
+            else{
+                $('#request').css('display','block');
+            }
+        })
+    })
+</script>
+
+
+{% endblock %}
+{% block main %}
+
+<form id='form1'>
+    <label>請求類型 </label>
+    <select name='request_type' id='request_type'>
+        <option value= 'post'>POST</option>
+        <option value= 'get'>GET</option>
+    </select>
+    <li>
+        <label for="Content-Type">Content-Type</label>
+        <input type="text" name="Content-Type" id="Content-Type" size="50"/>
+        <label for="url">url</label>
+        <input type="text" name="url" id="url" size="50"/>
+    </li>
+    <input type="checkbox" id="data_able" value="data_able">
+    <label for="data_able">data</label></div>
+    <li id='request'>
+        <label class="ui-label" for="request_data"></label>
+        <textarea id="request_data"  name="data" cols="60" rows="10"></textarea>
+        <input type="button" onclick="prettyPrint('#request_data')"value='pretty'>
+    </li>
+    <p><input type="button" onclick="check()" value="查詢"></p>
+</form>
+<li>
+<label class="ui-label" for="status">staus</label>
+<textarea id="status"  name="status" cols="10" rows="1"></textarea>
+<label class="ui-label" for="detail">reponse</label>
+<textarea id="detail"  name="detail" cols="50" rows="10"></textarea>
+</li>
+
+{% endblock %}
