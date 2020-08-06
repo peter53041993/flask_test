@@ -6,25 +6,27 @@
     #game_code,#game_type{border-radius: 22px;}
     li{list-style: none;}
     p{margin-top: 1%;}
+    span{color: red;}
 </style>
 {% endblock %}
 {% block script %}
     <script type="text/javascript">
         var game_detail="";
         function check(){
+            $('#submit').attr('disabled','true');
             if ($('.dataframe').length>0){
-                $("table").html("");//已經有了先清空
+                $('.dataframe').remove();
             }
             if($("#game_code").val() =="" && $("#game_type").val()=="" ){//判斷倆著皆不能輸入
                 alert("請選擇單一輸入框");
-                location.reload()
+                return false;
             }
             else if ($("#game_code").val() !="" && $("#game_type").val()!="" ){//判斷倆著皆輸入
                 alert("只能擇一輸入框");
-                location.reload()
+                return false;
             }
             else {
-            $.ajax({ 
+                myajax  = $.ajax({ 
                 url:"/game_result",
                 type:"POST",
                 //dataType: "json",
@@ -32,26 +34,36 @@
                         Accept:"application/json; charset=utf-8"
                     },
                 data:$("#form1").serialize(),
-                
                 success:function(data){
-                    //console.log(XMLHttpRequest)
                     game_detail = data;
-                    //console.log(typeof(data))
-                    console.log(data);
+                    //console.log(data);
                     if (data=='此環境沒有此訂單號'){
                         alert(data);
-                        location.reload();
-                    }
-                    else if(data.indexOf('cookie')>3){
-                        alert(data);
-                        location.reload();
+                        return false;
                     }
                     else {
-                        $('#game_detail').after(data)
+                        $('#game_detail').after(data);
+                        pretty("body > main > table > tbody > tr > td:nth-child(8)",'#')//理論獎金
+                        pretty("body > main > table > tbody > tr > td:nth-last-child(1)",'#')//遊戲說明
                     }
                     }
                     })
-                }}
+                    $.when(myajax).done(function (){
+                    $.ajax({
+                    url: "/get_cookie",
+                    type: "GET",
+                    data: {'env_type':  $("#env_type").val()},
+                    success:function(data){
+                        //console.log(data)
+                        $.cookie($("#env_type").val(), data)
+                    }
+
+                    })
+                
+                        })
+                }
+                $('#submit').removeAttr('disabled');
+                }
     </script>
 {% endblock %}
 {% block main %}
@@ -67,7 +79,7 @@
         </br>    
         請輸入遊戲玩法<input type="text" id="game_type" name="game_type"
             size="20" placeholder="請輸入簡體" >
-        <p><input type="button" onclick="check()" value="查詢" title="最近一個月內"></p>
+        <p><input type="button" onclick="check()"id=submit value="查詢" title="最近一個月內"></p>
     </form>
     <div id='game_detail'>
     </div> 
