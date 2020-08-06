@@ -1,5 +1,5 @@
 
-
+li{list-style: none;}
 .dataframe{font-size:11pt;border:2px solid #b613de;}
 .dataframe tr:hover{background:silver;cursor:pointer;}
 body > main > table > thead > tr > th {
