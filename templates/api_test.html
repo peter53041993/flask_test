@@ -7,15 +7,23 @@
 #id{border-radius: 22px;}
 p{margin-top: 1%;}
 textarea{vertical-align: middle;}
-.ui-label,label[for=data_able]{color: #bf22da;}
+.ui-label,label[for=data_able],label[for=cookie_able]{color: #bf22da;}
+#anvoid_cookie{color: #dca500}
 </style>
 {% endblock %}  
 {% block script %}
 <script type="text/javascript">
     function check(){
+        var event_id = event.target.id;
         $("#status").val('')
         $("#detail").val('')
-        
+        $("#req_time").val('')
+        if ($('#url').val()=='' || $('#url').val().indexOf('http')<0){
+            alert('url有誤');
+            return false;
+        }
+        $('#normal_check').attr('disabled','true');
+        $('#thread_check').attr('disabled','true');
         //alert('請稍後');
         $.ajax({
             url:"/api_test",
@@ -24,8 +32,10 @@ textarea{vertical-align: middle;}
             headers:{
                     Accept:"application/json; charset=utf-8"
                 },
-            data:$("#form1").serialize(),
+            data:$("#form1").serialize()+'&login_cookie='+$('#anvoid_cookie').val()+'&check_type='+event_id,
             success:function(data){
+                $('#normal_check').removeAttr('disabled');
+                $('#thread_check').removeAttr('disabled');
                 //var result =data;
                 if (data=='該環境沒有此用戶'){
                     alert('該環境沒有此用戶');
@@ -35,8 +45,12 @@ textarea{vertical-align: middle;}
                 $("#status").val(data['status'])
                 $("#detail").val(data['data'])
                 prettyPrint('#detail')
+                $('#req_time').val(data['time'])
+            },
+            error:function(status){
+                $('#normal_check').removeAttr('disabled');
+                $('#thread_check').removeAttr('disabled');
             }
-
             })
         } 
     function prettyPrint(id_name) {
@@ -54,16 +68,49 @@ textarea{vertical-align: middle;}
             }
         }
         }
+    function login_cookie(){
+        if ($('#username').val()==''){
+            $('#anvoid_cookie').val('用戶名為空');
+            return false;
+        } 
+        $('#anvoid_cookie').val('');
+        $('#cookie_submit').attr('disabled','true');
+        $.ajax({
+            url: "login_cookie",
+            type: "POST",
+            data:$("#form1").serialize(),
+            success:function(data){
+                if (data =='該環境沒有此用戶'){
+                    var anv_name = '';
+                }
+                else{
+                    var anv_name = 'ANVOID=';
+                }
+            $('#anvoid_cookie').val(anv_name+data);
+            $('#cookie_submit').removeAttr('disabled');
+            }
+        })
+    }
 </script>
 <script>
     $(document).ready(function(){
         $('#request').css('display','none');
+        $('#cookie').css('display','none');
+
         $('#data_able').change(function(){
             if ($('#data_able').prop('checked') == false){//data勾選取消
                 $('#request').css('display','none');
             }
             else{
                 $('#request').css('display','block');
+            }
+        })
+        $('#cookie_able').change(function(){
+            if ($('#cookie_able').prop('checked') == false){//data勾選取消
+                $('#cookie').css('display','none');
+            }
+            else{
+                $('#cookie').css('display','block');
             }
         })
     })
@@ -79,26 +126,51 @@ textarea{vertical-align: middle;}
         <option value= 'post'>POST</option>
         <option value= 'get'>GET</option>
     </select>
+    <label>Content-Type</label>
+    <select name='Content_type' id='Content_type'>
+        <option value= 'application/json'>application/json</option>
+        <option value= 'application/x-www-form-urlencoded'>
+        application/x-www-form-urlencoded</option>
+    </select>
     <li>
-        <label for="Content-Type">Content-Type</label>
-        <input type="text" name="Content-Type" id="Content-Type" size="50"/>
         <label for="url">url</label>
         <input type="text" name="url" id="url" size="50"/>
     </li>
-    <input type="checkbox" id="data_able" value="data_able">
+    <input type="checkbox" id=cookie_able value="cookie_able">
+    <label for='cookie_able'>cookie</label>
+    <li id='cookie'>
+        <label>登入環境</label>
+        <select name='env_type' id='env_type'>
+            <option value= 'dev02'>一般dev02</option>
+            <option value= 'fh82dev02'>合營dev02</option>
+            <option value= 'joy188'>一般188</option>
+            <option value= 'joy188.teny2020'>合營188</option>
+        </select>
+        <label for="username">用戶名</label>
+        <input type="text" name="username" id="username" size="10"/>
+        <input type="button" id='cookie_submit' onclick="login_cookie()"value='取得登入cookie'>
+        <label for="anvoid_cookie"></label>
+        <input type="text" name="anvoid_cookie" id="anvoid_cookie" size="40"/>
+    </li>
+    <input type="checkbox" id="data_able">
     <label for="data_able">data</label></div>
     <li id='request'>
         <label class="ui-label" for="request_data"></label>
-        <textarea id="request_data"  name="data" cols="60" rows="10"></textarea>
+        <textarea id="request_data"  name="request_data" cols="60" rows="10"></textarea>
         <input type="button" onclick="prettyPrint('#request_data')"value='pretty'>
     </li>
-    <p><input type="button" onclick="check()" value="查詢"></p>
+    <p><input type="button" id='normal_check' name="normal_check" onclick="check()" value="送出">
+    <input type="button" id='thread_check' name="thread_check" onclick="check()" value="併發">
 </form>
 <li>
 <label class="ui-label" for="status">staus</label>
-<textarea id="status"  name="status" cols="10" rows="1"></textarea>
-<label class="ui-label" for="detail">reponse</label>
-<textarea id="detail"  name="detail" cols="50" rows="10"></textarea>
+    <textarea id="status"  name="status" cols="30" rows="2"></textarea>
+    <label class="ui-label" for="detail">reponse</label>
+    <textarea id="detail"  name="detail" cols="50" rows="10"></textarea>
+</li>
+<li>
+    <label class="ui-label" for="detail">請求時間</label>
+    <textarea id="req_time"  name="req_time" cols="30" rows="2"></textarea>
 </li>
 
 {% endblock %}
