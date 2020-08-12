@@ -690,6 +690,7 @@ class Flask():
             data['中獎率'] = '0.95/投注內容%s=%s'%(game_content,round(0.95/float(game_content),4))
             data['理論獎金'] = str(game_theory)+"(投注內容/0.9)#快開改後不適用"
             data['獎金模式'] = "快開改前: %s"%bonus
+            data['中獎獎金'] = '改前: %s/改後: %s'%(game_amount*bonus,game_award)
             del data['反點獎金']# 快開沒參考價值
             del data['平台獎金']
         else:
@@ -715,7 +716,7 @@ class Flask():
 
     @app.route('/game_result', methods=["GET", "POST"])  # 查詢方案紀錄定單號
     def game_result():
-        global game_playtype,cookie,game_amount,game_content,game_point,lottery_name,game_theory,bonus,data
+        global game_playtype,cookie,game_amount,game_content,game_point,lottery_name,game_theory,bonus,data,game_award
 
         if request.method == "POST":
             game_code = request.form.get('game_code')  # 訂單號
@@ -1351,37 +1352,76 @@ class Flask():
         if request.method =="POST":
             print(request.cookies)
             request_type = request.form.get('request_type')
-            content_type = request.form.get('Content-Type')# header
+            content_type = request.form.get('Content_type')# header
             url = urlsplit(request.form.get('url'))# url 要切割
             url_domain = url.scheme+'://'+url.netloc# 為網域名
             url_path = url.path# .com/ 後面url路徑
-            data = request.form.get('data')
+            data = request.form.get('request_data')
+            login_cookie = request.form.get('login_cookie')
+            check_type = request.form.get('check_type')
+            print(check_type)
             header = { 
             "Content-Type": content_type,
-            'User-Agent':FF_Joy188.FF_().user_agent['Pc']# 這邊先寫死給一個
+            'User-Agent':FF_Joy188.FF_().user_agent['Pc'],# 這邊先寫死給一個
+            'Cookie': login_cookie
             }
             print(request_type,content_type,url_domain,url_path,data)
-            if request_type == 'post':
-                FF_Joy188.FF_().session_post(url_domain,url_path,data,header)
-            else:#get
-                FF_Joy188.FF_().session_get(url_domain,url_path,data,header)
-            status = (FF_Joy188.r.status_code)#連顯狀態
-            content = FF_Joy188.r.text
-
-            #if ['dev','188'] in 
-
-            try:
-                ANVOID = FF_Joy188.r.cookies.get_dict()['ANVOID']# 4.0平台登入cookie
-                print(ANVOID)
-            except:# 不是4.0 請求 
-                pass
+            threads,status,content,req_time = [],[],[],[]
+            if  request_type == 'post':
+                thread_func = FF_Joy188.FF_().session_post
+            else:
+                thread_func = FF_Joy188.FF_().session_get
+            if check_type == 'thread_check':# 併發
+                num = 2
+            else:
+                num = 1
+            for i in range(num):
+                t = threading.Thread(target=thread_func,args=(url_domain,url_path,data,header))
+                threads.append(t)
+            #print(len(threads))
+            for i in threads:
+                i.start()
+            for i in threads:
+                i.join()
+                print(FF_Joy188.content)
+                status.append(FF_Joy188.status)
+                content.append(FF_Joy188.content)
+                req_time.append(FF_Joy188.req_time)
+            #print(FF_Joy188.content)
             result = {}
-            result['status'] = '連線狀態: %s'%status
-            result['data'] = content
+            result['status'] = '連線狀態: %s'%status[-1]
+            result['data'] = content[-1]
+            result['time'] = req_time[-1]
             return result
         return render_template('api_test.html')
 
-
+    @app.route('/login_cookie',methods=["POST"])# 傳回登入cookie
+    def login_cookie():
+        env_url = request.form.get('env_type')
+        envConfig = Config.EnvConfig(env_url)
+        joint = envConfig.get_joint_venture(envConfig.get_env_id(),'www.%s.com'%env_url)
+        user = request.form.get('username')
+        AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(envConfig.get_env_id()),user,joint)  # 查詢用戶 userid
+        userid = AutoTest.userid
+        print(env_url)
+        if len(AutoTest.userid) == 0:
+                return('該環境沒有此用戶')
+        password = str.encode(envConfig.get_password())
+        param = FF_Joy188.FF_().param[0]
+        postData = {
+        "username": user,
+        "password": AutoTest.Joy188Test.md(password, param),
+        "param": param 
+        }
+        header = {
+            'User-Agent': FF_Joy188.FF_().user_agent['Pc']#從FF_joy188.py 取
+        }
+        print(user,envConfig.get_post_url())
+        FF_Joy188.FF_().session_post(envConfig.get_post_url(),'/login/login',postData,header)
+        cookies = FF_Joy188.r.cookies.get_dict()['ANVOID']
+        print(cookies)
+        return cookies
+        
     @app.route('/error')#錯誤處理
     def error():
         abort(404)
