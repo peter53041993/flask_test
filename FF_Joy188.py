@@ -4,7 +4,9 @@ from fake_useragent  import UserAgent
 import flask_test,AutoTest
 
 class FF_(): #4.0專案
-    cookies = {}# 存訪 前台用戶登入後的 cookie
+    status = []# 紀錄請求狀態
+    content = []# 內容
+    req_time = []# 時間
     def __init__(self):
         self.dev_url = ['dev02','dev03','fh82dev02','88hlqpdev02','teny2020dev02']
         self.uat_url = ['joy188','joy188.195353']
@@ -34,12 +36,18 @@ class FF_(): #4.0專案
          'hnffc':[u'河內分彩','99119'],'360ffc':[u'360紛紛採','99121'],'3605fc':[u'360五分彩','99122'],
         'hn5fc':[u'河內五分彩','99120'],'n3d':[u'越南3d','99124'],'np3':[u'越南福利彩','99123']
         }
-    def session_post(self,request_url,request_func,postData,header,verify=False):#共用 request.post方式 ,url 為動態 請求url ,source預設走PC
-        global r # 會針對每個不同請求, 回覆內容作調整
+    def session_post(self,request_url,request_func,postData,header):#共用 request.post方式 ,url 為動態 請求url ,source預設走PC
+        global r,status,content,req_time# 會針對每個不同請求, 回覆內容作調整
         r = self.session.post(request_url+request_func,data = postData,headers=header,verify=False)
+        status = r.status_code
+        content= r.text
+        req_time= time.strftime( '%Y-%m-%d %H:%M:%S')
     def session_get(self,request_url,request_func,getData,header):
-        global r # 會針對每個不同請求, 回覆內容作調整
-        r = self.session.get(request_url+request_func,data = getData,headers=header)
+        global r,status,content,req_time # 會針對每個不同請求, 回覆內容作調整
+        r = self.session.get(request_url+request_func,data = getData,headers=header,verify=False)
+        status = r.status_code
+        content= r.text
+        req_time= time.strftime( '%Y-%m-%d %H:%M:%S')
     def get_conn(self,env):#連結數據庫 env 0: dev02 , 1:188 ,2: 生產
         if env == 2:
             username = 'rdquery'
@@ -148,9 +156,3 @@ class FF_(): #4.0專案
             print(r.json()['data']['projectId']+"\n")
         except:
             print(r.text)
-    def Third_Home(self):# 第三方連線
-        header =FF_().Account_Cookie()
-        getData = ""
-        FF_().session_get(post_url,'/lc/home',getData,header)
-        soup = BeautifulSoup(r.text,'lxml')
-        print(soup.find_all('strong',{'id_':'_userName'}))
