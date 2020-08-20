@@ -812,16 +812,17 @@ class Flask():
                         game_detail[game_code][16])  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
                         for i in soup.find_all('span', id=re.compile("^(%s)" % point_id)):  # {'id':point_id}):
                             FF_bonus = float(i.text)
-                        print(FF_bonus)
+                        print('平台獎金: %s'%FF_bonus)
                         game_theory = game_detail[game_code][16]/10000# 理論將金
                     game_awardmode = game_detail[game_code][9]  # 是否為高獎金
+                    game_point = float(game_detail[game_code][18]/10000)
                     if game_awardmode == 1:
                         game_awardmode = '否'
+                        bonus = FF_bonus + game_point
                     elif game_awardmode == 2:
                         game_awardmode = '是'
                         bonus = game_retaward + FF_bonus  # 高獎金的話, 獎金 模式 + 反點獎金
                     game_content = game_detail[game_code][7]
-                    game_point = float(game_detail[game_code][18]/10000)
                     # print(bonus)
                     data = {"遊戲訂單號": game_code, "訂單時間": game_detail[game_code][0], "中獎狀態": game_status,
                            "投注彩種/投注玩法": lottery_name+"/"+game_playtype,
@@ -1356,16 +1357,20 @@ class Flask():
             url = urlsplit(request.form.get('url'))# url 要切割
             url_domain = url.scheme+'://'+url.netloc# 為網域名
             url_path = url.path# .com/ 後面url路徑
+            url_query = url.query# url 把參數加在面url的
+            if url_query != '':# url有這段的化, 需加? 參數
+                url_query = '?%s'%url_query
             data = request.form.get('request_data')
             login_cookie = request.form.get('login_cookie')
             check_type = request.form.get('check_type')
-            print(check_type)
+            print(check_type,login_cookie)
             header = { 
             "Content-Type": content_type,
             'User-Agent':FF_Joy188.FF_().user_agent['Pc'],# 這邊先寫死給一個
-            'Cookie': login_cookie
             }
-            print(request_type,content_type,url_domain,url_path,data)
+            if login_cookie != '':
+                header['Cookie'] = login_cookie
+            print(request_type,content_type,url_domain,url_path,url_query,data)
             threads,status,content,req_time = [],[],[],[]
             if  request_type == 'post':
                 thread_func = FF_Joy188.FF_().session_post
@@ -1376,7 +1381,7 @@ class Flask():
             else:
                 num = 1
             for i in range(num):
-                t = threading.Thread(target=thread_func,args=(url_domain,url_path,data,header))
+                t = threading.Thread(target=thread_func,args=(url_domain,url_path+url_query,data,header))
                 threads.append(t)
             #print(len(threads))
             for i in threads:
@@ -1421,7 +1426,11 @@ class Flask():
         cookies = FF_Joy188.r.cookies.get_dict()['ANVOID']
         print(cookies)
         return cookies
-        
+    @app.route('/remote_IP',methods=['POST'])# 從瀏覽器 獲得本地 ip,方便 好記錄 查證使用
+    def remote_IP():
+        ip = request.form
+        print(ip)
+        return ip
     @app.route('/error')#錯誤處理
     def error():
         abort(404)
