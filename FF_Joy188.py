@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-import json, cx_Oracle, requests,hashlib,time
+import json, cx_Oracle, requests,hashlib,time,urllib3
 from fake_useragent  import UserAgent
 import flask_test,AutoTest
 
@@ -37,12 +37,14 @@ class FF_(): #4.0專案
         'hn5fc':[u'河內五分彩','99120'],'n3d':[u'越南3d','99124'],'np3':[u'越南福利彩','99123']
         }
     def session_post(self,request_url,request_func,postData,header):#共用 request.post方式 ,url 為動態 請求url ,source預設走PC
+        urllib3.disable_warnings()
         global r,status,content,req_time# 會針對每個不同請求, 回覆內容作調整
         r = self.session.post(request_url+request_func,data = postData,headers=header,verify=False)
         status = r.status_code
         content= r.text
         req_time= time.strftime( '%Y-%m-%d %H:%M:%S')
     def session_get(self,request_url,request_func,getData,header):
+        urllib3.disable_warnings()
         global r,status,content,req_time # 會針對每個不同請求, 回覆內容作調整
         r = self.session.get(request_url+request_func,data = getData,headers=header,verify=False)
         status = r.status_code
