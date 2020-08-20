@@ -12,7 +12,7 @@ document.writeln("          <a class=\'dropdown-item\' href=\'sportApi\'>企鵝�
 document.writeln("        </div>");
 document.writeln("    </div>");*/
 document.writeln("    <div class=\'btn-group\'>");
-document.writeln("        <button type=\'button\' class=\'btn btn-secondary dropdown-toggle dropdown-toggle-split\' data-toggle=\'dropdown\' aria-haspopup=\'true\' aria-expanded=\'false\'>");
+document.writeln("        <button type=\'button\' class=\'btn btn-primary dropdown-toggle dropdown-toggle-split\' data-toggle=\'dropdown\' aria-haspopup=\'true\' aria-expanded=\'false\'>");
 document.writeln("          4.0需求");
 document.writeln("        </button>");
 document.writeln("        <div class=\'dropdown-menu\'>");
@@ -44,7 +44,7 @@ document.writeln("          股票");
 document.writeln("        </button>");
 document.writeln("    </div>");*/
 document.writeln("    <div class=\'btn-group\'>");
-document.writeln("        <button type=\'button\' class=\'btn btn-danger\'  onclick=location.href=\'/api_test\'>");
+document.writeln("        <button type=\'button\' class=\'btn btn-warning\'  onclick=location.href=\'/api_test\'>");
 document.writeln("          API測試");
 document.writeln("        </button>");
 document.writeln("    </div>");
