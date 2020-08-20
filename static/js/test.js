@@ -1,5 +1,5 @@
 
-
+/*
 document.writeln("<div class=\'btn-group\'>");
 document.writeln("        <button type=\'button\' class=\'btn btn-primary dropdown-toggle dropdown-toggle-split\' data-toggle=\'dropdown\' aria-haspopup=\'true\' aria-expanded=\'false\'>");
 document.writeln("          體育");
@@ -10,7 +10,7 @@ document.writeln("          <a class=\'dropdown-item\' href=\'sbApi\'>沙巴體�
 document.writeln("          <a class=\'dropdown-item\' href=\'sport\'>企鵝網體育比分</a>");
 document.writeln("          <a class=\'dropdown-item\' href=\'sportApi\'>企鵝體育API</a>");
 document.writeln("        </div>");
-document.writeln("    </div>");
+document.writeln("    </div>");*/
 document.writeln("    <div class=\'btn-group\'>");
 document.writeln("        <button type=\'button\' class=\'btn btn-secondary dropdown-toggle dropdown-toggle-split\' data-toggle=\'dropdown\' aria-haspopup=\'true\' aria-expanded=\'false\'>");
 document.writeln("          4.0需求");
@@ -38,11 +38,11 @@ document.writeln("        <button type=\'button\' class=\'btn btn-info\'  onclic
 document.writeln("          自動化測試");
 document.writeln("        </button>");
 document.writeln("    </div>");
-document.writeln("    <div class=\'btn-group\'>");
-document.writeln("        <button type=\'button\' class=\'btn btn-warning\'  onclick=location.href=\'/stock_search\'>");
+/*document.writeln("    <div class=\'btn-group\'>");
+//document.writeln("        <button type=\'button\' class=\'btn btn-warning\'  onclick=location.href=\'/stock_search\'>");
 document.writeln("          股票");
 document.writeln("        </button>");
-document.writeln("    </div>");
+document.writeln("    </div>");*/
 document.writeln("    <div class=\'btn-group\'>");
 document.writeln("        <button type=\'button\' class=\'btn btn-danger\'  onclick=location.href=\'/api_test\'>");
 document.writeln("          API測試");
@@ -54,4 +54,12 @@ function pretty(js_path,split_){ //dataframe調整 文字版面 , js_path為elem
     explan_1 = game_explan.textContent.split(split_)[0]//用 #來分割
     explan_2 = game_explan.textContent.split(split_)[1]// #後
     game_explan.innerHTML = explan_1 + "<br>" +"<span>"+split_+explan_2+"</span>" //換行 ,增加span
+}
+function get_ip(){
+    var ip = returnCitySN["cip"]+','+returnCitySN["cname"]
+    console.log(ip)
+    $.post(
+        url = '/remote_IP',
+        data = ip
+    )
 }
