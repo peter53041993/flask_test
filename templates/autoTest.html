@@ -15,7 +15,6 @@
         font-family: monospace;
         color: #fd0e25;
         font-size: x-large; }
-        }
     </style>
 {% endblock %}
 {% block script %}
@@ -35,9 +34,10 @@
             } 
             else if ($('#username').val() == ''){
                 alert('請輸入用戶名')
-                location.reload();
+                return false;
             } 
             else {
+                $('#case_submit').attr('disabled',true)
                 $.ajax({
                     url: "/autoTest",
                     type: 'POST',
@@ -48,7 +48,7 @@
                         console.log(data)
                         if (data == '此環境沒有該用戶'){
                             alert('此環境沒有該用戶');
-                            location.reload();
+                            return false;
                         } 
                         else{
                             console.log('test');
@@ -203,7 +203,7 @@
         </div>
         </div>
         <input type='checkbox' id='AllChecked' style="display:none;">
-        <p><input type="button" onclick="check()" value="执行"></p>
+        <p><input type="button" id='case_submit' onclick="check()" value="执行"></p>
     </form>
     <h3>進度條顯示</h3>
     <div class="progress" style="width: 750px;height: 22px; margin: 10px;">
