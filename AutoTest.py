@@ -1,32 +1,22 @@
 #!/usr/bin/env python
-import HTMLTestRunner, unittest, requests, hashlib, time, random, cx_Oracle, json
+import HTMLTestRunner,unittest,requests,hashlib,time,random,cx_Oracle,json,unittest,datetime,os,threading,redis,re
 from bs4 import BeautifulSoup
-import unittest
-import datetime
 from time import sleep
 from selenium import webdriver
 from faker import Factory
-from selenium.common.exceptions import TimeoutException
-from selenium.common.exceptions import NoSuchElementException
-from selenium.common.exceptions import WebDriverException
-from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.common.exceptions import TimeoutException,NoSuchElementException,WebDriverException,ElementClickInterceptedException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import os
 import pymysql as p
-import logging
-import threading
-import redis, re
 from Utils import Config
-import FF_Joy188
-import flask_test
+import FF_Joy188,flask_test
 
 os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'  # 避免抓出oracle中文 為問號
 
 
 lottery_sh = ['cqssc', 'xjssc', 'tjssc', 'hljssc', 'llssc', 'jlffc', 'slmmc', 'txffc',
-              'fhjlssc', 'btcffc', 'fhcqc', 'fhxjc','hnffc','360ffc','hn5fc',]
+              'fhjlssc', 'btcffc', 'fhcqc', 'fhxjc','hnffc','360ffc','hn5fc']
 lottery_3d = ['v3d']
 lottery_115 = ['sd115', 'jx115', 'gd115', 'sl115']
 lottery_k3 = ['ahk3', 'jsk3']
@@ -3074,7 +3064,6 @@ def suite_test(testcase,username,env,red,awardmode,money,submit_cancel,lottery_n
             description='環境: %s,帳號: %s' % (envConfig.get_post_url(), user_),
         )
         print('start')
-        # print(runner)
         runner.run(suite)
         # print(content)
         print('end')
