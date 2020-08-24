@@ -1,34 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
-import traceback
+import traceback,datetime,requests,json,os,random,threading,time,calendar,logging,urllib3,twstock, stock,re
 from http.client import HTTPException
 from flask import Flask, render_template, request, jsonify, redirect, make_response, url_for, Response, abort
-import datetime
 from dateutil.relativedelta import relativedelta
-import requests
-import json
-import image_test
-import os
-import AutoTest 
+import image_test,AutoTest,test_benefit,test_lotteryRecord,FF_Joy188
+from Utils import Config
 from time import sleep
-import random
-import threading
-import time
-import test_benefit
-import calendar
-import celery
-import test_lotteryRecord
-import logging
 from flask import current_app
-from logging import FileHandler
-import urllib3
 from bs4 import BeautifulSoup
-import twstock, stock
 import pandas as pd
 import numpy as np
-import re
-from Utils import Config
-import FF_Joy188
 from urllib.parse import urlsplit
 
 app = Flask(__name__)  # name 為模塊名稱
@@ -1363,11 +1345,15 @@ class Flask():
             data = request.form.get('request_data')
             login_cookie = request.form.get('login_cookie')
             check_type = request.form.get('check_type')
-            print(check_type,login_cookie)
+            header_key = request.form.getlist('header_key')
+            header_value = request.form.getlist('header_value')
+            print(check_type,login_cookie,header_key,header_value)
             header = { 
             "Content-Type": content_type,
             'User-Agent':FF_Joy188.FF_().user_agent['Pc'],# 這邊先寫死給一個
-            }
+            }  
+            for key,value in zip(header_key,header_value):# header_key/ header_value  為列表
+                header[key] = value
             if login_cookie != '':
                 header['Cookie'] = login_cookie
             print(request_type,content_type,url_domain,url_path,url_query,data)
@@ -1434,20 +1420,14 @@ class Flask():
     @app.route('/error')#錯誤處理
     def error():
         abort(404)
-
-
     @app.errorhandler(404)
     def page_not_found(error):
         print(error)
         return render_template('404.html'), 404
-
-
     @app.errorhandler(500)
     def internal_error(error):
         print(error)
         return render_template('404.html'), 500
-
-
     @app.errorhandler(HTTPException)
     def handle_http_exception(error):
         error_dict = {
@@ -1460,16 +1440,6 @@ class Flask():
         response = jsonify(error_dict)
         response.status_code = error.code
         return response
-
-
-'''
-@celery.task()
-def test_fun():
-    for _ in range(10000):
-        for j in range(50000):
-            i = 1
-    print('hello')
-'''
 
 if __name__ == "__main__":
     '''
