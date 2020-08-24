@@ -7,8 +7,12 @@
 #id{border-radius: 22px;}
 p{margin-top: 1%;}
 textarea{vertical-align: middle;}
-.ui-label,label[for=data_able],label[for=cookie_able]{color: #bf22da;}
+.ui-label,label[for=data_able],label[for=cookie_able],label[for=header_able]{color: #bf22da;}
 #anvoid_cookie{color: #dca500}
+button, input, optgroup, select, textarea {font-family: arial, Microsoft YaHei;}
+#add_header{background-color: #fcedff;}
+#delete_header{background-color: #23101024;}
+
 </style>
 {% endblock %}  
 {% block script %}
@@ -67,7 +71,18 @@ textarea{vertical-align: middle;}
                 return false; 
             }
         }
+    }
+    function add(){
+        $('#header').append('<li><label class="ui-label" for="header_key">key</label>\n<textarea class="header_key" name="header_key" cols="15" rows="1"></textarea>\n<label class="ui-label" for="header_value">value</label>\n<textarea class="header_value"name="header_value" cols="40" rows="1"></textarea></li>')
+        $('#delete_header').removeAttr('disabled')
+    }
+    function delete_(){
+        var delete_ele = document.querySelector("#header > li:nth-last-child(1)")
+        delete_ele.remove()
+        if (document.querySelector("#header > li:nth-last-child(1)")==null){
+            $('#delete_header').attr('disabled',true)
         }
+    }
     function login_cookie(){
         if ($('#username').val()==''){
             $('#anvoid_cookie').val('用戶名為空');
@@ -96,6 +111,8 @@ textarea{vertical-align: middle;}
     $(document).ready(function(){
         $('#request').css('display','none');
         $('#cookie').css('display','none');
+        $('#header').css('display','none');
+        $('#delete_header').attr('disabled',true)
 
         $('#data_able').change(function(){
             if ($('#data_able').prop('checked') == false){//data勾選取消
@@ -111,6 +128,15 @@ textarea{vertical-align: middle;}
             }
             else{
                 $('#cookie').css('display','block');
+            }
+        })
+        $('#header_able').change(function(){
+            if ($('#header_able').prop('checked') == false){//data勾選取消
+                $('#header').css('display','none');
+                
+            }
+            else{
+                $('#header').css('display','block');
             }
         })
     })
@@ -134,7 +160,7 @@ textarea{vertical-align: middle;}
     </select>
     <li>
         <label for="url">url</label>
-        <input type="text" name="url" id="url" size="50"/>
+        <input type="text" name="url" id="url" size="70"/>
     </li>
     <input type="checkbox" id=cookie_able value="cookie_able">
     <label for='cookie_able'>cookie</label>
@@ -158,6 +184,16 @@ textarea{vertical-align: middle;}
         <label class="ui-label" for="request_data"></label>
         <textarea id="request_data"  name="request_data" cols="60" rows="10"></textarea>
         <input type="button" onclick="prettyPrint('#request_data')"value='pretty'>
+    </li>
+    <input type="checkbox" id="header_able">
+    <label for="header_able">header</label></div>
+    <li id='header'>
+        <label class="ui-label" for="header_key">key</label>
+        <textarea class="header_key"  name="header_key" cols="15" rows="1"></textarea>
+        <label class="ui-label" for="header_value">value</label>
+        <textarea class="header_value"  name="header_value" cols="40" rows="1"></textarea>
+        <input type="button" onclick="add()"value='+'   id='add_header'>
+        <input type="button" onclick="delete_()"value='-'id='delete_header'>
     </li>
     <p><input type="button" id='normal_check' name="normal_check" onclick="check()" value="送出">
     <input type="button" id='thread_check' name="thread_check" onclick="check()" value="併發">
