@@ -196,7 +196,7 @@ class ApiTestPC(unittest.TestCase):
         try:
             msg = (r.json()['msg'])
             mode = money_dict[money_unit]
-            mode1 = award_mode_dict[award_mode]
+            mode1 = award_mode_dict[int(award_mode)]
             project_id = (r.json()['data']['projectId'])  # 訂單號
             submit_amount = (r.json()['data']['totalprice'])  # 投注金額
             # submit_mul = f"投注倍數: {m}"  #隨機倍數
@@ -259,11 +259,14 @@ class ApiTestPC(unittest.TestCase):
                         MUL = Config.random_mul(1)  # 不支援倍數,所以random參數為1
                     elif i == 'bjkl8':
                         MUL = Config.random_mul(5)  # 北京快樂8
+                        _money_unit = 1
+                        self._award_mode = 1
                     elif i == 'p5':
                         MUL = Config.random_mul(5)
-
                     elif i in ['btcffc', 'xyft']:
                         self._award_mode = 2
+                    elif i in ['ssq', 'np3', 'n3d', 'v3d']:
+                        self._award_mode = 1
                     elif i in LotteryData.lottery_sb:  # 骰寶只支援  元模式
                         _money_unit = 1
 
