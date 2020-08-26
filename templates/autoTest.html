@@ -66,6 +66,18 @@
     </script>
     <script>
         $(document).ready(function () {
+            $.ajax({
+                    url: "/config",
+                    type: 'GET',
+                    headers: {Accept: "application/json; charset=utf-8"},
+                    data: '',
+                    success: function (data) {
+                        if(data =='close'){
+                            $('.DRIVER').css('display','none');
+                        }
+                        console.log(data)
+                    }
+                })
 		    $("#env_type").change(function(){
                 var opt=$("#env_type").val();
                 if (opt=='fh968'){
