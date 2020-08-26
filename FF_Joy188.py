@@ -17,7 +17,7 @@ class FF_(): #4.0專案
         (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1",
         'Andorid': "Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 \
         (KHTML, like Gecko) Chrome/70.0.3538.110 Mobile Safari/537.36",
-        'Fake':  UserAgent().random
+        'Fake':  UserAgent(verify_ssl=False).random
         }
         self.param =  b'ba359dddc3c5dfd979169d056de72638',#固定寫死即可
         self.session = requests.Session()
