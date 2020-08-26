@@ -13,7 +13,7 @@
     <title>{% block title %}{% endblock %}</title>
     {% block script %}{% endblock %}
     <script src="{{ url_for('static',filename='js/test.js') }}"></script>
-    <script>get_ip()</script>
+    <script>remote_IP()</script>
 {% endblock %}</head>
 <body>
     <!-- 希望能固定出現在每個網頁的 nav -->
