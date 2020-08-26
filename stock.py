@@ -24,7 +24,7 @@ def kerr_conn(): # 本機Mysql 連線
     db = p.connect(
     host="127.0.0.1",
     user="root",
-    passwd="password",
+    passwd="123qwe",
     database="STOCK_TEST",
     use_unicode=True,
     charset="utf8"
