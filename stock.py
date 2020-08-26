@@ -1,20 +1,24 @@
-import pymysql as p
-from apscheduler.schedulers.blocking import BlockingScheduler
-import datetime,time
-import requests,urllib3
-from bs4 import BeautifulSoup
-import pandas_datareader as pdr
-import numpy as np
-import matplotlib
-matplotlib.use('Agg')
-from matplotlib import pyplot as plt
-from matplotlib.font_manager import FontProperties
-import twstock
-import os 
-import talib
-import mpl_finance as mpf
-import seaborn as sns
-#from fbprophet import Prophet
+try:
+    import pymysql as p
+    from apscheduler.schedulers.blocking import BlockingScheduler
+    import datetime,time
+    import requests,urllib3
+    from bs4 import BeautifulSoup
+    import pandas_datareader as pdr
+    import numpy as np
+    import matplotlib
+    matplotlib.use('Agg')
+    from matplotlib import pyplot as plt
+    from matplotlib.font_manager import FontProperties
+    import twstock
+    import os 
+    import talib
+    import mpl_finance as mpf
+    import seaborn as sns
+    #from fbprophet import Prophet
+except ModuleNotFoundError as e:
+    print(e)
+
 
 def kerr_conn(): # 本機Mysql 連線
     db = p.connect(
