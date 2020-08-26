@@ -1416,7 +1416,7 @@ class Flask():
     def remote_IP():
         ip = request.form
         print(ip)
-        return ip
+        return 'ok'
     @app.route('/error')#錯誤處理
     def error():
         abort(404)
@@ -1435,11 +1435,23 @@ class Flask():
             'description': error.description,
             'stack_trace': traceback.format_exc()
         }
-        log_msg = f"HTTPException {error_dict.code}, Description: {error_dict.description}, Stack trace: {error_dict.stack_trace}"
+        log_msg = "HTTPException {error_dict.code}, Description: {error_dict.description}, Stack trace: {error_dict.stack_trace}"
         logger.log(msg=log_msg)
         response = jsonify(error_dict)
         response.status_code = error.code
         return response
+    @app.route('/config',methods=["GET"])
+    def config():
+        print(request.url)#當前url
+        Config.select_config(stock.kerr_conn())
+        config_con = Config.config_con #config 內容
+        print(config_con)
+        config_data = json.loads(config_con[0][1])# str 轉json, config_con[0][1] : {"dev07": "close", "local": "open"}
+        if 'dev07' not in request.url:# local url
+            config_setting = config_data['local']
+        else:
+            config_setting = config_data['dev07']
+        return config_setting
 
 if __name__ == "__main__":
     '''
