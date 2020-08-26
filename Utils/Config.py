@@ -2,6 +2,8 @@ from selenium.webdriver.chrome.options import Options
 from enum import Enum
 import os
 import AutoTest
+import pymysql as p
+
 
 # ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
 path1=os.path.abspath('.')
@@ -13,6 +15,19 @@ reportHtml_Path = path1 + "\\templates\\report.html"
 chrome_options = Options()
 # chrome_options.add_argument("--headless")  # 背景執行
 chrome_options.add_argument("--start-maximized")  # 背景執行
+
+def select_config(db):# config定
+    cur = db.cursor()
+    #預設股市
+    sql = "SELECT *  from Config"
+    cur.execute(sql)
+    global config_con
+    config_con = {}# config 內容
+    rows = cur.fetchall()
+    #print(rows)
+    for index,content in enumerate(rows):
+        config_con[index] = content
+    cur.close()
 
 
 class UserAgent(Enum):
