@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
+import math
 import traceback
 from http.client import HTTPException
 
@@ -1347,6 +1348,54 @@ def fund_activity():  # 充值紅包 查詢
         conn.close_conn()
         return frame.to_html()
     return render_template('fund_activity.html')
+
+
+@app.route('/game_prize_cal', methods=["GET"])
+def game_prize_cal():
+    return render_template('game_prize_calculator.html')
+
+
+@app.route('/api/game_prize_cal', methods=["POST"])
+def get_prize_cal_result():
+    conn = OracleConnection(env_id=1)
+    lottery = request.form.get('lottery')
+    method = request.form.get('method')
+    bonus_prize = float(request.form.get('bonus_prize'))
+    print(f'lottery = {lottery}, method = {method}, bonus_prize = {bonus_prize}')
+    issue_nums = conn.select_lottery_issue_number(lottery.upper())
+    conn.close_conn()
+
+    total_prize = 0  # 總獎金初始化
+    total_bonus_prize = 0  # 總返點獎金初始化
+    total_bet_prize = 0  # 總投注金額初始化
+    result = []  # 回傳結果. [開獎號, 中獎注數, 獎金, 返點獎金, 累計獎金, 累計投注金額, 總盈利]
+    for issue_num in issue_nums:
+        if method == 'g1':  # 快三猜一個號
+            bet_nums = [1, 2, 3, 4, 5, 6]
+            prize = 4  # 單注獎金初始化
+            matched_nums = 0  # 計入單期開獎號總中獎注數. 初始化
+
+            total_bet_prize += 12  # 每期全餐投注金額
+            for bet_num in bet_nums:
+                matched_times = 0  # 紀錄單投注號是否中獎
+                for issue_digit in str(issue_num):
+                    if bet_num == int(issue_digit):  # 若投注號對應到開獎號, 中多號不影響獎金
+                        matched_times += 1
+                if matched_times > 0:  # 若相同次數大於0
+                    matched_nums += 1
+            total_prize += math.floor(prize * matched_nums * 10000) / 10000
+            total_bonus_prize += math.floor(bonus_prize * matched_nums * 10000) / 10000
+            # 回傳結果. [開獎號, 中獎注數, 獎金, 返點獎金, 累計獎金, 累計投注金額, 總盈利]
+            result.append([issue_num,
+                           matched_nums,
+                           prize * matched_nums,
+                           bonus_prize * matched_nums,
+                           math.floor((total_prize + total_bonus_prize) * 10000) / 10000,
+                           total_bet_prize,
+                           math.floor((total_bet_prize - total_prize - total_bonus_prize) * 10000) / 10000])
+    for data in result:
+        print(data)
+    return jsonify({'success': 200, "msg": "ok", "content": result})
 
 
 @app.route('/error')  # 錯誤處理

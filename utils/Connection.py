@@ -432,6 +432,20 @@ class OracleConnection:
         cursor.close()
         return bet_type
 
+    def select_lottery_issue_number(self, lottery_name):  # 從game_type 去對應玩法的數字,給app投注使用
+        cursor = self._get_oracle_conn().cursor()
+        sql = f"select ISSUE_NUMBER from GAME_EC_LOG where LOTTERY = '{lottery_name}' order by CREAT_TIME desc"
+        logger.info(sql)
+
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+
+        issue_numbers = []
+        for i in rows:  # i 生成tuple
+            issue_numbers.append(i[0])
+        cursor.close()
+        return issue_numbers
+
     def close_conn(self):
         if self._conn is not None:
             self._conn.close()
