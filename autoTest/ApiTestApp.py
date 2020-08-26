@@ -931,13 +931,15 @@ class ApiTestApp(unittest.TestCase):
                     third=third,
                     user=self._user)
                 logger.info(f'tran_result : {tran_result}')
-                sleep(0.5)
+                sleep(2)
                 count += 1
                 if tran_result[1] == '2':
-                    print(f'{third} ,sn 單號: {tran_result[0]}')
+                    logger.info(f'轉帳狀態成功 : [{third}] = {tran_result}')
+                    print(f'{third}: 轉帳成功 ,sn 單號: {tran_result[0]}')
                 if count == 15:
                     # raise Exception(f'轉帳狀態失敗 : {third}')  # 如果跑道9次  需確認
-                    # print(f'轉帳狀態失敗/逾時 : {third}')  # 如果跑道9次  需確認
+                    # print(f'{third}: 轉帳失敗, sn 單號: {tran_result[0]}')  # 如果跑道9次  需確認  # 驗證超出次數
+                    logger.error(f'轉帳狀態失敗 : [{third}] = {tran_result}')
                     third_failed[f'{third} 驗證逾時'] = tran_result  # 若有多次嘗試仍未成功計入錯誤
 
         if len(third_failed.items()) > 0:  # 若有三方轉帳錯誤紀錄
@@ -959,7 +961,7 @@ class ApiTestApp(unittest.TestCase):
             logger.info(f'test_ApptransferOut : third = {third}, response = {response.content}')
             status = response.json()['body']['result']['status']
             if status == 'Y':
-                print(f'轉出接口回傳:{response.json()}')
+                # print(f'轉出接口回傳:{response.json()}')
                 print(f'{third} 轉出金額 10')
             else:
                 third_failed[f'{third} 轉出'] = response.json()
@@ -968,19 +970,20 @@ class ApiTestApp(unittest.TestCase):
             logger.info(f'{third} 轉出開始')
             if third == 'sb':
                 third = 'shaba'
-            tran_result = self._conn_mysql.thirdly_tran(tran_type=1, third=third, user=self._user)  # 先確認資料轉帳傳泰
+            tran_result = ["", -1]
             count = 0
-            logger.info(f'tran_result : {tran_result}')
             while tran_result[1] != '2' and count < 16:  # 確認轉帳狀態,  2為成功 ,最多做10次
                 tran_result = self._conn_mysql.thirdly_tran(tran_type=1, third=third, user=self._user)
                 logger.info(f'tran_result : {tran_result}')
-                sleep(1)
+                sleep(2)
                 count += 1
                 if tran_result[1] == '2':
-                    print(f'{third} ,sn 單號: {tran_result[0]}')
+                    logger.info(f'轉帳狀態成功 : [{third}] = {tran_result}')
+                    print(f'{third}: 轉帳成功, sn 單號: {tran_result[0]}')
                 if count == 15:
                     # raise Exception(f'轉帳狀態失敗 : {third}')  # 驗證超出次數
-                    # print(f'轉帳狀態失敗/逾時 : {third}')  # 如果跑道9次  需確認  # 驗證超出次數
+                    # print(f'{third}: 轉帳失敗, sn 單號: {tran_result[0]}')  # 如果跑道9次  需確認  # 驗證超出次數
+                    logger.error(f'轉帳狀態失敗 : [{third}] = {tran_result}')
                     third_failed[f'{third} 驗證逾時'] = tran_result
 
             if len(third_failed.items()) > 0:

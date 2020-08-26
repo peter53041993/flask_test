@@ -542,18 +542,19 @@ class ApiTestPC(unittest.TestCase):
         logger.debug(f'status_dict = {status_dict.items()}')
         for third in status_dict.keys():
             if status_dict[third]:  # 判斷轉帳的狀態, 才去要 單號
-                tran_result = [0, 0]  # 初始化
+                tran_result = ["", 0]  # 初始化
                 count = 0
-                while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
+                while tran_result[1] != '2':  # 確認轉帳狀態,  2為成功 ,最多做10次
                     tran_result = self._conn_mysql.thirdly_tran(
                         tran_type=0,
                         third=third,
-                        user=self._user)  #
+                        user=self._user
+                    )
                     sleep(1.5)
                     count += 1
                     # print(f'驗證{third}中 : tran_result = {tran_result}')
                     if tran_result[1] == '2':
-                        print(f'狀態成功. {third} ,sn 單號: {tran_result[0]}')
+                        print(f'{third}: 轉帳成功 ,sn 單號: {tran_result[0]}')
                         break
                     if count == 15:
                         errors[third] = tran_result
@@ -590,20 +591,21 @@ class ApiTestPC(unittest.TestCase):
         for third in status_dict.keys():
             if status_dict[third]:
                 logger.debug(f'status_dict[{third}]:  # 判斷轉帳的狀態, 才去要 單號 = {status_dict[third]}')
-                tran_result = [0, 0]
+                tran_result = ["", 0]
                 count = 0
-                while tran_result[1] != '2' and count != 10:  # 確認轉帳狀態,  2為成功 ,最多做10次
+                while tran_result[1] != '2':  # 確認轉帳狀態,  2為成功 ,最多做10次
                     tran_result = self._conn_mysql.thirdly_tran(
-                        tran_type=0,
+                        tran_type=1,
                         third=third,
                         user=self._user)
-                    sleep(1)
+                    sleep(2)
                     count += 1
                     # print(f'驗證{third}中 : tran_result = {tran_result}')
                     if tran_result[1] == '2':
+                        logger.info(f'轉帳狀態成功 : [{third}] = {tran_result}')
                         print(f'狀態成功. {third} ,sn 單號: {tran_result[0]}')
                         break
-                    if count == 9:
+                    if count == 15:
                         logger.error(f'轉帳狀態失敗 : errors[{third}] = {tran_result}')
                         errors[third] = tran_result
                         # print(f'{third} : 轉帳狀態失敗')  # 如果跑道9次  需確認

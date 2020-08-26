@@ -462,7 +462,6 @@ class MysqlConnection:
     def get_mysql_conn(self, third: str):  # 第三方  mysql連線
         if self._third == third:
             return self._conn
-
         self.close_conn()
         self._third = third
         third_dict = {'lc': ['lcadmin', ['cA28yF#K=yx*RPHC', 'XyH]#xk76xY6e+bV'], 'ff_lc'],
@@ -514,7 +513,9 @@ class MysqlConnection:
                 trans_name = 'GNS_TO_FIREFROG'
         else:
             print('第三方 名稱錯誤')
-        sql = f"SELECT SN,STATUS FROM {table_name} WHERE FF_ACCOUNT = '{user}' AND CREATE_DATE > DATE(NOW()) AND TRANS_NAME= '{trans_name}'"
+        sql = f"SELECT SN,STATUS FROM {table_name} " \
+              f"WHERE FF_ACCOUNT = '{user}' AND TRANS_NAME= '{trans_name}'" \
+              f"ORDER BY CREATE_DATE DESC LIMIT 1"
         logger.info(f'sql = {sql}')
 
         result = []
@@ -522,6 +523,7 @@ class MysqlConnection:
         for row in cur.fetchall():
             result = [row[0], row[1]]
             logger.info(result)
+        self.get_mysql_conn(third).commit()
         cur.close()
         return result
 
