@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 # coding: utf-8
-
-
-
 from interval import Interval
 import requests
 import cx_Oracle
