@@ -55,7 +55,7 @@ function pretty(js_path,split_){ //dataframe調整 文字版面 , js_path為elem
     explan_2 = game_explan.textContent.split(split_)[1]// #後
     game_explan.innerHTML = explan_1 + "<br>" +"<span>"+split_+explan_2+"</span>" //換行 ,增加span
 }
-function get_ip(){
+function remote_IP(){
     var ip = returnCitySN["cip"]+','+returnCitySN["cname"]
     console.log(ip)
     $.post(
