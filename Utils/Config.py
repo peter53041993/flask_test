@@ -9,7 +9,7 @@ import pymysql as p
 path1=os.path.abspath('.')
 chromeDriver_Path = path1 + "\\chromedriver_83.exe"
 # report.html 絕對路徑
-reportHtml_Path = path1 + "\\templates\\report.html"  
+reportHtml_Path = path1 + "//templates//report.html"  
 
 # ChromeDriver 設定參數
 chrome_options = Options()
