@@ -3055,6 +3055,7 @@ def suite_test(testcase,username,env,red,awardmode,money,submit_cancel,lottery_n
         # print(content)
         print(suite)
         filename = Config.reportHtml_Path  # now + u'自動化測試' + '.html'
+        print(filename)
         global fp
         fp = open(filename, 'wb')
         global runner
