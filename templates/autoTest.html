@@ -38,30 +38,36 @@
             } 
             else {
                 $('#case_submit').attr('disabled',true)
+                event.preventDefault();
+                var source = new EventSource("/progress");
+                source.onmessage = function (event) {
+                $('.progress-bar').css('width', event.data + '%').attr('aria-valuenow', event.data);
+                $('.progress-bar-label').text(event.data + '%');}
+                console.log(source.readyState)
                 $.ajax({
                     url: "/autoTest",
                     type: 'POST',
                     headers: {Accept: "application/json; charset=utf-8"},
                     data: $('#form1').serialize(),
                     success: function (data) {
+                        $('#case_submit').removeAttr('disabled');
+                        source.close();
                         var result = data;
                         console.log(data)
                         if (data == '此環境沒有該用戶'){
                             alert('此環境沒有該用戶');
-                            return false;
                         } 
                         else{
                             console.log('test');
                             $(window).attr("location", "/report")
                         }
+                    },
+                    error: function(data){
+                    location.reload();
+                    source.close();    
                     }
                 })
             }
-            event.preventDefault();
-            var source = new EventSource("/progress");
-            source.onmessage = function (event) {
-            $('.progress-bar').css('width', event.data + '%').attr('aria-valuenow', event.data);
-            $('.progress-bar-label').text(event.data + '%');}
         }
     </script>
     <script>
