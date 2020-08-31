@@ -13,7 +13,6 @@
     <script type="text/javascript">
         var game_detail="";
         function check(){
-            $('#submit').attr('disabled','true');
             if ($('.dataframe').length>0){
                 $('.dataframe').remove();
             }
@@ -26,6 +25,7 @@
                 return false;
             }
             else {
+                $('#submit').attr('disabled','true');
                 myajax  = $.ajax({ 
                 url:"/game_result",
                 type:"POST",
@@ -46,6 +46,7 @@
                         pretty("body > main > table > tbody > tr > td:nth-child(8)",'#')//理論獎金
                         pretty("body > main > table > tbody > tr > td:nth-last-child(1)",'#')//遊戲說明
                     }
+                    $('#submit').removeAttr('disabled');
                     }
                     })
                     $.when(myajax).done(function (){
@@ -62,7 +63,6 @@
                 
                         })
                 }
-                $('#submit').removeAttr('disabled');
                 }
     </script>
 {% endblock %}
