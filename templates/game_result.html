@@ -47,6 +47,10 @@
                         pretty("body > main > table > tbody > tr > td:nth-last-child(1)",'#')//遊戲說明
                     }
                     $('#submit').removeAttr('disabled');
+                    },
+                    error: function(data){
+                        alert('有錯誤');
+                        $('#submit').removeAttr('disabled');  
                     }
                     })
                     $.when(myajax).done(function (){
