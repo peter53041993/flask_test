@@ -186,7 +186,7 @@ class Joy188Test(unittest.TestCase):
                 and come_from = '%s' order by transfer_date desc"%come_from
             elif type_ ==2:# 查詢 指定domain flask_test. sun_user2()
                 sql = "select a.domain,a.agent,b.url,a.register_display,a.status,a.note,b.days,b.registers  from  GLOBAL_DOMAIN_LIST a inner join user_url b on a.register_url_id = b.id  \
-                where note = '%s' order by a.status asc,b.registers desc"%note
+                where note like '%%%s%%' order by a.status asc,b.registers desc"%note
             else:# 查詢 指定用戶
                 sql = "select * from sun_game_user where account = '%s' and come_from = '%s'"%(user,come_from)
             print(sql)
@@ -279,10 +279,10 @@ class Joy188Test(unittest.TestCase):
     @staticmethod
     def select_gameResult(conn, result):  # 查詢用戶訂單號, 回傳訂單各個資訊
         with conn.cursor() as cursor:
-            sql = "select a.order_time,a.status,a.totamount,f.lottery_name,\
+            sql = "select a.order_time,b.status,b.totamount,f.lottery_name,\
             c.group_code_title,c.set_code_title,c.method_code_title,\
             b.bet_detail,e.award_name,b.award_mode,b.ret_award,b.multiple,b.money_mode,b.evaluate_win\
-            ,a.lotteryid,b.bet_type_code,c.theory_bonus,a.award_group_id,d.direct_ret\
+            ,a.lotteryid,b.bet_type_code,c.theory_bonus,a.award_group_id,d.direct_ret,b.issue_code\
             from(((\
             (game_order a inner join game_slip b on\
             a.id = b.orderid and a.userid=b.userid and a.lotteryid=b.lotteryid) inner join \
@@ -298,21 +298,16 @@ class Joy188Test(unittest.TestCase):
             rows = cursor.fetchall()
             global game_detail
             game_detail = {}
-            detail_list = []  # 存放各細節
-            # game_detail[result] = detail_list# 讓訂單為key,　value 為一個list 存放各訂單細節
-            for tuple_ in rows:
-                for i in tuple_:
-                    # print(i)
-                    detail_list.append(i)
-            game_detail[result] = detail_list
+            for index,tuple_ in enumerate(rows):
+                game_detail[index] = tuple_
         conn.close()
 
     @staticmethod
-    def select_gameorder(conn, play_type):  # 輸入玩法,找尋訂單
+    def select_gameorder(conn, play_type):  # 輸入玩法,找尋訂單 
         with conn.cursor() as cursor:
             sql = "select f.lottery_name,a.order_time,a.order_code,\
-            c.group_code_title,c.set_code_title,c.method_code_title,a.status,g.account,b.bet_detail,h.number_record\
-            from((((((\
+            c.group_code_title,c.set_code_title,c.method_code_title,b.status,g.account,b.bet_detail,h.number_record\
+            ,b.award_mode from((((((\
             game_order a inner join  game_slip b on \
             a.id = b.orderid and a.userid=b.userid and a.lotteryid=b.lotteryid) inner join game_bettype_status c on \
             a.lotteryid = c.lotteryid and b.bet_type_code=c.bet_type_code) \
@@ -326,6 +321,7 @@ class Joy188Test(unittest.TestCase):
             where a.order_time >sysdate - interval '1' month and \
             c.group_code_title||c.set_code_title||c.method_code_title like '%s' and d.bet_type=1  and a.status !=1 \
             order by a.order_time desc" % play_type
+            print(sql)
             cursor.execute(sql)
             rows = cursor.fetchall()
             global game_order, len_order
@@ -338,6 +334,37 @@ class Joy188Test(unittest.TestCase):
                 game_order[index] = order_list[index]  # 字典 index 為 key ,  order_list 為value
             # print(game_order)
         conn.close()
+    @staticmethod
+    def select_numberRecord(conn,lotteryid,issue_code):
+        with conn.cursor() as cursor:
+            sql = "select number_record from game_issue \
+            where issue_code = '%s' and lotteryid = '%s'"%(issue_code,lotteryid)
+            print(sql)
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global number_record
+            number_record = {}
+            for index,tuple_ in enumerate(rows):
+                number_record[index] = tuple_[0]
+    @staticmethod
+    def select_bonus(conn,lotteryid,bet_type_code,detail=""):#用bet_type_code 找尋 平台獎金/理論獎金 ,detail 投注內容,
+        with conn.cursor() as cursor:
+            if detail == '':
+                sql = "select actual_bonus,lhc_theory_bonus from game_award where LOTTERYID = %s and bet_type_code like '%%%s%%' \
+                "%(lotteryid,bet_type_code)
+            elif type(detail) == int:# 使用 award_group_id  來看
+                sql = "select actual_bonus from game_award where LOTTERYID=%s and  bet_type_code = '%s' \
+                and award_group_id = %s"%(lotteryid,bet_type_code,detail)
+            else:
+                sql = "select actual_bonus,lhc_theory_bonus from game_award where LOTTERYID = %s and bet_type_code = '%s' \
+            and lhc_code like '%%%s%%'"%(lotteryid,bet_type_code,detail)
+            print(sql)
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global bonus
+            bonus = {}
+            for index,tuple_ in enumerate(rows):
+                bonus[index] = tuple_
 
     @staticmethod
     def select_FundRed(conn, user,type_):  #充值 紅包 查尋  各充值表
