@@ -23,7 +23,7 @@ p{margin-top: 1%;}
             headers:{
                     Accept:"application/json; charset=utf-8"
                 },
-            data:$("#form1").serialize(),
+            data: form_trim("#form1"),
             success:function(data){
                 if (data=='該環境沒有此用戶'){
                     alert('該環境沒有此用戶');

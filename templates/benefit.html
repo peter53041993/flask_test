@@ -61,7 +61,7 @@
             }else{
                 $.ajax({url:"/benefit",
                 type:'POST', 
-                data: $('#form1').serialize(),//form表單裡的數據,
+                data: form_trim("#form1"),//form表單裡的數據,
                 //dataType:"json",
                 success:function(data){
                 $(window).attr("location","/benefit_"+testval)

@@ -48,7 +48,7 @@
                     url: "/autoTest",
                     type: 'POST',
                     headers: {Accept: "application/json; charset=utf-8"},
-                    data: $('#form1').serialize(),
+                    data: form_trim("#form1"),
                     success: function (data) {
                         $('#case_submit').removeAttr('disabled');
                         source.close();

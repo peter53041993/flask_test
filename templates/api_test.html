@@ -36,7 +36,7 @@ button, input, optgroup, select, textarea {font-family: arial, Microsoft YaHei;}
             headers:{
                     Accept:"application/json; charset=utf-8"
                 },
-            data:$("#form1").serialize()+'&login_cookie='+$('#anvoid_cookie').val()+'&check_type='+event_id,
+            data: form_trim("#form1")+'&login_cookie='+$('#anvoid_cookie').val()+'&check_type='+event_id,
             success:function(data){
                 $('#normal_check').removeAttr('disabled');
                 $('#thread_check').removeAttr('disabled');
@@ -93,7 +93,7 @@ button, input, optgroup, select, textarea {font-family: arial, Microsoft YaHei;}
         $.ajax({
             url: "login_cookie",
             type: "POST",
-            data:$("#form1").serialize(),
+            data: form_trim("#form1"),
             success:function(data){
                 if (data =='該環境沒有此用戶'){
                     var anv_name = '';

@@ -28,7 +28,7 @@
                 headers:{
                         Accept:"application/json; charset=utf-8"
                     },
-                data:$("#form1").serialize(),
+                data:form_trim("#form1"),
                 success:function(data){
                     game_detail = data;
                     console.log(typeof(data))
@@ -62,7 +62,7 @@
                 headers:{
                         Accept:"application/json; charset=utf-8"
                     },
-                data:$("#form1").serialize(),
+                data:form_trim("#form1"),
                 success:function(data){
                     game_detail = data;
                     console.log(typeof(data))
