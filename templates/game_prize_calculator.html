@@ -61,22 +61,21 @@
                     console.log(resp.content)
                     const tbody = document.getElementById("tbody")
                     $("#tbody tr").remove()
-                    resp.content.forEach(function   (item, index) {
-                            const row = tbody.insertRow(tbody.rows.length);
-                            let cell = row.insertCell(0);
-                            cell.innerHTML = index + 1;
-                            for (let i = 0; i < item.length; i++) {
-                                cell = row.insertCell(i + 1);
-                                cell.innerHTML = item[i];
-                                if (i === item.length - 1) {
-                                    if (parseFloat(item[i]) > 0)
-                                        cell.style = "color: green";
-                                    else
-                                        cell.style = "color: red"
-                                }
+                    resp.content.forEach(function (item, index) {
+                        const row = tbody.insertRow(-1);
+                        let cell = row.insertCell(0);
+                        cell.innerHTML = index + 1;
+                        for (let i = 0; i < item.length; i++) {
+                            cell = row.insertCell(i + 1);
+                            cell.innerHTML = item[i];
+                            if (i === item.length - 1) {
+                                if (parseFloat(item[i]) > 0)
+                                    cell.style = "color: green";
+                                else
+                                    cell.style = "color: red"
                             }
                         }
-                    )
+                    })
                 },
                 error: function (e) {
                     console.log(e);
@@ -91,7 +90,7 @@
                 const bonusPrize = document.getElementById('bonus_prize');
                 const bonus = document.getElementById('bonus');
                 if (this.value === 'g1')
-                    allPrize.value = 5.68;
+                    allPrize.value = 4.75;
                 else if (this.value === 'default')
                     allPrize.value = "";
                 if (this.value && bonus.value)
