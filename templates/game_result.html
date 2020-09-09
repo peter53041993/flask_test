@@ -22,6 +22,8 @@
             }
             else if ($("#game_code").val() !="" && $("#game_type").val()!="" ){//判斷倆著皆輸入
                 alert("只能擇一輸入框");
+                $("#game_code").val('')
+                $("#game_type").val('')
                 return false;
             }
             else {
@@ -33,27 +35,41 @@
                 headers:{
                         Accept:"application/json; charset=utf-8"
                     },
-                data:$("#form1").serialize(),
+                data: form_trim("#form1"),
                 success:function(data){
                     game_detail = data;
                     //console.log(data);
                     if (data=='此環境沒有此訂單號'){
                         alert(data);
+                        $('#submit').removeAttr('disabled');
+                        $("#game_code").val('')
+                        return false;
+                    }
+                    else if (data=='沒有該玩法'){
+                        alert(data);
+                        $('#submit').removeAttr('disabled');
+                        $("#game_type").val('')
                         return false;
                     }
                     else {
                         $('#game_detail').after(data);
+                        var lottery_text = document.querySelector("body > main > table > tbody > tr > td:nth-child(5)").textContent
+                        var lottery_status = document.querySelector("body > main > table > tbody > tr > td:nth-child(4)").textContent
+                        if(lottery_text.indexOf("PC蛋蛋")>=0){
+                            if(lottery_status.indexOf('等待開獎')==-1){//未開獎
+                            pretty("body > main > table > tbody > tr > td:nth-last-child(2)",'#')}//開獎號
+                        }
                         pretty("body > main > table > tbody > tr > td:nth-child(8)",'#')//理論獎金
                         pretty("body > main > table > tbody > tr > td:nth-last-child(1)",'#')//遊戲說明
+                        $('#submit').removeAttr('disabled');
                     }
-                    $('#submit').removeAttr('disabled');
                     },
                     error: function(data){
                         alert('有錯誤');
                         $('#submit').removeAttr('disabled');  
                     }
                     })
-                    $.when(myajax).done(function (){
+                    /*$.when(myajax).done(function (){
                     $.ajax({
                     url: "/get_cookie",
                     type: "GET",
@@ -65,7 +81,7 @@
 
                     })
                 
-                        })
+                        })*/
                 }
                 }
     </script>
