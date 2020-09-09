@@ -11,7 +11,7 @@ from utils.Connection import OracleConnection
 
 project_path = str(pathlib.Path(__file__).parent.parent.absolute())  # 專案路徑
 # project_path = os.path.abspath('.')  # 專案路徑
-chromeDriver_Path = project_path + r'\Drivers\chromedriver_83.exe'  # ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
+chromeDriver_Path = project_path + r'\Drivers\chromedriver_85.exe'  # ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
 reportHtml_Path = project_path + r"\templates\report.html"  # report.html 絕對路徑
 logging_config_path = project_path + r"\logs\logging_config.ini"
 
@@ -59,14 +59,14 @@ class EnvConfig:
     hy_domains = ['maike2020']
     product_domains = ['fh968']
 
-    yft_domains_wap = ['m.yulin.qa', 'm.feiao.qa', 'm.tianya.qa']
-    yft_domains = ['yulin.qa', 'feiao.qa', 'tianya.qa']
+    yft_qa_domains_wap = ['m.yulin.qa', 'm.feiao.qa', 'm.tianya.qa']
+    yft_qa_domains = ['yulin.qa', 'feiao.qa', 'tianya.qa']
 
     env_domain = None
 
     def __init__(self, domain):
         try:
-            if domain in self.dev_domains + self.joy_sun_domains + self.joy_domains + self.hy_domains + self.product_domains + self.yft_domains + self.yft_domains_wap:
+            if domain in self.dev_domains + self.joy_sun_domains + self.joy_domains + self.hy_domains + self.product_domains + self.yft_qa_domains + self.yft_qa_domains_wap:
                 self.env_domain = domain
         except ValueError:
             raise Exception('無對應網域 請至 Config.EnvConfig 添加')
@@ -83,9 +83,9 @@ class EnvConfig:
             return f"http://www2.{self.env_domain}.com"
         elif self.env_domain in self.joy_sun_domains:
             return f"http://www2.{self.env_domain}.bet"
-        elif self.env_domain in self.yft_domains_wap:
+        elif self.env_domain in self.yft_qa_domains_wap:
             return f"http://{self.env_domain}.space"
-        elif self.env_domain in self.yft_domains:
+        elif self.env_domain in self.yft_qa_domains:
             return f"http://www.{self.env_domain}.space"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
@@ -109,7 +109,7 @@ class EnvConfig:
             return "amberrd"
         elif self.env_domain in self.product_domains:
             return "tsuta0425"
-        elif self.env_domain in self.yft_domains + self.yft_domains_wap:
+        elif self.env_domain in self.yft_qa_domains + self.yft_qa_domains_wap:
             return "123123"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
@@ -135,7 +135,7 @@ class EnvConfig:
             return 1
         elif self.env_domain in self.product_domains:
             return 2
-        elif self.env_domain in self.yft_domains + self.yft_domains_wap:
+        elif self.env_domain in self.yft_qa_domains + self.yft_qa_domains_wap:
             return 11
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
@@ -147,7 +147,7 @@ class EnvConfig:
             return "http://admin.dev02.com"
         elif self.env_domain in self.joy_domains + self.joy_sun_domains:
             return "http://admin.joy188.com"
-        elif self.env_domain in self.yft_domains + self.yft_domains_wap:
+        elif self.env_domain in self.yft_qa_domains + self.yft_qa_domains_wap:
             return "http://manager.yulin.qa.space"
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
@@ -159,7 +159,7 @@ class EnvConfig:
             return {'username': 'cancus', 'password': '123qwe', 'bindpwd': 123456}
         elif self.env_domain in self.joy_domains + self.joy_sun_domains:
             return {'username': 'cancus', 'password': 'amberrd', 'bindpwd': 123456}
-        elif self.env_domain in self.yft_domains + self.yft_domains_wap:
+        elif self.env_domain in self.yft_qa_domains + self.yft_qa_domains_wap:
             return {'username': 'admin', 'password': '1234qwer'}
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')

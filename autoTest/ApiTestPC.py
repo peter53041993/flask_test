@@ -716,20 +716,135 @@ class ApiTestPC_YFT(unittest.TestCase):
         if self._session is None:
             self._session = requests.Session()
 
+    """Tools"""
+
     def login(self):
-        post_url = '/a/login/login'
+        _header = {'User-Agent': Config.UserAgent.PC.value, 'Content-Type': 'x-www-form-urlencoded'}
+        _post_url = '/a/login/login'
         md = hashlib.md5()
         md.update(self._env_config.get_password().encode('utf-8'))
         request = f'{{"account": "{self._user}", "passwd": "{md.hexdigest()}", "timeZone": "GMT+8", "isWap": false, "online": false}} '
         logger.debug(f'request_body = {request}')
-        response = self._session.post(url=self._env_config.get_post_url() + post_url, data=request, headers=self.header)
-        logger.debug(f'login_url = {self._env_config.get_post_url() + post_url}')
+        response = self._session.post(url=self._env_config.get_post_url() + _post_url, data=request,
+                                      headers=self.header)
+        logger.debug(f'login_url = {self._env_config.get_post_url() + _post_url}')
         logger.debug(f'Login response = {response.content}')
         if response.cookies['JSESSIONID']:
             logger.info(f'Cookies = {response.cookies["JSESSIONID"]}')
             self.header['JSESSIONID'] = response.cookies['JSESSIONID']  # setCookie into header
         else:
             self.fail('登入失敗.')
+
+    def admin_login(self):
+        _cookies = self._session.get(url=self._env_config.get_admin_url(), headers=self.header).cookies.get_dict()
+        logger.info(f'_loginPage={_cookies["sid"]}')
+        _post_url = f'/leona/login;JSESSIONID={_cookies["sid"]}'
+        _admin_user = ['admin', '1234qwer']
+        md = hashlib.md5()
+        md.update(_admin_user[1].encode('utf-8'))
+        _content = f'username={_admin_user[0]}&password={md.hexdigest()}'
+        self._session.post(url=self._env_config.get_admin_url() + _post_url, data=_content, header=self.header)
+
+    def get_lottery_info(self, lottery_name):
+        """
+        取得彩種資訊（獎期等）
+        :param lottery_name: 彩種英文ID
+        :return: 返還獎期資訊內容
+        """
+        content = f'{{"lotteryType":"{lottery_name}","timeZone":"GMT+8","isWap":false,"online":false}}'
+        logger.debug(f'get_lottery_info -----> {content}')
+
+        response = self._session.post(url=self._env_config.get_post_url() + '/a/lottery/init', data=content,
+                                      headers=self.header)
+        logger.debug(f'get_lottery_info <----- {response.json()}')
+        return response.json()['content']
+
+    def bet_yft(self, lottery_name, games, is_trace=False, stop_on_win=True):
+        """
+        YFT發起投注
+        :param games: 投注玩法清單，可取自BetContent_yft.py
+        :param lottery_name: 彩種英文ID
+        :param is_trace: 追號與否，影響投注內容需替換的參數
+        :param stop_on_win: 追中即停
+        :return: 投注結果
+        """
+        post_url = '/a/lottery/betV2'
+        lottery_info = self.get_lottery_info(lottery_name)
+
+        from utils.BetContent_yft import game_default
+        import json
+        default = json.loads(game_default)
+        logger.debug(f'default json = {default}')
+        from utils.BetContent_yft import game_dict
+        totalAmount = 0
+        schemeList = []
+        for game in games:
+            if game_dict.get(game) and game not in ('pt333bt02', 'pt137bt02'):  # 排除牛牛
+                schemeList.append(game_dict.get(game)[0])
+                totalAmount += game_dict.get(game)[1]
+        default['currIssueNo'] = lottery_info["chaseableIssueNoList"][0]
+        default['stopOnWon'] = 'null'
+        default['schemeList'] = schemeList
+        default['lotteryType'] = lottery_name
+        default['issueList'] = [1]
+        default['isWap'] = False
+
+        if is_trace:
+            default['issueList'] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            totalAmount *= 10
+            if stop_on_win:
+                default['stopOnWon'] = 'yes'
+            else:
+                default['stopOnWon'] = 'no'
+        if self._money_unit == '0.1':
+            totalAmount *= 0.1
+        elif self._money_unit == '0.01':
+            totalAmount *= 0.01
+
+        default['totalAmount'] = totalAmount
+
+        data = json.dumps(default)
+        data.replace('\'null\'', 'null')
+        data.replace('True', 'true')
+        data.replace('False', 'false')
+
+        logger.debug(f"self.money_unit == '0.1' = {self._money_unit == '0.1'}\n"
+                     f"self.money_unit == '0.01' = {self._money_unit == '0.01'}\n"
+                     f"self.award_mode == '2' = {self._award_mode == '2'}")
+        if self._money_unit == '0.1':
+            logger.debug("self.money_unit == '0.1'")
+            data = data.replace('"potType": "Y"', '"potType": "J"')
+        elif self._money_unit == '0.01':
+            logger.debug("self.money_unit == '0.01'")
+            data = data.replace('"potType": "Y"', '"potType": "F"')
+        if self._award_mode == '2':
+            logger.debug("self.award_mode == '2'")
+            data = data.replace('"doRebate": "yes"', '"doRebate": "no"')
+
+        logger.info(f'Bet content = {data}')
+        bet_response = self._session.post(url=self._env_config.get_post_url() + post_url, data=data,
+                                          headers=self.header)
+        logger.info(f'Bet response = {bet_response.json()}\n')
+        return bet_response.json()
+
+    def bet_trace(self, game_name, stop_on_win):
+        games = self._conn.get_lottery_games(game_name[0])
+        expected = 'ok'
+        bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
+                                    is_trace=False)
+        if bet_response['status'] == expected:
+            print(
+                f'{game_name[1]}投注追號成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        else:
+            self.fail(f'投注失敗，接口返回：{bet_response}')
+
+        bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
+                                    is_trace=True)
+        if bet_response['status'] == expected:
+            print(
+                f'{game_name[1]}追號全彩種成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+        else:
+            self.fail(f'投注失敗，接口返回：{bet_response}')
 
     """時時彩系列"""
 
@@ -994,104 +1109,3 @@ class ApiTestPC_YFT(unittest.TestCase):
 
         game_name = ['gd11x5', '廣東蘇11選5']
         self.bet_trace(game_name, stop_on_win)
-
-    def get_lottery_info(self, lottery_name):
-        """
-        取得彩種資訊（獎期等）
-        :param lottery_name: 彩種英文ID
-        :return: 返還獎期資訊內容
-        """
-        content = f'{{"lotteryType":"{lottery_name}","timeZone":"GMT+8","isWap":false,"online":false}}'
-        logger.debug(f'get_lottery_info -----> {content}')
-
-        response = self._session.post(url=self._env_config.get_post_url() + '/a/lottery/init', data=content,
-                                      headers=self.header)
-        logger.debug(f'get_lottery_info <----- {response.json()}')
-        return response.json()['content']
-
-    def bet_yft(self, lottery_name, games, is_trace=False, stop_on_win=True):
-        """
-        YFT發起投注
-        :param games: 投注玩法清單，可取自BetContent_yft.py
-        :param lottery_name: 彩種英文ID
-        :param is_trace: 追號與否，影響投注內容需替換的參數
-        :param stop_on_win: 追中即停
-        :return: 投注結果
-        """
-        post_url = '/a/lottery/betV2'
-        lottery_info = self.get_lottery_info(lottery_name)
-
-        from utils.BetContent_yft import game_default
-        import json
-        default = json.loads(game_default)
-        logger.debug(f'default json = {default}')
-        from utils.BetContent_yft import game_dict
-        totalAmount = 0
-        schemeList = []
-        for game in games:
-            if game_dict.get(game) and game not in ('pt333bt02', 'pt137bt02'):  # 排除牛牛
-                schemeList.append(game_dict.get(game)[0])
-                totalAmount += game_dict.get(game)[1]
-        default['currIssueNo'] = lottery_info["chaseableIssueNoList"][0]
-        default['stopOnWon'] = 'null'
-        default['schemeList'] = schemeList
-        default['lotteryType'] = lottery_name
-        default['issueList'] = [1]
-        default['isWap'] = False
-
-        if is_trace:
-            default['issueList'] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-            totalAmount *= 10
-            if stop_on_win:
-                default['stopOnWon'] = 'yes'
-            else:
-                default['stopOnWon'] = 'no'
-        if self._money_unit == '0.1':
-            totalAmount *= 0.1
-        elif self._money_unit == '0.01':
-            totalAmount *= 0.01
-
-        default['totalAmount'] = totalAmount
-
-        data = json.dumps(default)
-        data.replace('\'null\'', 'null')
-        data.replace('True', 'true')
-        data.replace('False', 'false')
-
-        logger.debug(f"self.money_unit == '0.1' = {self._money_unit == '0.1'}\n"
-                     f"self.money_unit == '0.01' = {self._money_unit == '0.01'}\n"
-                     f"self.award_mode == '2' = {self._award_mode == '2'}")
-        if self._money_unit == '0.1':
-            logger.debug("self.money_unit == '0.1'")
-            data = data.replace('"potType": "Y"', '"potType": "J"')
-        elif self._money_unit == '0.01':
-            logger.debug("self.money_unit == '0.01'")
-            data = data.replace('"potType": "Y"', '"potType": "F"')
-        if self._award_mode == '2':
-            logger.debug("self.award_mode == '2'")
-            data = data.replace('"doRebate": "yes"', '"doRebate": "no"')
-
-        logger.info(f'Bet content = {data}')
-        bet_response = self._session.post(url=self._env_config.get_post_url() + post_url, data=data,
-                                          headers=self.header)
-        logger.info(f'Bet response = {bet_response.json()}\n')
-        return bet_response.json()
-
-    def bet_trace(self, game_name, stop_on_win):
-        games = self._conn.get_lottery_games(game_name[0])
-        expected = 'ok'
-        bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
-                                    is_trace=False)
-        if bet_response['status'] == expected:
-            print(
-                f'{game_name[1]}投注追號成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
-        else:
-            self.fail(f'投注失敗，接口返回：{bet_response}')
-
-        bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
-                                    is_trace=True)
-        if bet_response['status'] == expected:
-            print(
-                f'{game_name[1]}追號全彩種成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
-        else:
-            self.fail(f'投注失敗，接口返回：{bet_response}')
