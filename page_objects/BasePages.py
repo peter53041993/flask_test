@@ -38,9 +38,9 @@ class BasePage:
         :param last_page: 上一個頁面的POM物件，需繼承自BasePage，若不為空則以此物件參數進行初始化、沿用參數
         """
         if last_page:
-            self.env_config = last_page._env_config
+            self.env_config = last_page.env_config
             self.driver = last_page.driver
-            self.user = last_page._user
+            self.user = last_page.user
             self.password = last_page.password
             self.logger = last_page.logger
         else:
@@ -163,6 +163,10 @@ class LoginPage(BasePage):
         id_button_free_trial = 'freeTrial'
         id_button_save_login = 'safeLogin'
         xpath_button_forget_password = '//*[@id="J-button-submitDev"]/li[1]/a'
+        xpath_fhlm_logo = "//img[@class='fhlm-logo']"
+        id_j_dl_apple = 'J-download-apple'
+        id_j_dl_android = 'J-download-android'
+        id_safeLogin = 'safeLogin'
 
     def __init__(self, env_config=None, last_page=None):
         """
@@ -172,6 +176,7 @@ class LoginPage(BasePage):
         """
         if last_page:
             super().__init__(last_page=last_page)
+            self.env_config = last_page.env_config
         else:
             super().__init__(env_domain=env_config)
         self.logger.info('{} init started.'.format(self.__class__.__name__))
@@ -194,6 +199,51 @@ class LoginPage(BasePage):
             raise Exception('未知錯誤')
         sleep(3)
         return MainPage(self)
+
+    def jump_to(self, element: elements):
+        if element not in (self.elements.id_safeLogin, self.elements.id_button_free_trial):
+            raise NoSuchElementException('Wrong element.')
+        if element is self.elements.id_safeLogin:
+            return ShowSecLoginPage(self)
+
+    def mouse_action(self, element: elements):
+        if element in (self.elements.id_j_dl_android, self.elements.id_j_dl_apple):
+            ActionChains(self.driver).move_to_element(self.driver.find_element_by_id(element.value)).perform()
+        elif element == self.elements.xpath_fhlm_logo:
+            ActionChains(self.driver).move_to_element(self.driver.find_element_by_xpath(element.value)).perform()
+
+
+class ShowSecLoginPage(BasePage):
+    @staticmethod
+    class elements(Enum):
+        id_input_account = 'J-user-name'
+        id_button_login = 'J-form-submit'
+        id_return_normal = 'normalLogin'
+        id_j_dl_apple = 'J-download-apple'
+        id_j_dl_android = 'J-download-android'
+        xpath_fhlm_logo = "//img[@class='fhlm-logo']"
+
+    def __init__(self, last_page: BasePage):
+        """
+        安全登入頁
+        :param last_page: 前一網頁，POM架構，需繼承自 BasePage
+        """
+        super().__init__(last_page=last_page)
+        self.logger.info('{} init started.'.format(self.__class__.__name__))
+        self.link = "/login/showsectlogin"
+        self.go_to()
+        self.logger.info('{} init ended.'.format(self.__class__.__name__))
+
+    def jump_to(self, element: elements):
+        if element is not self.elements.id_return_normal:
+            return 'Wrong element.'
+        return LoginPage(last_page=self)
+
+    def mouse_action(self, element: elements):
+        if element in (self.elements.id_j_dl_android, self.elements.id_j_dl_apple):
+            ActionChains(self.driver).move_to_element(self.driver.find_element_by_id(element.value)).perform()
+        elif element == self.elements.xpath_fhlm_logo:
+            ActionChains(self.driver).move_to_element(self.driver.find_element_by_xpath(element.value)).perform()
 
 
 class RegPage(BasePage):
