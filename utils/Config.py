@@ -164,6 +164,16 @@ class EnvConfig:
         else:
             raise Exception('無對應網域參數，請至Config envConfig()新增')
 
+    def get_admin_cookie(self):
+        if self.env_domain is None:
+            raise Exception('env 環境未初始化')
+        import requests
+        request = requests.session().post(self.get_admin_url() + '/admin/login/login',
+                                          data=self.get_admin_data())
+        if request.status_code != 200:
+            raise Exception('Admin login failed.')
+        return request.cookies.get_dict()['ANVOAID']
+
     def get_joint_venture(self, domain):
         conn = OracleConnection(self.get_env_id())
         domain_urls = conn.select_domain_default_url(domain)  # 先去全局 找是否有設定 該domain

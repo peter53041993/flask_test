@@ -84,26 +84,54 @@
             })
         }
 
-        $(document).ready(function () {
-            $('#method').change(function () {
-                const allPrize = document.getElementById('allPrize');
-                const bonusPrize = document.getElementById('bonus_prize');
-                const bonus = document.getElementById('bonus');
-                if (this.value === 'g1')
-                    allPrize.value = 4.75;
-                else if (this.value === 'default')
-                    allPrize.value = "";
-                if (this.value && bonus.value)
-                    bonusPrize.value = Math.floor(allPrize.value * bonus.value * 100) / 10000;
-            })
+        function selectLottery(lottery) {
+            const ssc = ['CQSSC']
+            $('#method > option').remove()
+            const select = document.getElementById('method');
+            if (lottery.value === 'AHK3' || lottery.value === 'JSK3') {
+                addMethod('g1', '猜一個號');
+            } else if (lottery.value in ssc) {
+                addMethod('pair_1', '雙面盤_對子_前三');
+                addMethod('pair_2', '雙面盤_對子_中三');
+                addMethod('pair_3', '雙面盤_對子_後三');
+            }
+            selectMethod()
+        }
 
+        function addMethod(value, innerText) {
+            const select = document.getElementById('method');
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.innerText = innerText;
+            select.appendChild(opt);
+        }
+
+        function selectMethod() {
+            const allPrize = document.getElementById('allPrize');
+            const bonusPrize = document.getElementById('bonus_prize');
+            const bonus = document.getElementById('bonus');
+            const method = document.getElementById('method');
+            console.log()
+            if (method.value === 'g1')
+                allPrize.value = 4.75;
+            else if (method.value.includes('pair_'))
+                allPrize.value = 3.2;
+            else if (method.value === 'default')
+                allPrize.value = "";
+            if (method.value && bonus.value)
+                bonusPrize.value = Math.floor(allPrize.value * bonus.value * 100) / 10000;
+        }
+
+        $(document).ready(function () {
             $('#bonus').change(function () {
                 const allPrize = document.getElementById('allPrize');
                 const bonusPrize = document.getElementById('bonus_prize');
                 const bonus = document.getElementById('bonus');
+                selectMethod()
                 if (this.value && bonus.value)
                     bonusPrize.value = Math.floor(allPrize.value * bonus.value * 100) / 10000;
             })
+            selectMethod()
         })
     </script>
 {% endblock %}
@@ -112,13 +140,14 @@
     <h1>全餐獎金試算</h1>
     <form id="game_data" method='POST' style="display: block">
         <label for="lottery">彩種: </label>
-        <select name='lottery' id='lottery'>
+        <select name='lottery' id='lottery' onchange="selectLottery(this)">
             <option value="AHK3">安徽快三</option>
             <option value="JSK3">江蘇快三</option>
+            <option value="CQSSC">重慶時時彩</option>
         </select>
         <br>
         <label for="method">全投玩法: </label>
-        <select name='method' id='method'>
+        <select name='method' id='method' onchange="selectMethod()">
             <option value="default">請選擇</option>
             <option value="g1">猜一個號</option>
         </select>

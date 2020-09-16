@@ -755,36 +755,34 @@ def game_result():
 
                 game_award = float(game_detail[13] / 10000)  # 中獎獎金
 
-                header = None
+                header = {'User-Agent': Config.UserAgent.PC.value,
+                          'Content-Type': 'application/x-www-form-urlencoded'}
                 session = None
-                lotteryid = None
+                lottery_id = None
                 award_id = None
-                if env not in cookies_.keys():
+                print(f'cookies_.keys() = {cookies_.keys()}')
+                if env.get_domain() not in cookies_.keys():
                     print("瀏覽器上 還沒有後台cookie,需登入")
-                    AutoTest.ApiTestPC.admin_login(env_config=env)
                     award_id = game_detail[17]  # 獎金id, 傳后查詢尋是哪個獎金組
-                    lotteryid = game_detail[14]  # 採種Id 傳給 後台 查詢哪個彩種
+                    lottery_id = game_detail[14]  # 採種Id 傳給 後台 查詢哪個彩種
                     session = requests.Session()
-                    header = {
-                        'User-Agent': Config.UserAgent.PC.value,
-                        'Content-Type': 'application/x-www-form-urlencoded'}  # 後台 登入header
-                    cookie = AutoTest.ApiTestPC.admin_login(env_config=env)['ANVOAID']  # 後台登入 cookie
+                    header['Cookie'] = 'ANVOAID=' + env.get_admin_cookie()  # 後台 登入header
+                    cookie = env.get_admin_cookie()  # 後台登入 cookie
 
                     res = redirect('game_result')
-                    res.set_cookie(env, cookie)  # 存放cookie
+                    res.set_cookie(env.get_domain(), cookie)  # 存放cookie
 
                     # return res
                     # print(cookie)
                     # cookies_[env] = cookie
                 else:
                     print("瀏覽器已經存在cookie,無須登入")
-                    cookie = cookies_[env]
+                    header['Cookie'] = cookies_[env]
                     """若進入else, header / session / lotteryid / award_id 如何初始化?"""
 
-                header['Cookie'] = 'ANVOAID=' + cookie  # 存放後台cookie
                 # header['Content-Type'] ='application/json'
                 r = session.get(
-                    env.get_admin_url() + f"/gameoa/queryGameAward?lotteryId={lotteryid}&awardId={award_id}&status=1"
+                    env.get_admin_url() + f"/gameoa/queryGameAward?lotteryId={lottery_id}&awardId={award_id}&status=1"
                     , headers=header)  # 登入後台 查詢 用戶獎金值
                 # print(r.text)
                 soup = BeautifulSoup(r.text, 'lxml')
@@ -818,7 +816,6 @@ def game_result():
                         "獎金模式狀態": game_awardmode, "反點獎金": game_retaward, "投注倍數": game_detail[11],
                         "元角分模式": game_moneymode, "中獎獎金": game_award, "遊戲說明": GAME_EXPLAN
                         }
-                global FRAME
                 FRAME = pd.DataFrame(data, index=[0])
                 print(FRAME)
                 # return frame
@@ -1372,10 +1369,10 @@ def get_prize_cal_result():
     for issue_num in issue_nums:
         if method == 'g1':  # 快三猜一個號
             bet_nums = [1, 2, 3, 4, 5, 6]
-            prize = 4  # 單注獎金初始化
+            prize = 4  # 平台獎金
             matched_nums = 0  # 計入單期開獎號總中獎注數. 初始化
-
             total_bet_prize += 12  # 每期全餐投注金額
+
             for bet_num in bet_nums:
                 matched_times = 0  # 紀錄單投注號是否中獎
                 for issue_digit in str(issue_num):
@@ -1393,6 +1390,42 @@ def get_prize_cal_result():
                            math.floor((total_prize + total_bonus_prize) * 10000) / 10000,
                            total_bet_prize,
                            math.floor((total_bet_prize - total_prize - total_bonus_prize) * 10000) / 10000])
+        if method in ('pair_1', 'pair_2', 'pair_3'):  # 對子
+            prize = 2.88  # 平台獎金
+            total_bet_prize += 1  # 每期全餐投注金額
+
+            history_nums = []
+            if method == 'pair_1':
+                history_nums = [issue_num[0], issue_num[1], issue_num[2]]
+            if method == 'pair_2':
+                history_nums = [issue_num[1], issue_num[2], issue_num[3]]
+            if method == 'pair_3':
+                history_nums = [issue_num[2], issue_num[3], issue_num[4]]
+            history_nums.sort()
+            if (history_nums[0] == history_nums[1] or history_nums[1] == history_nums[2]) and history_nums[0] != \
+                    history_nums[2]:
+                matched_nums = 1
+                total_prize += math.floor(prize * 10000) / 10000
+                total_bonus_prize += bonus_prize
+            else:
+                matched_nums = 0
+            result.append([history_nums,
+                           matched_nums,
+                           prize * matched_nums,
+                           bonus_prize * matched_nums,
+                           math.floor((total_prize + total_bonus_prize) * 10000) / 10000,
+                           total_bet_prize,
+                           math.floor((total_bet_prize - total_prize - total_bonus_prize) * 10000) / 10000])
+            pass
+        if method == 'straight':
+            pass
+        if method == 'dice3':
+            pass
+        if method == 'straight_0.5':
+            pass
+        if method == 'diff6':
+            pass
+
     for data in result:
         print(data)
     return jsonify({'success': 200, "msg": "ok", "content": result})

@@ -40,6 +40,11 @@ class ApiTestPC(unittest.TestCase):
             'User-Agent': Config.UserAgent.PC.value,
             'Content-Type': 'application/json; charset=UTF-8'
         }
+        self._admin_header = {  # 預設Header格式
+            'User-Agent': Config.UserAgent.PC.value,
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Cookie': 'ANVOAID=' + env_config.get_admin_cookie()
+        }
         self._third_list = ['gns', 'shaba', 'im', 'ky', 'lc', 'city']
         self._conn_mysql = mysql
         self._conn_oracle = oracle
@@ -618,24 +623,6 @@ class ApiTestPC(unittest.TestCase):
         if errors:
             self.fail('部分轉帳失敗')
 
-    @staticmethod
-    def admin_login(env_config):
-        global ADMIN_COOKIE, ADMIN_URL, HEADER, COOKIES
-        ADMIN_COOKIE = {}
-        HEADER = {
-            'User-Agent': Config.UserAgent.PC.value,
-            'Content-Type': 'application/x-www-form-urlencoded'}
-        admin_data = env_config.get_admin_data()
-        ADMIN_URL = env_config.get_admin_url()
-        session = requests.Session()
-        r = session.post(ADMIN_URL + '/admin/login/login', data=admin_data, headers=HEADER)
-        COOKIES = r.cookies.get_dict()  # 獲得登入的cookies 字典
-        ADMIN_COOKIE['admin_cookie'] = COOKIES['ANVOAID']
-        print(ADMIN_COOKIE)
-        print(f'登入後台 , 環境: {ADMIN_URL}')
-        print(r.text)
-        return COOKIES
-
     def test_redEnvelope(self):  # 紅包加壁,審核用
         user = self._user
         print(f'用戶: {user}')
@@ -646,13 +633,11 @@ class ApiTestPC(unittest.TestCase):
             print(f'紅包餘額: {int(red_bal[0]) / 10000}')
         except IndexError:
             print('紅包餘額為0')
-        self.admin_login(env_config=self._env_config)  # 登入後台
         data = {"receives": user, "blockType": "2", "lotteryType": "1", "lotteryCodes": "",
                 "amount": "100", "note": "test"}
-        HEADER['Cookie'] = 'ANVOAID=' + ADMIN_COOKIE['admin_cookie']  # 存放後台cookie
-        HEADER['Content-Type'] = 'application/json'
-        r = self.SESSION.post(ADMIN_URL + '/redAdmin/redEnvelopeApply',  # 後台加紅包街口
-                              data=json.dumps(data), headers=HEADER)
+        self._admin_header['Content-Type'] = 'application/json'
+        r = self.SESSION.post(self._env_config.get_admin_url() + '/redAdmin/redEnvelopeApply',  # 後台加紅包街口
+                              data=json.dumps(data), headers=self._admin_header)
         if r.json()['status'] == 0:
             print('紅包加幣100')
         else:
@@ -662,8 +647,8 @@ class ApiTestPC(unittest.TestCase):
         red_list.append(f'{red_id[0]}')
         # print(red_list)
         data = {"ids": red_list, "status": 2}
-        r = self.SESSION.post(ADMIN_URL + '/redAdmin/redEnvelopeConfirm',  # 後台審核街口
-                              data=json.dumps(data), headers=HEADER)
+        r = self.SESSION.post(self._env_config.get_admin_url() + '/redAdmin/redEnvelopeConfirm',  # 後台審核街口
+                              data=json.dumps(data), headers=self._admin_header)
         try:
             logger.info(f'r.json() : {r.json()}')
             if r.json()['status'] == 0:
@@ -688,13 +673,13 @@ class ApiTestPC_YFT(unittest.TestCase):
     _money_unit = None
     _award_mode = None
     _conn = None
-    header = {'User-Agent': Config.UserAgent.PC.value,
-              'Content-Type': 'application/json'}
+    _header = {'User-Agent': Config.UserAgent.PC.value,
+               'Content-Type': 'application/json'}
 
     def setUp(self):
         logger.info(f'ApiTestPC setUp : {self._testMethodName}')
         self.login()
-        logger.info(f'After login. header = {self.header}')
+        logger.info(f'After login. header = {self._header}')
 
     def __init__(self, case, env_config, user, conn, money_unit=1, _award_mode=0):
         """
@@ -719,31 +704,31 @@ class ApiTestPC_YFT(unittest.TestCase):
     """Tools"""
 
     def login(self):
-        _header = {'User-Agent': Config.UserAgent.PC.value, 'Content-Type': 'x-www-form-urlencoded'}
+        self._header = {'User-Agent': Config.UserAgent.PC.value, 'Content-Type': 'x-www-form-urlencoded'}
         _post_url = '/a/login/login'
         md = hashlib.md5()
         md.update(self._env_config.get_password().encode('utf-8'))
         request = f'{{"account": "{self._user}", "passwd": "{md.hexdigest()}", "timeZone": "GMT+8", "isWap": false, "online": false}} '
         logger.debug(f'request_body = {request}')
         response = self._session.post(url=self._env_config.get_post_url() + _post_url, data=request,
-                                      headers=self.header)
+                                      headers=self._header)
         logger.debug(f'login_url = {self._env_config.get_post_url() + _post_url}')
         logger.debug(f'Login response = {response.content}')
         if response.cookies['JSESSIONID']:
             logger.info(f'Cookies = {response.cookies["JSESSIONID"]}')
-            self.header['JSESSIONID'] = response.cookies['JSESSIONID']  # setCookie into header
+            self._header['JSESSIONID'] = response.cookies['JSESSIONID']  # setCookie into header
         else:
             self.fail('登入失敗.')
 
     def admin_login(self):
-        _cookies = self._session.get(url=self._env_config.get_admin_url(), headers=self.header).cookies.get_dict()
+        _cookies = self._session.get(url=self._env_config.get_admin_url(), headers=self._header).cookies.get_dict()
         logger.info(f'_loginPage={_cookies["sid"]}')
         _post_url = f'/leona/login;JSESSIONID={_cookies["sid"]}'
         _admin_user = ['admin', '1234qwer']
         md = hashlib.md5()
         md.update(_admin_user[1].encode('utf-8'))
         _content = f'username={_admin_user[0]}&password={md.hexdigest()}'
-        self._session.post(url=self._env_config.get_admin_url() + _post_url, data=_content, header=self.header)
+        self._session.post(url=self._env_config.get_admin_url() + _post_url, data=_content, header=self._header)
 
     def get_lottery_info(self, lottery_name):
         """
@@ -755,7 +740,7 @@ class ApiTestPC_YFT(unittest.TestCase):
         logger.debug(f'get_lottery_info -----> {content}')
 
         response = self._session.post(url=self._env_config.get_post_url() + '/a/lottery/init', data=content,
-                                      headers=self.header)
+                                      headers=self._header)
         logger.debug(f'get_lottery_info <----- {response.json()}')
         return response.json()['content']
 
@@ -823,7 +808,7 @@ class ApiTestPC_YFT(unittest.TestCase):
 
         logger.info(f'Bet content = {data}')
         bet_response = self._session.post(url=self._env_config.get_post_url() + post_url, data=data,
-                                          headers=self.header)
+                                          headers=self._header)
         logger.info(f'Bet response = {bet_response.json()}\n')
         return bet_response.json()
 
