@@ -1584,6 +1584,13 @@ def get_qrcode_result():
         driver.execute_script('return arguments[0].toDataURL("image/png").substring(22);', canvas))
     data.append(['比特幣推廣模板_彩種介紹', decode_base64(canvas_url), 'data:image/png;base64,' + canvas_url])
 
+    """推廣頁推廣面"""
+    driver.get(page.env_config.get_post_url() + '/proxy/promotepreview?target=shaibao')
+    canvas = driver.find_element_by_xpath("//canvas")
+    canvas_url = str(
+        driver.execute_script('return arguments[0].toDataURL("image/png").substring(22);', canvas))
+    data.append(['安徽骰寶推廣模板_彩種介紹', decode_base64(canvas_url), 'data:image/png;base64,' + canvas_url])
+
     driver.close()
     print(f'data = {data}')
     return jsonify({'success': 200, "msg": "ok", "content": data})
