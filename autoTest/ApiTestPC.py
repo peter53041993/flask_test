@@ -366,11 +366,11 @@ class ApiTestPC(unittest.TestCase):
                                              ball_type_post[2])
                     else:
                         result = self.req_post_submit(self._user, i, post_data, _money_unit, self._award_mode,
-                                             ball_type_post[2])
+                                                      ball_type_post[2])
+                if result is not True:
+                    failed.append(i)
             red_bal = self._conn_oracle.select_red_bal(self._user)
             print(f'紅包餘額: {int(red_bal[0]) / 10000}')
-            if result is not True:
-                failed.append(i)
         except KeyError as e:
             print(u"輸入值有誤")
             from utils.TestTool import trace_log
@@ -709,7 +709,7 @@ class ApiTestPC_YFT(unittest.TestCase):
     _award_mode = None
     _conn = None
     _header = {'User-Agent': Config.UserAgent.PC.value,
-               'Content-Type': 'application/json'}
+               'Content-Type': 'application/json;charset=UTF-8'}
 
     def setUp(self):
         logger.info(f'ApiTestPC setUp : {self._testMethodName}')
@@ -739,7 +739,6 @@ class ApiTestPC_YFT(unittest.TestCase):
     """Tools"""
 
     def login(self):
-        self._header = {'User-Agent': Config.UserAgent.PC.value, 'Content-Type': 'x-www-form-urlencoded'}
         _post_url = '/a/login/login'
         md = hashlib.md5()
         md.update(self._env_config.get_password().encode('utf-8'))
@@ -865,6 +864,16 @@ class ApiTestPC_YFT(unittest.TestCase):
                 f'{game_name[1]}追號全彩種成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
         else:
             self.fail(f'投注失敗，接口返回：{bet_response}')
+
+    """開戶"""
+
+    def test_create_link(self):
+        link = '/a/agent/createAgentLink'
+        from utils.BetContent_yft import link_default
+        link_contant = link_default.replace('r_percent', 0.001)
+        response = self._session.post(url=self._env_config.get_post_url() + link, data=link_contant,
+                                      headers=self._header)
+        logger.info(response.text)
 
     """時時彩系列"""
 
