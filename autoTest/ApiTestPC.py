@@ -54,9 +54,9 @@ class ApiTestPC(unittest.TestCase):
 
     def web_issue_code(self, lottery):  # 頁面產生  獎期用法,  取代DB連線問題
         now_time = int(time.time())
-        r = self.SESSION.get(self._en_url + f'/gameBet/{lottery}/lastNumber?_={now_time}', headers=self._header)
+        r = self.SESSION.get(self._en_url + f'/gameBet/{lottery}/dynamicConfig?_={now_time}', headers=self._header)
         try:
-            return r.json()['issueCode']
+            return r.json()['data']['issueCode']
         except:
             pass
         if lottery == 'lhc':
@@ -190,8 +190,8 @@ class ApiTestPC(unittest.TestCase):
 
     def req_post_submit(self, account, lottery, data_, money_unit, award_mode, play_):
         logger.info(
-            f'account: {account}, lottery: {lottery}, data_: {data_}, moneyunit: {money_unit}, awardmode: {award_mode}, '
-            f'play_ {play_}')
+            f'account: {account}, lottery: {lottery}, data_: {json.dumps(data_)},'
+            f' moneyunit: {money_unit}, awardmode: {award_mode}, play_ {play_}')
         global MUL_
 
         award_mode_dict = {0: u"非一般模式", 1: u"非高獎金模式", 2: u"高獎金"}
@@ -199,6 +199,7 @@ class ApiTestPC(unittest.TestCase):
         r = self.SESSION.post(self._en_url + '/gameBet/' + lottery + '/submit',
                               data=json.dumps(data_), headers=self._header)
         try:
+            logger.info(f'lottery: {lottery} bet response = {r.text}')
             msg = (r.json()['msg'])
             mode = money_dict[money_unit]
             mode1 = award_mode_dict[int(award_mode)]
@@ -208,8 +209,7 @@ class ApiTestPC(unittest.TestCase):
             lottery_name = f'投注彩種: {LotteryData.lottery_dict[lottery][0]}'
 
             if r.json()['isSuccess'] == 0:  #
-                content_ = f'{lottery_name} \n {MUL_} "\n" {play_} "\n" {msg} "\n"'
-
+                logger.info(f'{lottery_name} \n {MUL_} "\n" {play_} "\n" {msg} "\n"')
                 if r.json()['msg'] == u'存在封锁变价':  # 有可能封鎖變價,先跳過   ()
                     print(u'存在封锁变价')
                 elif r.json()['msg'] == u'您的投注内容 超出倍数限制，请调整！':
@@ -219,15 +219,40 @@ class ApiTestPC(unittest.TestCase):
                 else:  # 系統內部錯誤
                     print(r.json()['msg'])
             else:  # 投注成功
+                """查詢後台生成訂單資訊，確認獎金模式正確性"""
+                if r.json()['data']['orderId']:
+                    slip = self._conn_oracle.select_game_slip(r.json()['data']['orderId'])[0]
+                elif r.json()['data']["projectId"]:
+                    order_id = self._conn_oracle.select_game_order_data(r.json()['data']["projectId"])["ID"]
+                    logger.info(f'即開  order_id = {order_id}')
+                    slip = self._conn_oracle.select_game_slip(order_id)[0]
+                else:
+                    return False
+                logger.info(f'game slip = {slip}')
+
+                if award_mode in (0, 1) and slip["AWARD_MODE"] != 1:
+                    error = f'低獎金投注生成高獎金注單. order id = {slip["ORDERID"]}, issue = {project_id}'
+                    print(error)
+                    return False
+                if award_mode == 2 and slip["AWARD_MODE"] != 2:
+                    error = f'高獎金投注生成低獎金注單. order id = {slip["ORDERID"]}, issue = {project_id}'
+                    print(error)
+                    return False
                 if self._red_type == 'yes':
+                    if slip["TOTAL_RED_DISCOUNT_AMOUNT"] == 0:
+                        logger.error(f'紅包投注但注單無紅包抵扣. order id = {slip["ORDERID"]}, issue = {project_id}')
+                        return False
                     content_ = f'{lottery_name} \n' \
                                f' 投注單號: {project_id} \n' \
                                f' {MUL_}\n' \
                                f' {play_}\n' \
                                f' 投注金額: {str(float(submit_amount * 0.0001))} \n' \
-                               f' 紅包金額: 2 {mode}/{mode1} \n' \
+                               f' 紅包金額: {slip["TOTAL_RED_DISCOUNT_AMOUNT"]} {mode}/{mode1} \n' \
                                f' {msg} \n'
                 else:
+                    if slip["TOTAL_RED_DISCOUNT_AMOUNT"] != 0:
+                        logger.error(f'無紅包投注但注單有紅包抵扣. order id = {slip["ORDERID"]}, issue = {project_id}')
+                        return False
                     content_ = f'{lottery_name}\n' \
                                f' 投注單號: {project_id}\n' \
                                f' {MUL_}\n' \
@@ -235,68 +260,75 @@ class ApiTestPC(unittest.TestCase):
                                f'投注金額: {str(float(submit_amount * 0.0001))} \n' \
                                f' {mode}/{mode1} \n' \
                                f' {msg}\n'
-        except ValueError:
-            content_ = (f'{lottery} 投注失敗' + "\n")
-        print(content_)
+                print(content_)
+                return True
+        except Exception as e:
+            print(f'{lottery} 投注失敗，無法預期的錯誤' + "\n")
+            from utils.TestTool import trace_log
+            logger.error(trace_log(e))
+            return False
 
     def test_PCLotterySubmit(self, plan=1):  # 彩種投注
         """投注測試"""
         _money_unit = 1  # 初始元模式
+        failed = []
+        result = None
 
         if self._red_type == 'yes':
             print('使用紅包投注')
         else:
             print('不使用紅包投注')
-        while True:
-            try:
-                for i in LotteryData.lottery_dict.keys():
-                    global MUL_  # 傳回 投注出去的組合訊息 req_post_submit 的 content裡
-                    global MUL
-                    ball_type_post = self.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
+        try:
+            logger.info(f' LotteryData.lottery_dict = {LotteryData.lottery_dict}')
+            for i in LotteryData.lottery_dict.keys():
+                global MUL_  # 傳回 投注出去的組合訊息 req_post_submit 的 content裡
+                global MUL
+                ball_type_post = self.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
 
                     if self._money_unit == '1':  # 使用元模式
                         _money_unit = 1
                     elif self._money_unit == '2':  # 使用角模式
                         _money_unit = 0.1
 
-                    if i == 'btcctp':
-                        self._award_mode = 2
-                        MUL = Config.random_mul(1)  # 不支援倍數,所以random參數為1
-                    elif i == 'bjkl8':
-                        MUL = Config.random_mul(5)  # 北京快樂8
-                        _money_unit = 1
-                        self._award_mode = 1
-                    elif i == 'p5':
-                        MUL = Config.random_mul(5)
-                    elif i in ['btcffc', 'xyft']:
-                        self._award_mode = 2
-                    elif i in ['ssq', 'np3', 'n3d', 'v3d']:
-                        self._award_mode = 1
-                    elif i in LotteryData.lottery_sb:  # 骰寶只支援  元模式
-                        _money_unit = 1
+                if i == 'btcctp':
+                    self._award_mode = 2
+                    _money_unit = 1
+                    MUL = Config.random_mul(1)  # 不支援倍數,所以random參數為1
+                elif i == 'bjkl8':
+                    MUL = Config.random_mul(5)  # 北京快樂8
+                    _money_unit = 1
+                    self._award_mode = 1
+                elif i == 'p5':
+                    MUL = Config.random_mul(5)
+                elif i in ['btcffc', 'xyft']:
+                    self._award_mode = 2
+                elif i in ['ssq', 'np3', 'n3d', 'v3d', 'fc3d', 'p5', 'lhc']:
+                    self._award_mode = 1
+                elif i in LotteryData.lottery_sb:  # 骰寶只支援  元模式
+                    _money_unit = 1
 
-                    MUL_ = f'選擇倍數: {MUL}'
-                    amount = 2 * MUL * _money_unit
+                MUL_ = f'選擇倍數: {MUL}'
+                logger.info(f'MUL = {MUL}, _money_unit = {_money_unit}, amount = {2 * MUL * _money_unit}')
+                amount = 2 * MUL * _money_unit
 
                     # 從DB抓取最新獎期.[1]為 99101類型select_issueselect_issue
 
-                    if plan == 1:  # 一般投住
-
-                        # Joy188Test.select_issue(Joy188Test.get_conn(1),lottery_dict[i][1])
-                        # 從DB抓取最新獎期.[1]為 99101類型
-                        # print(issueName,issue)
-                        issuecode = self.web_issue_code(i)
-                        plan_ = [{"number": '123', "issueCode": issuecode, "multiple": 1}]
-                        print(u'一般投住')
-                        isTrace = 0
-                        traceWinStop = 0
-                        traceStopValue = -1
-                    else:  # 追號
-                        plan_ = self.plan_num(self._env_config.get_env_id(), i, Config.random_mul(30))  # 隨機生成 50期內的比數
-                        print(f'追號, 期數:{len(plan_)}')
-                        isTrace = 1
-                        traceWinStop = 1
-                        traceStopValue = 1
+                if plan == 1:  # 一般投住
+                    # Joy188Test.select_issue(Joy188Test.get_conn(1),lottery_dict[i][1])
+                    # 從DB抓取最新獎期.[1]為 99101類型
+                    # print(issueName,issue)
+                    issuecode = self.web_issue_code(i)
+                    plan_ = [{"number": '123', "issueCode": issuecode, "multiple": 1}]
+                    print(u'一般投住')
+                    isTrace = 0
+                    traceWinStop = 0
+                    traceStopValue = -1
+                else:  # 追號
+                    plan_ = self.plan_num(self._env_config.get_env_id(), i, Config.random_mul(30))  # 隨機生成 50期內的比數
+                    print(f'追號, 期數:{len(plan_)}')
+                    isTrace = 1
+                    traceWinStop = 1
+                    traceStopValue = 1
 
                     len_ = len(plan_)  # 一般投注, 長度為1, 追號長度為
                     # print(game_type)
@@ -321,30 +353,33 @@ class ApiTestPC(unittest.TestCase):
                                                "type": ball_type_post[0]}],
                                     "orders": plan_}
 
-                    if i in 'lhc':
-                        self.req_post_submit(self._user, 'lhc', post_data_lhc, _money_unit, self._award_mode,
-                                             ball_type_post[2])
-
-                    elif i in LotteryData.lottery_sb:
-                        self.req_post_submit(self._user, i, post_data_sb, _money_unit, self._award_mode,
+                if i in 'lhc':
+                    result = self.req_post_submit(self._user, 'lhc', post_data_lhc, _money_unit, self._award_mode,
+                                         ball_type_post[2])
+                elif i in LotteryData.lottery_sb:
+                    result = self.req_post_submit(self._user, i, post_data_sb, _money_unit, 1,
+                                         ball_type_post[2])
+                else:
+                    if self._red_type == 'yes':  # 紅包投注
+                        post_data['redDiscountAmount'] = 2  # 增加紅包參數
+                        result = self.req_post_submit(self._user, i, post_data, _money_unit, self._award_mode,
                                              ball_type_post[2])
                     else:
-                        if self._red_type == 'yes':  # 紅包投注
-                            post_data['redDiscountAmount'] = 2  # 增加紅包參數
-                            self.req_post_submit(self._user, i, post_data, _money_unit, self._award_mode,
-                                                 ball_type_post[2])
-                        else:
-                            self.req_post_submit(self._user, i, post_data, _money_unit, self._award_mode,
-                                                 ball_type_post[2])
-                red_bal = self._conn_oracle.select_red_bal(self._user)
-                print(f'紅包餘額: {int(red_bal[0]) / 10000}')
-                break
-            except KeyError as e:
-                print(u"輸入值有誤")
-                break
-            except IndexError as e:
-                # print(e)
-                break
+                        result = self.req_post_submit(self._user, i, post_data, _money_unit, self._award_mode,
+                                             ball_type_post[2])
+            red_bal = self._conn_oracle.select_red_bal(self._user)
+            print(f'紅包餘額: {int(red_bal[0]) / 10000}')
+            if result is not True:
+                failed.append(i)
+        except KeyError as e:
+            print(u"輸入值有誤")
+            from utils.TestTool import trace_log
+            logger.error(trace_log(e))
+        except Exception as e:
+            from utils.TestTool import trace_log
+            logger.error(trace_log(e))
+        if len(failed) > 0:
+            self.fail(f'以下彩種投注失敗: {failed}')
 
     @func_time
     def test_PcLogin(self):

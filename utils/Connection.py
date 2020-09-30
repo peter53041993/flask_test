@@ -446,6 +446,26 @@ class OracleConnection:
         cursor.close()
         return issue_numbers
 
+    def select_game_slip(self, order_id):
+        cursor = self._get_oracle_conn().cursor()
+        sql = f"select * from GAME_SLIP where ORDERID = '{order_id}'"
+        logger.info(sql)
+
+        cursor.execute(sql)
+        result = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
+        cursor.close()
+        return result
+
+    def select_game_order_data(self, order_code):
+        cursor = self._get_oracle_conn().cursor()
+        sql = f"select * from GAME_ORDER where ORDER_CODE = '{order_code}'"
+        logger.info(sql)
+
+        cursor.execute(sql)
+        result = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
+        cursor.close()
+        return result[0]
+
     def close_conn(self):
         if self._conn is not None:
             self._conn.close()
