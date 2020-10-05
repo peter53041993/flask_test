@@ -790,11 +790,11 @@ class ApiTestPC_YFT(unittest.TestCase):
         post_url = '/a/lottery/betV2'
         lottery_info = self.get_lottery_info(lottery_name)
 
-        from utils.BetContent_yft import game_default
+        from utils.requestContent_YFT import game_default
         import json
         default = json.loads(game_default)
         logger.debug(f'default json = {default}')
-        from utils.BetContent_yft import game_dict
+        from utils.requestContent_YFT import game_dict
         totalAmount = 0
         schemeList = []
         for game in games:
@@ -865,15 +865,44 @@ class ApiTestPC_YFT(unittest.TestCase):
         else:
             self.fail(f'投注失敗，接口返回：{bet_response}')
 
-    """開戶"""
-
-    def test_create_link(self):
+    def test_create_user(self):
+        """新增開戶連結"""
         link = '/a/agent/createAgentLink'
-        from utils.BetContent_yft import link_default
-        link_contant = link_default.replace('r_percent', 0.001)
+        from utils.requestContent_YFT import link_default
+        link_contant = link_default.replace('r_percent', '0.001')
+        logger.warning(f'link_contant = {link_contant}')
         response = self._session.post(url=self._env_config.get_post_url() + link, data=link_contant,
                                       headers=self._header)
-        logger.info(response.text)
+        logger.info(f'response.text = {response.text}')
+
+        if response.json()['status'] == 'ok':
+            link_id = response.json()["content"]["id"]
+            print(f'連結創立成功 ({link_id})')
+
+            """新增用戶"""
+            from datetime import datetime
+
+            link = "/a/register/register"
+            m = hashlib.md5()
+            m.update("123123".encode("utf-8"))
+            data = {
+                "account": "autoreg" + str(round(datetime.now().timestamp())),
+                "passwd": m.hexdigest(),
+                "id": link_id,
+                "timeZone": "GMT+8",
+                "isWap": False,
+                "online": False
+            }
+            logger.info(f'json.dumps(data) = {json.dumps(data)}')
+            response = self._session.post(self._env_config.get_post_url() + link, headers=self._header, data=json.dumps(data))
+            logger.info(f'response.text = {response.text}')
+            if response.status_code == 200:
+                print('用戶創建成功')
+                print(f'回傳資料：{response.json()["content"]}')
+            else:
+                raise Exception(f'用戶創建失敗{response.json()["msg"]}')
+        else:
+            raise Exception(f'連結創立失敗{response.json()["msg"]}')
 
     """時時彩系列"""
 

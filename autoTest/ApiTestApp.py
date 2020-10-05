@@ -1004,7 +1004,7 @@ class ApiTestAPP_YFT(unittest.TestCase):
                 '_award_mode', '_conn_postgre', '_header'
 
     def setUp(self):
-        from utils.BetContent_yft import _iapi_default
+        from utils.requestContent_YFT import _iapi_default
         self._iapi_default = json.loads(_iapi_default)
 
         global YFT_SIGN
@@ -1329,7 +1329,7 @@ class ApiTestAPP_YFT(unittest.TestCase):
 
         import json
         default = self._iapi_default
-        from utils.BetContent_yft import game_dict
+        from utils.requestContent_YFT import game_dict
         totalAmount = 0
         schemeList = []
         for game in games:
