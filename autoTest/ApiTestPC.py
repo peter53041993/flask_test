@@ -285,10 +285,10 @@ class ApiTestPC(unittest.TestCase):
                 global MUL
                 ball_type_post = self.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
 
-                    if self._money_unit == '1':  # 使用元模式
-                        _money_unit = 1
-                    elif self._money_unit == '2':  # 使用角模式
-                        _money_unit = 0.1
+                if self._money_unit == '1':  # 使用元模式
+                    _money_unit = 1
+                elif self._money_unit == '2':  # 使用角模式
+                    _money_unit = 0.1
 
                 if i == 'btcctp':
                     self._award_mode = 2
@@ -311,7 +311,7 @@ class ApiTestPC(unittest.TestCase):
                 logger.info(f'MUL = {MUL}, _money_unit = {_money_unit}, amount = {2 * MUL * _money_unit}')
                 amount = 2 * MUL * _money_unit
 
-                    # 從DB抓取最新獎期.[1]為 99101類型select_issueselect_issue
+                # 從DB抓取最新獎期.[1]為 99101類型select_issueselect_issue
 
                 if plan == 1:  # 一般投住
                     # Joy188Test.select_issue(Joy188Test.get_conn(1),lottery_dict[i][1])
@@ -330,47 +330,47 @@ class ApiTestPC(unittest.TestCase):
                     traceWinStop = 1
                     traceStopValue = 1
 
-                    len_ = len(plan_)  # 一般投注, 長度為1, 追號長度為
-                    # print(game_type)
+                len_ = len(plan_)  # 一般投注, 長度為1, 追號長度為
+                # print(game_type)
 
-                    post_data = {"gameType": i, "isTrace": isTrace, "traceWinStop": traceWinStop,
-                                 "traceStopValue": traceWinStop,
-                                 "balls": [{"id": 1, "ball": ball_type_post[1], "type": ball_type_post[0],
-                                            "moneyunit": _money_unit, "multiple": MUL, "awardMode": self._award_mode,
-                                            "num": 1}], "orders": plan_, "amount": len_ * amount}  # 不使用紅包
+                post_data = {"gameType": i, "isTrace": isTrace, "traceWinStop": traceWinStop,
+                             "traceStopValue": traceWinStop,
+                             "balls": [{"id": 1, "ball": ball_type_post[1], "type": ball_type_post[0],
+                                        "moneyunit": _money_unit, "multiple": MUL, "awardMode": self._award_mode,
+                                        "num": 1}], "orders": plan_, "amount": len_ * amount}  # 不使用紅包
 
-                    post_data_lhc = {"balls": [{"id": 1, "moneyunit": _money_unit, "multiple": 1, "num": 1,
-                                                "type": ball_type_post[0], "amount": amount, "lotterys": "13",
-                                                "ball": ball_type_post[1], "odds": "7.5"}],
-                                     "isTrace": 0, "orders": plan_,
-                                     "amount": amount, "awardGroupId": 202}
+                post_data_lhc = {"balls": [{"id": 1, "moneyunit": _money_unit, "multiple": 1, "num": 1,
+                                            "type": ball_type_post[0], "amount": amount, "lotterys": "13",
+                                            "ball": ball_type_post[1], "odds": "7.5"}],
+                                 "isTrace": 0, "orders": plan_,
+                                 "amount": amount, "awardGroupId": 202}
 
-                    post_data_sb = {"gameType": i, "isTrace": 0, "multiple": 1, "trace": 1,
-                                    "amount": amount,
-                                    "balls": [{"ball": ball_type_post[1],
-                                               "id": 11, "moneyunit": _money_unit, "multiple": 1, "amount": amount,
-                                               "num": 1,
-                                               "type": ball_type_post[0]}],
-                                    "orders": plan_}
+                post_data_sb = {"gameType": i, "isTrace": 0, "multiple": 1, "trace": 1,
+                                "amount": amount,
+                                "balls": [{"ball": ball_type_post[1],
+                                           "id": 11, "moneyunit": _money_unit, "multiple": 1, "amount": amount,
+                                           "num": 1,
+                                           "type": ball_type_post[0]}],
+                                "orders": plan_}
 
                 if i in 'lhc':
                     result = self.req_post_submit(self._user, 'lhc', post_data_lhc, _money_unit, self._award_mode,
-                                         ball_type_post[2])
+                                                  ball_type_post[2])
                 elif i in LotteryData.lottery_sb:
                     result = self.req_post_submit(self._user, i, post_data_sb, _money_unit, 1,
-                                         ball_type_post[2])
+                                                  ball_type_post[2])
                 else:
                     if self._red_type == 'yes':  # 紅包投注
                         post_data['redDiscountAmount'] = 2  # 增加紅包參數
                         result = self.req_post_submit(self._user, i, post_data, _money_unit, self._award_mode,
-                                             ball_type_post[2])
+                                                      ball_type_post[2])
                     else:
                         result = self.req_post_submit(self._user, i, post_data, _money_unit, self._award_mode,
-                                             ball_type_post[2])
+                                                      ball_type_post[2])
+                if result is not True:
+                    failed.append(i)
             red_bal = self._conn_oracle.select_red_bal(self._user)
             print(f'紅包餘額: {int(red_bal[0]) / 10000}')
-            if result is not True:
-                failed.append(i)
         except KeyError as e:
             print(u"輸入值有誤")
             from utils.TestTool import trace_log
@@ -709,7 +709,7 @@ class ApiTestPC_YFT(unittest.TestCase):
     _award_mode = None
     _conn = None
     _header = {'User-Agent': Config.UserAgent.PC.value,
-               'Content-Type': 'application/json'}
+               'Content-Type': 'application/json;charset=UTF-8'}
 
     def setUp(self):
         logger.info(f'ApiTestPC setUp : {self._testMethodName}')
@@ -739,7 +739,6 @@ class ApiTestPC_YFT(unittest.TestCase):
     """Tools"""
 
     def login(self):
-        self._header = {'User-Agent': Config.UserAgent.PC.value, 'Content-Type': 'x-www-form-urlencoded'}
         _post_url = '/a/login/login'
         md = hashlib.md5()
         md.update(self._env_config.get_password().encode('utf-8'))
@@ -791,11 +790,11 @@ class ApiTestPC_YFT(unittest.TestCase):
         post_url = '/a/lottery/betV2'
         lottery_info = self.get_lottery_info(lottery_name)
 
-        from utils.BetContent_yft import game_default
+        from utils.requestContent_YFT import game_default
         import json
         default = json.loads(game_default)
         logger.debug(f'default json = {default}')
-        from utils.BetContent_yft import game_dict
+        from utils.requestContent_YFT import game_dict
         totalAmount = 0
         schemeList = []
         for game in games:
@@ -865,6 +864,66 @@ class ApiTestPC_YFT(unittest.TestCase):
                 f'{game_name[1]}追號全彩種成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
         else:
             self.fail(f'投注失敗，接口返回：{bet_response}')
+
+    def test_create_user(self):
+        from datetime import datetime
+        from utils.requestContent_YFT import link_default
+        m = hashlib.md5()
+        m.update("123123".encode("utf-8"))
+        """直接新增用戶"""
+        link = "/a/agent/createNewUser"
+        data = eval(link_default.replace('r_percent', '0.001').replace('false', 'False').replace('true', 'True'))
+        extra = {
+            "type": "a",
+            "username": "autoreg" + str(round(datetime.now().timestamp())),
+            "password": m.hexdigest(),
+            "passwordConfirm": m.hexdigest(),
+            "timeZone": "GMT+8",
+            "isWap": False,
+            "online": True
+        }
+        data.update(extra)
+        logger.info(f'Dir create user. data = {json.dumps(data)}')
+        response = self._session.post(url=self._env_config.get_post_url() + link, data=json.dumps(data),
+                                      headers=self._header)
+        logger.info(f'response.text = {response.text}')
+        if response.status_code == 200:
+            print(f'直接開戶成功\n返回數據：{response.json()["content"]}\n')
+
+        """新增開戶連結"""
+        link = '/a/agent/createAgentLink'
+        from utils.requestContent_YFT import link_default
+        link_contant = link_default.replace('r_percent', '0.001')
+        logger.warning(f'link_contant = {link_contant}')
+        response = self._session.post(url=self._env_config.get_post_url() + link, data=link_contant,
+                                      headers=self._header)
+        logger.info(f'response.text = {response.text}')
+
+        if response.json()['status'] == 'ok':
+            link_id = response.json()["content"]["id"]
+            print(f'連結創立成功！\n連結ID = {link_id}\n')
+
+            """用連結新增用戶"""
+            link = "/a/register/register"
+            data = {
+                "account": "autoreg" + str(round(datetime.now().timestamp())),
+                "passwd": m.hexdigest(),
+                "id": link_id,
+                "timeZone": "GMT+8",
+                "isWap": False,
+                "online": False
+            }
+            logger.info(f'json.dumps(data) = {json.dumps(data)}')
+            response = self._session.post(self._env_config.get_post_url() + link, headers=self._header,
+                                          data=json.dumps(data))
+            logger.info(f'response.text = {response.text}')
+            if response.status_code == 200:
+                print('開戶連結開戶成功')
+                print(f'回傳資料：{response.json()["content"]}')
+            else:
+                raise Exception(f'用戶創建失敗{response.json()["msg"]}')
+        else:
+            raise Exception(f'連結創立失敗{response.json()["msg"]}')
 
     """時時彩系列"""
 

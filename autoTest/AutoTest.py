@@ -96,6 +96,7 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mo
 
         fp.close()
         _conn.close_conn()
-        _conn2.close_conn()
+        if _conn2 is not None:
+            _conn2.close_conn()
     except Exception as e:
         logger.error(trace_log(e))

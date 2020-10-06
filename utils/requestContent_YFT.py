@@ -1,31 +1,25 @@
 game_default = '{"lotteryType":"","currIssueNo":"","stopOnWon":"","totalAmount":"",' \
                '"issueList":[],"schemeList":[],"timeZone":"GMT+8","isWap":false,"online":true}'
-iapi_default = '{"callType":"","content":{"passwd":"","account":"","uuid":""},' \
-               '"clientInfo":{"appType":"teemo","clientType":"android","clientVersion":"3.0.0"},' \
-               '"timeZone":"Asia/Taipei"}'
+_iapi_default = '{"callType":"","content":{"passwd":"","account":"","uuid":""},' \
+                '"clientInfo":{"appType":"teemo","clientType":"android","clientVersion":"3.0.0"},' \
+                '"timeZone":"Asia/Taipei"}'
 
-# pk10_games = ['pt330bt02', 'pt333bt02', 'pt320bt02', 'pt321bt01', 'pt321bt02', 'pt322bt01', 'pt322bt02', 'pt323bt02',
-#               'pt325bt01', 'pt325bt02', 'pt326bt02', 'pt326bt02', 'pt327bt02']
-# k3_games = ['pt300bt02', 'pt301bt01', 'pt302bt02', 'pt303bt02', 'pt304bt01', 'pt305bt02', 'pt306bt02', 'pt307bt02',
-#             'pt309bt02']
-# ll5_games = ['pt200bt02', 'pt201bt02', 'pt202bt02', 'pt203bt01', 'pt203bt02', 'pt204bt01', 'pt204bt02', 'pt205bt01',
-#              'pt205bt02', 'pt206bt01', 'pt206bt02', 'pt207bt01', 'pt207bt02', 'pt208bt01', 'pt208bt02', 'pt209bt01',
-#              'pt209bt02', 'pt210bt01', 'pt210bt02', 'pt211bt01', 'pt211bt02', 'pt212bt01', 'pt212bt02', 'pt213bt01',
-#              'pt213bt02', 'pt216bt02']
-# ssc_games = ['pt100bt02', 'pt100bt01', 'pt100bt04', 'pt101bt23', 'pt101bt24', 'pt101bt25', 'pt101bt26', 'pt101bt27',
-#              'pt101bt28', 'pt102bt02', 'pt103bt02', 'pt104bt02', 'pt105bt02', 'pt106bt01', 'pt106bt02', 'pt106bt04',
-#              'pt107bt32', 'pt107bt29', 'pt107bt30', 'pt107bt31', 'pt108bt01', 'pt108bt02', 'pt108bt04', 'pt108bt05',
-#              'pt108bt06', 'pt109bt05', 'pt109bt07', 'pt109bt20', 'pt109bt21', 'pt109bt22', 'pt110bt05', 'pt110bt06',
-#              'pt110bt01', 'pt110bt02', 'pt110bt04', 'pt111bt05', 'pt111bt07', 'pt111bt20', 'pt111bt21', 'pt111bt22',
-#              'pt112bt01', 'pt112bt02', 'pt112bt04', 'pt112bt05', 'pt112bt06', 'pt113bt05', 'pt113bt07', 'pt113bt20',
-#              'pt113bt21', 'pt113bt22', 'pt114bt01', 'pt114bt02', 'pt114bt05', 'pt114bt06', 'pt115bt01', 'pt115bt02',
-#              'pt115bt05', 'pt115bt07', 'pt116bt01', 'pt116bt02', 'pt116bt05', 'pt116bt06', 'pt117bt01', 'pt117bt02',
-#              'pt117bt05', 'pt117bt07', 'pt118bt02', 'pt119bt02', 'pt120bt02', 'pt121bt02', 'pt122bt02', 'pt123bt02',
-#              'pt124bt02', 'pt125bt02', 'pt126bt02', 'pt127bt02', 'pt128bt02', 'pt130bt01', 'pt130bt02', 'pt130bt05',
-#              'pt131bt01', 'pt131bt02', 'pt131bt05', 'pt132bt01', 'pt132bt02', 'pt132bt05', 'pt133bt05', 'pt133bt20',
-#              'pt133bt21', 'pt133bt22', 'pt134bt01', 'pt134bt02', 'pt135bt29', 'pt135bt30', 'pt135bt31', 'pt135bt32',
-#              'pt136bt02', 'pt137bt02'
-#              ]
+link_default = '{"rebateList": ' \
+               '[{"lotteryType": "ssc","playType": "lmp","rebatePercent": "r_percent","bonusGroup": 1900},' \
+               '{"lotteryType": "ssc","playType": "normal","rebatePercent": "r_percent","bonusGroup": 1800},' \
+               '{"lotteryType": "k3","playType": "lmp","rebatePercent": "r_percent","bonusGroup": 1900},' \
+               '{"lotteryType": "k3","playType": "normal","rebatePercent": "r_percent","bonusGroup": 1700},' \
+               '{"lotteryType": "syxw","playType": "lmp","rebatePercent": "r_percent","bonusGroup": 1900},' \
+               '{"lotteryType": "syxw","playType": "normal","rebatePercent": "r_percent","bonusGroup": 1800},' \
+               '{"lotteryType": "sdpl35","playType": "lmp","rebatePercent": "r_percent","bonusGroup": 1900},' \
+               '{"lotteryType": "sdpl35","playType": "normal","rebatePercent": "r_percent","bonusGroup": 1700},' \
+               '{"lotteryType": "pk10","playType": "normal","rebatePercent": "r_percent","bonusGroup": 1900},' \
+               '{"lotteryType": "pk10","playType": "lmp","rebatePercent": "r_percent","bonusGroup": 1900},' \
+               '{"lotteryType": "kl8","playType": "normal","rebatePercent": "0","bonusGroup": 1700},' \
+               '{"lotteryType": "kl8","playType": "lmp","rebatePercent": "r_percent","bonusGroup": 1900},' \
+               '{"lotteryType": "lhc","playType": "normal","rebatePercent": "r_percent","bonusGroup": 1800},' \
+               '{"lotteryType": "lhc","playType": "lmp","rebatePercent": "r_percent","bonusGroup": 1900}],' \
+               '"type": "a","timeZone": "GMT+8","isWap": false,"online": true}'
 
 game_dict = {
     """時時彩系列"""
