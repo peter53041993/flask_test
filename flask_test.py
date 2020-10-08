@@ -4,7 +4,7 @@ import traceback,datetime,requests,json,os,random,threading,time,calendar,loggin
 from http.client import HTTPException
 from flask import Flask, render_template, request, jsonify, redirect, make_response, url_for, Response, abort
 from dateutil.relativedelta import relativedelta
-import image_test,AutoTest,test_benefit,test_lotteryRecord,FF_Joy188
+import image_test,AutoTest,test_benefit,test_lotteryRecord,FF_Joy188,GameBox
 from Utils import Config
 from time import sleep
 from flask import current_app
@@ -288,13 +288,10 @@ class Flask():
                 submit_cancel = request.form.get('submit_cancel')# 投注完是否撤銷 , 0為否 , 1為是
                 submit_plan =  request.form.get('test_PcPlan')# 追號使用
                 lottery_name = request.form.get('lottery_name')#彩種選擇
-                print(red,awardmode,lottery_name)
-                print(envConfig.get_post_url())# url
                 domain_url = envConfig.get_post_url().split('http://')[1]# 後台全局 url 需把 http做切割
-                
                 domain_type = envConfig.get_joint_venture(envConfig.get_env_id(),domain_url)# 查詢 後台是否有設置 該url 
-                #domain_type = Config.domain_type#後台 該url joint_venture 的 類型
-
+                print(red,awardmode,lottery_name,type(awardmode))
+                print(envConfig.get_post_url())# url
                 AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(envConfig.get_env_id()),username,domain_type)  # 查詢用戶 userid
                 userid = AutoTest.userid
                 for test in test_case:
@@ -808,54 +805,58 @@ class Flask():
                         
                         game_submit = game_detail[key][7]#投注內容
                         game_submit_list.append(game_submit)
+                        '''
                         if theory_bonus == 0:  # 理論獎金為0, 代表一個完髮有可能有不同獎金
                             bonus = []
                             print('有多獎金玩法'+bet_type_code)
                             for i in soup.find_all('span', id=re.compile("^(%s)" % bet_type_code)):
                                 bonus.append(float(i.text))  # 有多個獎金
                             FF_bonus = " ".join([str(x) for x in bonus])  # 原本bonus裡面裝 float  .需list裡轉成字元,
+                        
                         else:
-                            if lottery_name == 'PC蛋蛋':
-                                if bet_type_code not in ['66_28_71','66_13_84','66_74_107']:# 同個玩法只有單一賠率 
-                                    AutoTest.Joy188Test.select_bonus(AutoTest.Joy188Test.get_conn(envs),lotteryid,bet_type_code)# 使用bet_type_code like
-                                else:
-                                    game_map = Flask.game_map(type_=1)  # 呼叫玩法說明/遊戲mapping 
-                                    print(game_map)
-                                    if bet_type_code  == '66_13_84': #色波
-                                        color_dict = {
-                                            "红": "RED",
-                                            "绿": "GREEN",
-                                            "蓝": "BLUE"
+                        '''    
+                        if lottery_name == 'PC蛋蛋':
+                            if bet_type_code not in ['66_28_71','66_13_84','66_74_107']:# 同個玩法只有單一賠率 
+                                AutoTest.Joy188Test.select_bonus(AutoTest.Joy188Test.get_conn(envs),lotteryid,bet_type_code)# 使用bet_type_code like
+                            else:
+                                game_map = Flask.game_map(type_=1)  # 呼叫玩法說明/遊戲mapping 
+                                print(game_map)
+                                if bet_type_code  == '66_13_84': #色波
+                                    color_dict = {
+                                        "红": "RED",
+                                        "绿": "GREEN",
+                                        "蓝": "BLUE"
+                                    }
+                                    game_submit = color_dict[game_submit]# 換成 英文 , 因為要再去select_bonus  找  獎金
+                                elif bet_type_code == '66_74_107': #大單,大雙,,,,,,
+                                    color_dict = {
+                                        "大双": "DASHUNG", 
+                                        "小双": "XIAOSHUNG",
+                                        "大单": "DADAN",
+                                        "小单": "XIAODAN"                               
                                         }
-                                        game_submit = color_dict[game_submit]# 換成 英文 , 因為要再去select_bonus  找  獎金
-                                    elif bet_type_code == '66_74_107': #大單,大雙,,,,,,
-                                        color_dict = {
-                                            "大双": "DASHUNG", 
-                                            "小双": "XIAOSHUNG",
-                                            "大单": "DADAN",
-                                            "小单": "XIAODAN"                               
-                                            }
-                                        game_submit = color_dict[game_submit]# 換成 英文 , 因為要再去select_bonus  找  獎金
-                                    else: #和值
-                                        
-                                        pass# 和值 0 -27 ,投注內容 keys不用做Mapping
-                                    #print(game_submit)
-                                    point_id =  bet_type_code + "_"+ game_map[game_submit]
-                                    #print(game_submit)
-                                    AutoTest.Joy188Test.select_bonus(AutoTest.Joy188Test.get_conn(envs),lotteryid,point_id,game_submit)
-                                pc_dd_bonus = AutoTest.bonus
-                                theory_bonus = pc_dd_bonus[0][1]/10000
-                                FF_bonus =  pc_dd_bonus[0][0]/10000
-                                #print(theory_bonus,FF_bonus)
-                            else:# 其他大眾彩種
-                                theory_bonus = theory_bonus/10000# 理論將金
-                                point_id = bet_type_code + "_" + str(theory_bonus)  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
-                                #for i in soup.find_all('span', id=re.compile("^(%s)" % point_id)):  # {'id':point_id}):
-                                    #FF_bonus = float(i.text)
-                                award_group_id = game_detail[key][17]#用來查詢 用戶 獎金組 屬於哪種
-                                AutoTest.Joy188Test.select_bonus(AutoTest.Joy188Test.get_conn(envs),lotteryid,bet_type_code,award_group_id)# 使用bet_type_code like
-                                pc_dd_bonus = AutoTest.bonus
-                                FF_bonus =  pc_dd_bonus[0][0]/10000
+                                    game_submit = color_dict[game_submit]# 換成 英文 , 因為要再去select_bonus  找  獎金
+                                else: #和值
+                                    
+                                    pass# 和值 0 -27 ,投注內容 keys不用做Mapping
+                                #print(game_submit)
+                                point_id =  bet_type_code + "_"+ game_map[game_submit]# 前面bet_type_code一致, _後面 動態
+                                
+                                #相同賠率 有不同完髮的(ex: 投注內容 0和27, 賠率都是 900 ), 需再把 投注內容game_submit 進去 找  
+                                AutoTest.Joy188Test.select_bonus(AutoTest.Joy188Test.get_conn(envs),lotteryid,point_id,game_submit)
+                            pc_dd_bonus = AutoTest.bonus
+                            theory_bonus = pc_dd_bonus[0][1]/10000
+                            FF_bonus =  pc_dd_bonus[0][0]/10000
+                            #print(theory_bonus,FF_bonus)
+                        else:# 其他大眾彩種
+                            theory_bonus = theory_bonus/10000# 理論將金
+                            point_id = bet_type_code + "_" + str(theory_bonus)  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
+                            #for i in soup.find_all('span', id=re.compile("^(%s)" % point_id)):  # {'id':point_id}):
+                                #FF_bonus = float(i.text)
+                            award_group_id = game_detail[key][17]#用來查詢 用戶 獎金組 屬於哪種
+                            AutoTest.Joy188Test.select_bonus(AutoTest.Joy188Test.get_conn(envs),lotteryid,bet_type_code,award_group_id)# 使用bet_type_code like
+                            pc_dd_bonus = AutoTest.bonus
+                            FF_bonus =  pc_dd_bonus[0][0]/10000
                         theory_bonus_list.append(theory_bonus)
                         ff_bonus_list.append(FF_bonus)
                         game_point = float(game_detail[key][18]/10000)
@@ -1470,7 +1471,118 @@ class Flask():
             result['time'] = req_time[-1]
             return result
         return render_template('api_test.html')
+    @app.route('/gameBox',methods=["POST","GET"])
+    def gameBox():
+        admin_items,user_items = {},{}#管理端/客戶端
+        for key in GameBox.GameBox().data_type.keys():
+            # 中文名稱為key, 英文參數唯value,用意 顯示在頁面上中文
+            if key in ['createApp','updateIpWhitelist','updateSupplierAccount','token']:
+                admin_items[GameBox.GameBox().data_type[key][0]] = key
+            else:
+                user_items[GameBox.GameBox().data_type[key][0]] = key
+        if request.method == "POST":
+            client_type = {
+            "api_key":["1566e8efbdb444dfb670cd515ab99fda","XT","9RJ0PYLC5Ko4O4vGsqd","","a93f661cb1fcc76f87cfe9bd96a3623f"]
+            ,"api_url":["https://api.dg99web.com","http://tsa.l0044.xtu168.com","https://testapi.onlinegames22.com","http://api.cqgame.games","http://gsmd.336699bet.com"]
+            ,"supplier_type":["dream_game","sa_ba_sports","ae_sexy","cq_9","gpi"]
+            ,"supplier_user":["DGTE01011T","6yayl95mkn","fhlmag","cq9_test","xo8v"]
+            ,"game_type" :["DG","沙巴","Sexy","Cq9",'GPI']
+            }
+            cq_9Key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiI1ZjU5OWU3NTc4MDdhYTAwMDFlYTFjMjYiLCJhY2NvdW50IjoiYW1iZXJ1YXQiLCJvd25lciI6IjVkYzExN2JjM2ViM2IzMDAwMTA4ZTQ4NyIsInBhcmVudCI6IjVkYzExN2JjM2ViM2IzMDAwMTA4ZTQ4NyIsImN1cnJlbmN5IjoiVk5EIiwianRpIjoiNzkyMjU1MDIzIiwiaWF0IjoxNTk5NzA4Nzg5LCJpc3MiOiJDeXByZXNzIiwic3ViIjoiU1NUb2tlbiJ9.cyvPJaWFGwhX4dZV7fwcwgUhGM9d5dVv8sgyctlRijc"
+            url_dict = {0:['http://43.240.38.15:21080','測試區'],1:['http://54.248.18.149:8203','灰度']}# 測試 / 灰度
+            env_type = request.form.get('env_type')
+            game_type = request.form.get('game_type')#  0 : DG , 1: 沙巴
+            user = request.form.get('user')
+            #admin_check = request.form.get('admin_check')# 管理端
+            #user_check = request.form.get('user_check')#客戶端
+            print(env_type,game_type,user)
+            game_list = []# 存放前台選擇的 測試項目
+            '''
+            if admin_check == '1'  and user_check == '1':#兩者皆勾選
+                print('管理/用戶 皆勾選')
+                game_list.append(request.form.get('admin_name'))
+                game_list.append(request.form.get('user_name'))
+            elif  admin_check == '1':
+                print('管理端勾選')
+                game_list.append(request.form.get('admin_name'))
+                request.form.get('admin_name')
+            elif user_check == '1':
+                game_list.append(request.form.get('user_name'))
+                print('用戶端勾選')
+            else:
+                print('錯誤需確認')
+            '''
+            game_list.append(request.form.get('user_name'))
+            print(game_list)
 
+            api_key = client_type["api_key"][int(game_type)]
+            api_url = client_type["api_url"][int(game_type)]
+            supplier_type = client_type["supplier_type"][int(game_type)]
+            supplier_user = client_type["supplier_user"][int(game_type)]
+            clientId = client_type["supplier_user"][int(game_type)]
+            client_detail = GameBox.GameBox.GameBox_Con(client_id=clientId,env=int(env_type))
+            url = url_dict[int(env_type)][0]
+            url_type = '%s, '%url+client_type['game_type'][int(game_type)]+url_dict[int(env_type)][1]
+            GameBox.suite_test(game_type=int(game_type),url_type=url_type,clientId=clientId,user=user,client_detail=client_detail,
+            api_key=api_key,api_url=api_url,supplier_type=supplier_type,url=url,game_list=game_list,user_items=user_items,admin_items=admin_items,cq_9Key=cq_9Key)
+
+            return 'ok'
+        print(admin_items,user_items)
+        return render_template('gameBox.html',user_items=user_items,admin_items=admin_items)
+        
+    @app.route('/fund_fee',methods=["POST","GET"])# 充值/提線 手續費查詢
+    def fund_fee():
+        if request.method == "POST":
+            select_type = request.form.get('type')
+            env_type = request.form.get('env_type')
+            user = request.form.get('user')
+            print(select_type,user)
+            #總代: 因為parent_id  為 -1.需用 user_iD查
+            AutoTest.Joy188Test.select_Fee(AutoTest.Joy188Test.get_conn(int(env_type)),select_type,user)
+            fund_fee = AutoTest.fund_fee
+            print(fund_fee)
+            if select_type == "fund":# 充值
+                type_msg = "充值"
+                if len(fund_fee) == 0:# 總代線沒設定
+                    rule_msg = "總代線沒設定,走平台設定"
+                else:# 總代線有設定手續費
+                    FF_list = []# 存放平台的 充值
+                    for key in fund_fee:
+                        if fund_fee[key][0] in [i for i in range(1,16)]:# [0] 是bank_id  , [1-15] 是 PC銀行卡
+                            ff_name =  "PC銀行卡"
+                        elif fund_fee[key][2] == 1:#APP
+                            ff_name = "APP%s"%fund_fee[key][3]
+                        elif fund_fee[key][2] == 0:#PC
+                            ff_name = "PC%s"%fund_fee[key][3]
+                        FF_list.append(ff_name)
+                    rule_msg = '走總代線設定%s'%set(FF_list)
+                        
+                data = {"手續費類型": type_msg,"手續費規則":rule_msg,"備註":"總代線有設定走平台/不管用戶身分"}
+            else:# 提線
+                AutoTest.Joy188Test.select_userLvl(AutoTest.Joy188Test.get_conn(int(env_type)),user)
+                user_lvl = AutoTest.user_lvl
+                type_msg = "提現"
+                if len(fund_fee) == 0:# 總代線沒設定
+                    rule_msg = "總代線沒設定,走平台設定"
+                elif fund_fee[0][0] == 0:#手續費有設定,開關
+                    rule_msg = "總代線开設定關閉,走平台"
+                elif user_lvl[0][1] == 0:#非星級
+                    rule_msg = "一般用戶"
+                    if user_lvl[0][0] >= 1:#柏金 vip
+                        rule_msg = rule_msg + ",vip/走平台"
+                    else:
+                         rule_msg = rule_msg + ",非vip/走總代線設定"
+                elif user_lvl[0][1] == 1:#星級
+                    rule_msg = "星級用戶"
+                    if user_lvl[0][0] >= 3:#星級 3 等以上 vip
+                        rule_msg = rule_msg + ",vip/走平台"
+                    else:
+                        rule_msg = rule_msg + ",非vip/走總代線設定"
+                data = {"手續費類型": type_msg,"手續費規則":rule_msg}
+            frame = pd.DataFrame(data,index=[0])
+            print(frame)
+            return frame.to_html()
+        return render_template('FundFee.html')
     @app.route('/login_cookie',methods=["POST"])# 傳回登入cookie
     def login_cookie():
         env_url = request.form.get('env_type')
