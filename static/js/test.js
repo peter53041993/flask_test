@@ -31,11 +31,18 @@ document.writeln("          <a class=\'dropdown-item\' href=\'game_result\'>玩�
 document.writeln("          <a class=\'dropdown-item\' href=\'user_active\'>有效用戶/第三方銷量</a>");
 document.writeln("          <a class=\'dropdown-item\' href=\'url_token\'>註冊碼/註冊連結/用戶資訊</a>");
 document.writeln("          <a class=\'dropdown-item\' href=\'sun_user\'>太陽成/申博用戶</a>");
+document.writeln("          <a class=\'dropdown-item\' href=\'fund_fee\'>充值/提現手續費</a>");
+//document.writeln("          <a class=\'dropdown-item\' href=\'fund_limit\'>充值限制</a>");
 document.writeln("        </div>");
 document.writeln("    </div>");
 document.writeln("    <div class=\'btn-group\'>");
 document.writeln("        <button type=\'button\' class=\'btn btn-info\'  onclick=location.href=\'/autoTest\'>");
 document.writeln("          自動化測試");
+document.writeln("        </button>");
+document.writeln("    </div>");
+document.writeln("    <div class=\'btn-group\'>");
+document.writeln("        <button type=\'button\' class=\'btn btn-warning\'  onclick=location.href=\'/gameBox\'>");
+document.writeln("          GAMEBOX");
 document.writeln("        </button>");
 document.writeln("    </div>");
 /*document.writeln("    <div class=\'btn-group\'>");
@@ -44,7 +51,7 @@ document.writeln("          股票");
 document.writeln("        </button>");
 document.writeln("    </div>");*/
 document.writeln("    <div class=\'btn-group\'>");
-document.writeln("        <button type=\'button\' class=\'btn btn-warning\'  onclick=location.href=\'/api_test\'>");
+document.writeln("        <button type=\'button\' class=\'btn btn-danger\'  onclick=location.href=\'/api_test\'>");
 document.writeln("          API測試");
 document.writeln("        </button>");
 document.writeln("    </div>");
@@ -76,4 +83,13 @@ function form_trim(form_element){ // 輸入框,去除 空白
     });
     var serializedForm = $.param(formArr);
     return serializedForm
+}
+
+function button_disabled(element){// 按扭送出後  置灰
+    var element_disabled = $(element).attr('disabled','true');
+    return element_disabled
+}
+function button_RemoveDisabeld(element){// 取消置灰{
+    var element_remove  = $(element).removeAttr('disabled');
+    return element_remove
 }
