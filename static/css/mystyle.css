@@ -9,3 +9,6 @@ body > main > table > thead > tr > th {
 body > main > table > tbody > tr {
     text-align: center;
 }
+a.dropdown-item:hover {
+    background: radial-gradient(#eaabf5, transparent);
+}
