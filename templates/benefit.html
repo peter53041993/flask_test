@@ -21,6 +21,14 @@
     </script>
     <script>
         $(document).ready(function(){
+            var op= document.getElementById('benefit');
+            var opt = op.getElementsByTagName('option');        
+            opt[0].selected = true //設置預設 ,日工資
+            
+            var today_month =  new Date().getMonth()+1//當月
+            var today_day =  new Date().getDate()-1// -1 用意 ,統計日期 最新 為昨日
+            //var ben_today = document.getElementById('day_day').getElementsByTagName('option')[today_day].selected= true//日工資 日期預設
+        
             $("#benefit").change(function(){
             var testval= $("#benefit").val();
             console.log(testval)
@@ -37,6 +45,8 @@
             for (i=1;i<=31;i++){
                 addOption(day_day,i,i)//設置日期
             }
+            $('#day_month option[value='+today_month+']').attr('selected','selected')
+            $('#day_day option[value='+today_day+']').attr('selected','selected')
         })
     </script>
     <script type="text/javascript">
@@ -81,7 +91,7 @@
                 }
             }        
     </script>
-    <script>
+    <!--script>
         window.onload=function(){//頁面整理預設  選項為工資
         var op= document.getElementById('benefit');
         var opt = op.getElementsByTagName('option');        
@@ -89,11 +99,11 @@
         
         var today_month =  new Date().getMonth()+1//當月
         var today_day =  new Date().getDate()-1// -1 用意 ,統計日期 最新 為昨日
-        var ben_month = document.getElementById('month_month').getElementsByTagName('option')[today_month].selected= true//分紅 月份預設
-        var ben_day = document.getElementById('day_month').getElementsByTagName('option')[today_month].selected= true//日工資 月份預設
-        var ben_today = document.getElementById('day_day').getElementsByTagName('option')[today_day].selected= true//日工資 日期預設
+        var select_montth = $('#day_month option[value='+today_month+']').attr('selected','selected')
+        var select_day = $('#day_day option[value='+today_day+']').attr('selected','selected')
+        //var ben_today = document.getElementById('day_day').getElementsByTagName('option')[today_day].selected= true//日工資 日期預設
         }
-    </script>
+    </script-->
 {% endblock %}
 {% block main %}
     <h1 style="font-size: 15px;">福利中心查詢</h1>
