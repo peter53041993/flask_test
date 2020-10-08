@@ -91,7 +91,6 @@
             }
             //console.log(data)
 
-            event.preventDefault();
             var source = new EventSource("/progress");
             //var msg = 'start'
             source.onmessage = function (event) {
@@ -131,7 +130,6 @@
             }
             //console.log(data)
 
-            event.preventDefault();
             var source = new EventSource("/progress");
             //var msg = 'start'
             source.onmessage = function (event) {

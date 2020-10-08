@@ -333,6 +333,7 @@ def auto_test():
                     f"AutoTest.suite_test(test_cases={test_cases}, user_name={user_name}, "
                     f"env_config.get_domain()={env_config.get_domain()}, red={red}), "
                     f"money_unit={money_unit}, award_mode={award_mode}")
+                Config.test_cases_init(sum(len(cases) for cases in test_cases))  # 初始化測試案例數目，後續供進度條讀取百分比
                 AutoTest.suite_test(test_cases, user_name, env_config.get_domain(),
                                     red, money_unit, award_mode)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
                 return redirect('report')
@@ -353,16 +354,14 @@ def report():
 @app.route('/progress')
 def progress():  # 執行測試案例時, 目前 還位判斷 request街口狀態,  需 日後補上
     def generate():
-        x = 0
-        # global response_status
-        # print(response_status)
-        while x <= 100:
-            # print(response_status)
-            yield "data:" + str(x) + "\n\n"  # data內容, 換行
-            x = x + 1
+        percent = 0
+        while percent <= 100:
+            if Config.CASE_AMOUNT:
+                percent = Config.CASE_AMOUNT[0] / Config.CASE_AMOUNT[1] * 100
+            yield "data:" + str(math.floor(percent)) + "\n\n"  # data內容, 換行
             sleep(0.5)
-        # yield "data:"+ str(100)
-
+            print(f'percent = {percent}, CASE_AMOUNT = {Config.CASE_AMOUNT} // print')
+        print(f'While loop stopped !')
     return Response(generate(), mimetype='text/event-stream')
 
 

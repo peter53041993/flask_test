@@ -105,7 +105,7 @@ class BaseBetPage(BasePages.BasePage):
                 expected_conditions.presence_of_element_located((By.XPATH, self.xpath_bet_success)))
             print('投注結果驗證通過')
         except Exception as e:
-            logger.info(trace_log(e))
+            logger.error(trace_log(e))
             print('取得投注結果失敗')
             raise e
 
@@ -123,7 +123,7 @@ class BaseBetPage(BasePages.BasePage):
         print('self.game_types = {}'.format(self.game_types))
         try:
             if len(self.game_types) > 0:
-                self.logger.debug("len(self.gameTypes) : %s" % len(self.game_types))
+                # self.logger.debug("len(self.gameTypes) : %s" % len(self.game_types))
                 for gType in range(index_t, len(self.game_types)):
                     _temp_t = gType
                     # self.logger.debug("_temp_t:%s" % _temp_t)
@@ -150,19 +150,19 @@ class BaseBetPage(BasePages.BasePage):
             methods = self.get_current_methods()
             for method in range(index_m, len(methods)):
                 _temp_m = method
-                self.logger.debug("_temp_m:%s" % _temp_m)
+                # self.logger.debug("_temp_m:%s" % _temp_m)
                 methods[method].click()
-                self.logger.info(">>>%s method clicked" % methods[method].get_attribute('innerHTML'))
+                # self.logger.info(">>>%s method clicked" % methods[method].get_attribute('innerHTML'))
                 sleep(self._waitTime)  # 供JS運行時間
                 games = self.get_current_games()
                 for game in range(index_g, len(games)):
                     _temp_g = game
-                    self.logger.debug("_temp_g:%s" % _temp_g)
+                    # self.logger.debug("_temp_g:%s" % _temp_g)
                     if self.link == '/gameBet/jlffc':
                         methods[method].click()  # 為配合吉利分分彩新增
-                        self.logger.info(">>>%s method clicked." % methods[method].get_attribute('innerHTML'))
+                        # self.logger.info(">>>%s method clicked." % methods[method].get_attribute('innerHTML'))
                     games[game].click()
-                    self.logger.info(">%s game clicked." % games[game].get_attribute('innerHTML'))
+                    # self.logger.info(">%s game clicked." % games[game].get_attribute('innerHTML'))
                     sleep(0.1)
                     self.add_random_bet_1()
                     sleep(self._waitTime)

@@ -993,7 +993,7 @@ class ApiTestApp(unittest.TestCase):
         self.test_AppBalance()
 
     def tearDown(self) -> None:
-        pass
+        Config.test_cases_update(1)
 
 
 class ApiTestAPP_YFT(unittest.TestCase):
@@ -1394,3 +1394,6 @@ class ApiTestAPP_YFT(unittest.TestCase):
                 f'\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
         else:
             self.fail(f'投注失敗，接口返回：{bet_response}')
+
+    def tearDown(self) -> None:
+        Config.test_cases_update(1)
