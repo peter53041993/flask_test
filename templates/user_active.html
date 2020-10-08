@@ -18,9 +18,11 @@
             }
             if($("#user").val() =="" ){//用戶名為空
                 alert("請輸入用戶名");
-                location.reload()
+                return false;
             }
             else {
+            button_disabled('#check_FF')
+            button_disabled('#check_Third')
             $.ajax({
                 url:"/user_active",
                 type:"POST",
@@ -34,11 +36,13 @@
                     console.log(typeof(data))
                     if (data=='此環境沒有該用戶'){
                         alert(data);
-                        location.reload()  
+                        return false; 
                     }
                     else{
                     console.log(data);
                     $("#user_detail").after(data)}
+                    button_RemoveDisabeld("#check_FF")
+                    button_RemoveDisabeld("#check_Third")
         
                 }
             })
@@ -52,30 +56,35 @@
             }
             if($("#user").val() =="" ){//用戶名為空
                 alert("請輸入用戶名");
-                location.reload()
+                return false;
             }
             else {
-            $.ajax({
-                url:"/app_bet",
-                type:"POST",
-                //dataType: "json",
-                headers:{
-                        Accept:"application/json; charset=utf-8"
-                    },
-                data:form_trim("#form1"),
-                success:function(data){
-                    game_detail = data;
-                    console.log(typeof(data))
-                    if (data=='此環境沒有該用戶'){
-                        alert(data);
-                        location.reload()  
+                button_disabled('#check_FF')
+                button_disabled('#check_Third')    
+                $.ajax({
+                    url:"/app_bet",
+                    type:"POST",
+                    //dataType: "json",
+                    headers:{
+                            Accept:"application/json; charset=utf-8"
+                        },
+                    data:form_trim("#form1"),
+                    success:function(data){
+                        game_detail = data;
+                        console.log(typeof(data))
+                        if (data=='此環境沒有該用戶'){
+                            alert(data);
+                            return false;  
+                        }
+                        else{
+                        console.log(data);
+                        $("#user_detail").after(data)
+                        }
+                        button_RemoveDisabeld("#check_FF")
+                        button_RemoveDisabeld("#check_Third")
+            
                     }
-                    else{
-                    console.log(data);
-                    $("#user_detail").after(data)}
-        
-                }
-            })
+                })
             }   
             }
         
@@ -99,8 +108,8 @@
         請輸入用戶名<input type="text" id="user" name="user"
             size="16">
         </br> 
-        <p><input type="button" onclick="check()" value="有效用戶查詢"></p>
-        <p><input type="button" onclick="check2()" value="第三方銷量計算"></p>
+        <p><input type="button" onclick="check()" id="check_FF" value="4.0有效用戶查詢"></p>
+        <p><input type="button" onclick="check2()" id="check_Third" value="第三方銷量計算"></p>
     </form>
     <div id='user_detail'>
     </div> 
