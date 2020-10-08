@@ -21,7 +21,7 @@ lottery_3d = ['v3d']
 lottery_115 = ['sd115', 'jx115', 'gd115', 'sl115']
 lottery_k3 = ['ahk3', 'jsk3']
 lottery_sb = ['jsdice', "jldice1", 'jldice2']
-lottery_fun = ['pk10', 'xyft']
+lottery_fun = ['pk10', 'xyft','xyft168']
 lottery_noRed = ['fc3d', 'n3d', 'np3', 'p5']  # 沒有紅包
 
 
@@ -78,7 +78,7 @@ def get_rediskey(envs):  # env參數 決定是哪個環境
     r = redis.Redis(connection_pool=pool)
 
 
-def get_token(envs, user):
+def get_token(envs, user):#查詢用戶 APP token 時間
     get_rediskey(envs)
     global redis_
     redis_ = r_keys = (r.keys('USER_TOKEN_%s*' % re.findall(r'[0-9]+|[a-z]+', user)[0]))
@@ -107,7 +107,7 @@ class Joy188Test(unittest.TestCase):
         return rx
 
     @staticmethod
-    def get_conn(env):  # 連結數據庫 env 0: dev02 , 1:188
+    def get_conn(env):  # 連結數據庫 env 0: dev02 , 1:188 , 2 : 生產
         if env == 2:
             username = 'rdquery'
             service_name = 'gamenxsXDB'
@@ -275,6 +275,40 @@ class Joy188Test(unittest.TestCase):
                 userid.append(i[0])
                 # joint_venture.append(i[1])
         conn.close()
+    @staticmethod
+    def select_Fee(conn,type_,user):#查詢 用戶 總代線 手續費
+        with conn.cursor() as cursor:
+            if type_ == 'fund':#充值
+                sql = "SELECT fee.bank_id, fee.fee,fee.mobile,bank.name FROM TOP_AGENT_RECHARGE_FEE fee \
+                INNER JOIN user_customer user_ ON fee.user_id = user_.id inner join FUND_BANK bank  on fee.bank_id = bank.code \
+                WHERE user_.account in (select regexp_substr(user_chain,'[^/]+') from user_customer where account = '%s')"%user
+            else:#提線
+                sql = "SELECT fee.enable,fee.bank_fee,fee.bank_limit_count,fee.usdt_fee,fee.usdt_limit_count, \
+                user_.vip_lvl,user_.new_vip_flag FROM top_agent_withdraw_fee fee \
+                INNER JOIN user_customer user_ ON fee.user_id = user_.id WHERE \
+                user_.account in (select regexp_substr(user_chain,'[^/]+') from user_customer where account = '%s')"%user
+            print(sql)
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global fund_fee
+            fund_fee = {}
+            for num,index in enumerate(rows):
+                fund_fee[num] = index
+        conn.close()
+
+    @staticmethod 
+    def select_lotteryPoint(conn,lotteryid,user):# 用戶彩種反點
+        with conn.cursor() as cursor:
+            sql = "SELECT  user_.account,user_.register_date,game_award.direct_ret,game_award_group.award_name \
+            FROM game_award_user_group game_award INNER JOIN user_customer user_ ON game_award.userid = user_.id \
+            INNER JOIN game_award_group ON game_award.sys_award_group_id = game_award_group.id \
+            WHERE game_award.lotteryid = %s AND user_.account = '%s' and game_award.bet_type = 1"%(lotteryid,user)
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global lottery_point
+            lottery_point = {}
+            for index,content in enumerate(rows):
+                lottery_point[index] = content
 
     @staticmethod
     def select_gameResult(conn, result):  # 查詢用戶訂單號, 回傳訂單各個資訊
@@ -352,6 +386,8 @@ class Joy188Test(unittest.TestCase):
             if detail == '':
                 sql = "select actual_bonus,lhc_theory_bonus from game_award where LOTTERYID = %s and bet_type_code like '%%%s%%' \
                 "%(lotteryid,bet_type_code)
+            elif detail == 'FF_bonus':# 用平台獎金 去都出 理論獎金  , 目前 PCDD 賠率使用
+                sql = "SELECT actual_bonus,lhc_theory_bonus FROM game_award WHERE lotteryid = %s"%lotteryid
             elif type(detail) == int:# 使用 award_group_id  來看
                 sql = "select actual_bonus from game_award where LOTTERYID=%s and  bet_type_code = '%s' \
                 and award_group_id = %s"%(lotteryid,bet_type_code,detail)
@@ -364,7 +400,10 @@ class Joy188Test(unittest.TestCase):
             global bonus
             bonus = {}
             for index,tuple_ in enumerate(rows):
-                bonus[index] = tuple_
+                if detail == "FF_bonus":#抓出來需做 數值上的處理
+                    bonus[float(tuple_[0]/10000)] =  tuple_[1]/10000 #用平台獎金當key : 理論獎金value        
+                else:
+                    bonus[index] = tuple_
 
     @staticmethod
     def select_FundRed(conn, user,type_):  #充值 紅包 查尋  各充值表
@@ -476,6 +515,17 @@ class Joy188Test(unittest.TestCase):
                 for i in tuple_:
                     # print(i)
                     user_fund.append(i)
+        conn.close()
+    @staticmethod
+    def select_userLvl(conn,user):#用戶 vip 和是否為 星級
+        with conn.cursor() as cursor:
+            sql = "select vip_lvl,new_vip_flag from user_customer where account = '%s'"%user
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            global user_lvl 
+            user_lvl = []
+            for i in rows:
+                user_lvl.append(i)
         conn.close()
 
     @staticmethod
@@ -666,6 +716,8 @@ class Joy188Test(unittest.TestCase):
             ran = Joy188Test.random_mul(4)
             ball = ['-' if i != ran else str(Joy188Test.random_mul(9)) for i in range(5)]
             mul = Joy188Test.random_mul(2222)
+        elif test == 'hezhi':
+            pass
         else:
             mul = Joy188Test.random_mul(1)
         if mul_id == 0:# 生產環境 倍數寫死 1
@@ -680,14 +732,14 @@ class Joy188Test(unittest.TestCase):
         game_group = {'wuxing': u'五星', 'sixing': u'四星', 'qiansan': u'前三', 'housan': u'後三',
                       'zhongsan': u'中三', 'qianer': u'前二', 'houer': u'後二', 'xuanqi': u'選ㄧ', 'sanbutonghao': u'三不同號',
                       'santonghaotongxuan': u'三同號通選', 'guanya': u'冠亞', 'biaozhuntouzhu': u'標準玩法', 'zhengma': u'正碼',
-                      'p3sanxing': u'P3三星', 'renxuan': u'任選'}
+                      'p3sanxing': u'P3三星', 'renxuan': u'任選','zhenghe':'整合'}
 
         game_set = {
             'zhixuan': u'直選', 'renxuanqizhongwu': u'任選一中一', 'biaozhun': u'標準', 'zuxuan': u'組選'
-            , 'pingma': u'平碼', 'putongwanfa': u'普通玩法'}
+            , 'pingma': u'平碼', 'putongwanfa': u'普通玩法','hezhi':'和值'}
         game_method = {
             'fushi': u'複式', 'zhixuanfushi': u'直選複式', 'zhixuanliuma': u'直選六碼',
-            'renxuan7': u'任選7'
+            'renxuan7': u'任選7','hezhi':'和值'
         }
 
         group_ = Joy188Test.play_type()  # 建立 個隨機的goup玩法 ex: wuxing,目前先給時彩系列使用
@@ -711,13 +763,14 @@ class Joy188Test(unittest.TestCase):
             8: ["zhengma.pingma.zhixuanliuma", "04"],
             9: ["p3sanxing.zhixuan.p3fushi", "9,1,0", ],
             10: ["renxuan.putongwanfa.renxuan7", "09,13,16,30,57,59,71"],
-            11: ["chungtienpao.chungtienpao.chungtienpao", "1.01"]  # 快開
+            11: ["chungtienpao.chungtienpao.chungtienpao", "1.01"],# 快開
+            12: ["zhenghe.hezhi.hezhi","3"]#pc蛋蛋
         }
 
         if lottery in lottery_sh:  # 時彩系列
             num = 0
             play_ = u'玩法名稱: %s.%s.%s' % (game_group[group_], game_set['zhixuan'],
-                                         game_method['fushi'])
+            game_method['fushi'])
 
         elif lottery in lottery_3d:
             num = 1
@@ -765,17 +818,21 @@ class Joy188Test(unittest.TestCase):
         elif lottery == 'bjkl8':
             num = 10
             play_ = u'玩法名稱: %s.%s.%s' % (game_group['renxuan'], game_set['putongwanfa'],
-                                         game_method['renxuan7'])
+            game_method['renxuan7'])
+        elif lottery == 'pcdd':
+            num = 12
+            play_ = u'玩法名稱: %s.%s.%s'%(game_group['zhenghe'],game_set['hezhi'],
+            game_method['hezhi'])
         else:
             num = 11
-            # play_ = u'玩法名稱: 沖天炮
+            play_ = u'玩法名稱: 沖天炮'
         return test_dicts[num][0], test_dicts[num][1]
 
     @staticmethod
     def req_post_submit(account, lottery, data_, moneyunit, awardmode,cancel_):
         try:
-            awardmode_dict = {0: u"非一般模式", 1: u"非高獎金模式", 2: u"高獎金"}
-            money_dict = {1: u"元模式", 0.1: u"分模式", 0.01: u"角模式"}
+            awardmode_dict = {1: u"一班模式", 2: u"高獎金"}
+            money_dict = {1: u"元模式", 0.1: u"角模式", 0.01: u"分模式"}
 
             header = {
                 'Cookie': "ANVOID=" + cookies_[account],
@@ -837,14 +894,22 @@ class Joy188Test(unittest.TestCase):
     @staticmethod
     def test_PcPlan():
         "追號測試"
+
         awardmode = awardmode_type[0]
         header = {
             'Cookie': "ANVOID=" + cookies_[user_],
             'User-Agent': userAgent
         }
         for lottery in lottery_list:
+            if awardmode_type[0] == '0':#預設
+                if lottery in ['xyft','btcctp','btcffc','xyft168']:
+                   awardmode = 2
+                else:
+                  awardmode = 1  
+            else: 
+                awardmode = int(awardmode_type[0])
             FF_Joy188.FF_().Pc_Submit(lottery=lottery,envs=envs,account=user_,em_url=em_url,header=header,awardmode=awardmode,
-            type_=10,stop=1)
+            type_=10,stop="")
 
     @staticmethod
     # @jit_func_time
@@ -854,7 +919,7 @@ class Joy188Test(unittest.TestCase):
             mul_id = 0# 生產環境 倍數 需寫死最低, 能投注即可
             print("\n"+'特定環境 使用最低倍數1')
         else:
-            mul_id = 1
+            mul_id = 1# 測試環境
         account = user_
         cancel_ = cancel_type[0]
         if red_type == 'yes':
@@ -863,7 +928,6 @@ class Joy188Test(unittest.TestCase):
             print('不使用紅包投注')
         if cancel_ == '0':
             print('投注完不撤銷')
-
         else:
             print('投注完馬上撤銷')
         while True:
@@ -873,17 +937,14 @@ class Joy188Test(unittest.TestCase):
                     global mul_  # 傳回 投注出去的組合訊息 req_post_submit 的 content裡
                     global mul
                     ball_type_post = Joy188Test.game_type(i,mul_id) #找尋彩種後, 找到Mapping後的 玩法後內榮 ,時時彩倍數也在這
-
+                    
                     if awardmode_type[0] == '0':# 頁面獎金玩法使用 預設
-                        awardmode =1
                         if i in ['btcctp','xyft','btcffc']:
                             awardmode = 2
                         else:
-                            pass
-                    elif awardmode_type[0] == '1':#頁面使用一般
-                        awardmode = 1
-                    elif awardmode_type[0] == '2':#高獎金
-                        awardmode =2
+                            awardmode = 1
+                    else:# 頁面使用  一班 或 高獎金 選像
+                        awardmode = int(awardmode_type[0])
                     print('awardmode: %s'%awardmode)
                     
                     if money_type[0] == '1':#使用元模式
@@ -900,6 +961,8 @@ class Joy188Test(unittest.TestCase):
                         mul = Joy188Test.random_mul(1)
                     elif i in lottery_sb:#骰寶只支援  元模式
                         moneyunit = 1
+                    elif i == 'pcdd':
+                        mul = 1
 
                     mul_ = (u'選擇倍數: %s' % mul)
                     amount = 2 * mul * moneyunit
@@ -916,28 +979,34 @@ class Joy188Test(unittest.TestCase):
                     # print(game_type)
 
                     post_data = {"gameType": i, "isTrace": isTrace, "traceWinStop": traceWinStop,
-                                 "traceStopValue": traceWinStop,
-                                 "balls": [{"id": 1, "ball": ball_type_post[1], "type": ball_type_post[0],
-                                            "moneyunit": moneyunit, "multiple": mul, "awardMode": awardmode,
-                                            "num": 1}], "orders": plan_, "amount": len_ * amount}  # 不使用紅包
+                    "traceStopValue": traceWinStop,
+                    "balls": [{"id": 1, "ball": ball_type_post[1], "type": ball_type_post[0],
+                    "moneyunit": moneyunit, "multiple": mul, "awardMode": awardmode,
+                    "num": 1}], "orders": plan_, "amount": len_ * amount}  # 不使用紅包
 
                     post_data_lhc = {"balls": [{"id": 1, "moneyunit": moneyunit, "multiple": 1, "num": 1,
-                                                "type": ball_type_post[0], "amount": amount, "lotterys": "13",
-                                                "ball": ball_type_post[1], "odds": "7.5"}],
-                                     "isTrace": 0, "orders": plan_,
-                                     "amount": amount, "awardGroupId": 202}
+                    "type": ball_type_post[0], "amount": amount, "lotterys": "13",
+                    "ball": ball_type_post[1], "odds": "7.5"}],
+                    "isTrace": 0, "orders": plan_,
+                    "amount": amount, "awardGroupId": 202}
 
                     post_data_sb = {"gameType": i, "isTrace": 0, "multiple": 1, "trace": 1,
-                                    "amount": amount,
-                                    "balls": [{"ball": ball_type_post[1],
-                                               "id": 11, "moneyunit": moneyunit, "multiple": 1, "amount": amount,
-                                               "num": 1,
-                                               "type": ball_type_post[0]}],
-                                    "orders": plan_}
+                    "amount": amount,
+                    "balls": [{"ball": ball_type_post[1],
+                    "id": 11, "moneyunit": moneyunit, "multiple": 1, "amount": amount,
+                    "num": 1,"type": ball_type_post[0]}],"orders": plan_}
 
-                    if i in 'lhc':
+                    post_data_pcdd = {"balls":[{"id":1,"moneyunit":1,"multiple":1,"num":1,
+                    "type":"zhenghe.hezhi.hezhi","amount":50,"ball":"3","odds":90,"awardMode":1}],
+                    "orders":plan_,"redDiscountAmount":0,"amount":"50.00","isTrace":0,
+                    "traceWinStop":0,"traceStopValue":-1}
+
+                    #post_data = FF_Joy188.FF_().submit_json(account,i,awardmode,0,0 ,-1,1,envs)
+
+                    if i == 'lhc':
                         Joy188Test.req_post_submit(account, 'lhc', post_data_lhc, moneyunit, awardmode,cancel_)
-
+                    elif i == 'pcdd':
+                        Joy188Test.req_post_submit(account, 'pcdd', post_data_pcdd, moneyunit, awardmode,cancel_)
                     elif i in lottery_sb:
                         Joy188Test.req_post_submit(account, i, post_data_sb, moneyunit, awardmode,cancel_)
                     else:# 一般投注
@@ -949,9 +1018,9 @@ class Joy188Test(unittest.TestCase):
                 Joy188Test.select_RedBal(Joy188Test.get_conn(1), user)
                 print('紅包餘額: %s' % (int(red_bal[0]) / 10000))
                 break
-            except KeyError as e:
-                print(u"輸入值有誤")
-                break
+            #except KeyError as e:
+                #print(u"輸入值有誤")
+                #break
             except IndexError as e:
                 print(e)
                 break
@@ -3034,11 +3103,8 @@ def suite_test(testcase,username,env,red,awardmode,money,submit_cancel,lottery_n
     env_config_ = Config.EnvConfig(env)
     env_app_config_ = Config.EnvConfigApp(env)
     content = {}
-    # pc = []
-    # app =[]
-    # driver =[]
     suite_list = []
-    # threads =[]
+
     if lottery_name == 'all':
         lottery_list = []
         for lottery in FF_Joy188.FF_().lottery_dict.keys():
@@ -3056,8 +3122,7 @@ def suite_test(testcase,username,env,red,awardmode,money,submit_cancel,lottery_n
     return_cancel(submit_cancel)
     try:
         suite = unittest.TestSuite()
-        # suite_pc = unittest.TestSuite()
-        # suite_app = unittest.TestSuite()
+
         now = time.strftime('%Y_%m_%d %H-%M-%S')
         # print(len(testcase))
         for i in testcase:            
