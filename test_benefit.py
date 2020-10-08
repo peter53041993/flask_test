@@ -109,8 +109,8 @@ def select_red(conn,date_start,date_end,account):
         SUM(NVL(A.total_ret,0)) AS V3,\
         SUM(NVL(A.total_red_discount,0)) AS V4,\
         B.U_ID V7,\
-        SUM(nvl(CASE WHEN a.lotteryid IN(99115,99203) THEN ceil(a.total_amount) ELSE 0 END,0) ) AS btc_xyft_amount,\
-        SUM(nvl(CASE WHEN a.lotteryid IN(99115,99203) THEN ceil(a.total_red_discount) ELSE 0 END,0) ) AS btc_xyft_red_discount,\
+        SUM(nvl(CASE WHEN a.lotteryid IN(99115,99203,99205) THEN ceil(a.total_amount) ELSE 0 END,0) ) AS btc_xyft_amount,\
+        SUM(nvl(CASE WHEN a.lotteryid IN(99115,99203,99205) THEN ceil(a.total_red_discount) ELSE 0 END,0) ) AS btc_xyft_red_discount,\
         SUM(nvl(CASE WHEN substr(a.bet_type_code,0,3) in ('47_','48_','50_','51_','52_') THEN ceil(a.total_amount) ELSE 0 END,0) )\
         AS super_amount,\
         SUM(nvl(CASE WHEN substr(a.bet_type_code,0,3) in ('47_','48_','50_','51_','52_') THEN ceil(a.TOTAL_RED_DISCOUNT)  ELSE 0 END,0) ) AS super_red_discount,\
@@ -233,7 +233,7 @@ def game_report_day(user,month,day,cookies,env):#盈虧報表數據,   日工資
 
         red_total = (red_xybtc*0.2)+(red_2000*0.8) + red_remain # 這裡將 分別的紅包 + 剩下的紅包  ,再拿去給有效銷量減掉
         print(red_total)
-        effectiveBet = round(effectiveBet - red_total +  0.2*(sbdxdsBet-red_sb),4)#最後需加上  骰寶實際的投注 (需減掉 紅包 骰寶)
+        effectiveBet_ = round(effectiveBet - red_total +  0.2*(sbdxdsBet-red_sb),4)#最後需加上  骰寶實際的投注 (需減掉 紅包 骰寶)
 
         header['Content-Type'] = 'application/json; charset=UTF-8'# 為了真人 加header
         #fhll 需加 content_type這段內容, 但4.0的盈虧不需要 (所以先做4.0,再做真人)
@@ -247,7 +247,7 @@ def game_report_day(user,month,day,cookies,env):#盈虧報表數據,   日工資
         fh_activityGifts = 0#真人活動禮金   都是0
 
         #日工資 有效消量: 需計算 20% 大小單雙   ,然後再加上 真人實際投注額 
-        effectiveBet_day = effectiveBet + trueBet
+        effectiveBet_day = effectiveBet_ + trueBet
         #日工資總銷量 : 4.0總銷量 + 真人銷量 
         Allbet_day = All_bet + trueBet 
 
@@ -273,9 +273,9 @@ def game_report_day(user,month,day,cookies,env):#盈虧報表數據,   日工資
         result_data['fh_ret']=fh_ret
         result_data['fh_activityGifts']=fh_activityGifts
         result_data['totalRedDiscount']=totalRedDiscount
-        result_data['red_xybtc'] = red_xybtc
-        result_data['red_2000'] = red_2000
-        result_data['red_sb'] = red_sb
+        result_data['red_xybtc'] = red_xybtc*0.2
+        result_data['red_2000'] = red_2000*0.8
+        result_data['red_sb'] = red_sb*0.2
         result_data['red_remain'] = red_remain
 
 
