@@ -695,7 +695,7 @@ class ApiTestPC(unittest.TestCase):
         print(f'紅包餘額: {int(red_bal[0] / 10000)}')
 
     def tearDown(self) -> None:
-        pass
+        Config.test_cases_update(1)
 
 
 class ApiTestPC_YFT(unittest.TestCase):
@@ -1188,3 +1188,6 @@ class ApiTestPC_YFT(unittest.TestCase):
 
         game_name = ['gd11x5', '廣東蘇11選5']
         self.bet_trace(game_name, stop_on_win)
+
+    def tearDown(self) -> None:
+        Config.test_cases_update(1)

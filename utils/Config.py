@@ -20,6 +20,9 @@ chrome_options = Options()
 chrome_options.add_argument("--headless")  # 背景執行
 chrome_options.add_argument("--start-maximized")  # 全螢幕
 
+global CASE_AMOUNT
+
+CASE_AMOUNT = None
 
 class LotteryData:
     lottery_dict = {
@@ -255,3 +258,16 @@ def func_time(func):  # 案例時間
         print(f"用時: {end_}秒")
 
     return wrapper
+
+
+def test_cases_init(amount: int):
+    """全域變數，初始化測試案例數目"""
+    global CASE_AMOUNT
+    CASE_AMOUNT = [0, amount]
+
+
+def test_cases_update(amount: int):
+    """測試案例完成時呼叫"""
+    if not CASE_AMOUNT:
+        raise ValueError("CASE_AMOUNT尚未初始化")
+    CASE_AMOUNT[0] += amount
