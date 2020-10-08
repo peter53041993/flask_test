@@ -27,7 +27,7 @@
                 return false;
             }
             else {
-                $('#submit').attr('disabled','true');
+                button_disabled('#submit')
                 myajax  = $.ajax({ 
                 url:"/game_result",
                 type:"POST",
@@ -38,16 +38,15 @@
                 data: form_trim("#form1"),
                 success:function(data){
                     game_detail = data;
+                    button_RemoveDisabeld('#submit')
                     //console.log(data);
                     if (data=='此環境沒有此訂單號'){
                         alert(data);
-                        $('#submit').removeAttr('disabled');
                         $("#game_code").val('')
                         return false;
                     }
                     else if (data=='沒有該玩法'){
                         alert(data);
-                        $('#submit').removeAttr('disabled');
                         $("#game_type").val('')
                         return false;
                     }
@@ -61,29 +60,15 @@
                         }
                         pretty("body > main > table > tbody > tr > td:nth-child(8)",'#')//理論獎金
                         pretty("body > main > table > tbody > tr > td:nth-last-child(1)",'#')//遊戲說明
-                        $('#submit').removeAttr('disabled');
                     }
-                    },
+                },
                     error: function(data){
                         alert('有錯誤');
-                        $('#submit').removeAttr('disabled');  
+                        button_RemoveDisabeld('#submit')
                     }
-                    })
-                    /*$.when(myajax).done(function (){
-                    $.ajax({
-                    url: "/get_cookie",
-                    type: "GET",
-                    data: {'env_type':  $("#env_type").val()},
-                    success:function(data){
-                        //console.log(data)
-                        $.cookie($("#env_type").val(), data)
-                    }
-
-                    })
-                
-                        })*/
-                }
-                }
+                })
+            }
+        }
     </script>
 {% endblock %}
 {% block main %}
