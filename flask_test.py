@@ -193,19 +193,6 @@ class Flask():
 
     # test_sport('全部')
 
-    @app.route('/form', methods=['POST', 'GET'])
-    def test_form():  # 輸入/form 頁面, 呼叫render_template的html
-        if request.method == "POST":
-            username = request.form['username']  # 在頁面上填的資料
-            email = request.form['email']
-            hobbies = request.form['hobbies']
-            return redirect(url_for('showbio',  # 提交
-                                    username=username,  # 前面為參數,後面為資料
-                                    email=email,
-                                    hobbies=hobbies))  # redirect 重新定向
-        return render_template('bio_form.html')
-
-
     @app.route('/', methods=['GET'])
     def index():
         return render_template('index.html')
@@ -356,7 +343,10 @@ class Flask():
             testInfo['month'] = month
             testInfo['day'] = day
             testInfo['env'] = env
-
+            envConfig = Config.EnvConfig(request.form.get('env'))
+            AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(envConfig.get_env_id()),username,'')
+            if len(AutoTest.userid) == 0:
+                return '此環境沒有該用戶'
             print(testInfo)  # 方便看資料用
 
             if env not in cookies_.keys():  # 請求裡面 沒有 這些環境cookie,就再登入各環境後台
@@ -447,10 +437,10 @@ class Flask():
         return render_template('domain_list.html')
 
 
-    def session_get(url):
+    def domain_get(self,url):# domain_list , url 訪問後  ,回傳 url_dict
         urllib3.disable_warnings()  # 解決 會跳出 request InsecureRequestWarning問題
         header = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36'
+            'User-Agent': FF_Joy188.FF_().user_agent['Pc']
         }
         global r, url_dict
         try:
@@ -465,10 +455,13 @@ class Flask():
     def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
         global url_dict
         urllib3.disable_warnings()  # 解決 會跳出 request InsecureRequestWarning問題
+        print(request.url)#"http://3eeb8f01ffe7.ngrok.io/domain_status"
+        url_split = urlsplit(request.url)
+        request_url = "%s://%s"%(url_split.scheme,url_split.netloc)# 動態切割 當前url
         header = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36'
+            'User-Agent': FF_Joy188.FF_().user_agent['Pc']
         }
-        r = requests.get('http://66dca985.ngrok.io' + '/domain_list', headers=header)
+        r = requests.get(request_url + '/domain_list', headers=header)
         # print(r.text)
         soup = BeautifulSoup(r.text, 'lxml')
         url_dict = {}  # 存放url 和 皆口狀態
@@ -482,7 +475,7 @@ class Flask():
                         url_dict[a.text] = ''
             threads = []
             for url_key in url_dict:
-                threads.append(threading.Thread(target=session_get, args=(url_key,)))
+                threads.append(threading.Thread(target= Flask().domain_get, args=(url_key,)))
             for i in threads:
                 i.start()
             for i in threads:
