@@ -1,13 +1,8 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>福利-分紅</title>
-
-</head>
-<body>
-    <h1 style="font-size: 15px;">福利中心-分紅資料</h1>
+{% extends "base.html" %}
+{% block title %}分紅{% endblock %}
+{% block header %}分紅{% endblock %}
+{% block main %} 
     <div>
-        <p>{{result}}</p>
         <p>用戶名: {{result.user}}</p>
         <p>查詢日期: {{result.startTime}}到{{result.stopTime}},統計範圍: {{result.month_type}},
         註冊天數範圍: {{result.start_bronday}}~{{result.stop_bronday}}</p>
@@ -26,7 +21,4 @@
     <div id='memo' style="font-size:30px;color: #673AB7;">  
         備註:分紅 "總銷量"和"有效銷量"只差別在"超級2000"投注, 如果超級2000 紅包有值,需把 總待盈虧的超級2000-紅包超級2000
     </div>
-
-</body>
-
-</html> 
+{% endblock %}

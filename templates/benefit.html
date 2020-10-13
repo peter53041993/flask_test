@@ -25,7 +25,8 @@
             var opt = op.getElementsByTagName('option');        
             opt[0].selected = true //設置預設 ,日工資
             
-            var today_month =  new Date().getMonth()+1//當月
+            var last_month = new Date().getMonth()//上個月 分紅用
+            var today_month =  new Date().getMonth()+1//當月,日公資
             var today_day =  new Date().getDate()-1// -1 用意 ,統計日期 最新 為昨日
             //var ben_today = document.getElementById('day_day').getElementsByTagName('option')[today_day].selected= true//日工資 日期預設
         
@@ -46,6 +47,7 @@
                 addOption(day_day,i,i)//設置日期
             }
             $('#day_month option[value='+today_month+']').attr('selected','selected')
+            $('#month_month option[value='+last_month+']').attr('selected','selected')
             $('#day_day option[value='+today_day+']').attr('selected','selected')
         })
     </script>
@@ -69,29 +71,37 @@
             }else if(day.val()==""){
                 alert("日期為空");    
             }else{
-                $.ajax({url:"/benefit",
-                type:'POST', 
-                data: form_trim("#form1"),//form表單裡的數據,
-                //dataType:"json",
-                success:function(data){
-                $(window).attr("location","/benefit_"+testval)
-                var msg = 'a';
-                console.log(data);
-                //alert(data);
-                }})
+                button_disabled('#submit')
                 event.preventDefault();
                 var source = new EventSource("/progress");
                 var msg = 'start'
                 source.onmessage = function (event) {
                 $('.progress-bar').css('width', event.data + '%').attr('aria-valuenow', event.data);
-                $('.progress-bar-label').text(event.data + '%');
-                if (msg == 'a') {
-                    source.close()
-                    }}
+                $('.progress-bar-label').text(event.data + '%');}
+                $.ajax({url:"/benefit",
+                type:'POST', 
+                data: form_trim("#form1"),//form表單裡的數據,
+                //dataType:"json",
+                success:function(data){
+                    button_RemoveDisabeld('#submit')
+                    source.close();
+                    if (data=="此環境沒有該用戶"){
+                        alert('此環境沒有該用戶');
+                        return false;
+                    }
+                    else{
+                        $(window).attr("location","/benefit_"+testval)
+                        console.log(data);
+                    //alert(data);
+                    }
+                    //return false;
                 }
-            }        
+                })
+                
+            }
+        }        
     </script>
-    <!--script>
+    <script>
         window.onload=function(){//頁面整理預設  選項為工資
         var op= document.getElementById('benefit');
         var opt = op.getElementsByTagName('option');        
@@ -103,10 +113,10 @@
         var select_day = $('#day_day option[value='+today_day+']').attr('selected','selected')
         //var ben_today = document.getElementById('day_day').getElementsByTagName('option')[today_day].selected= true//日工資 日期預設
         }
-    </script-->
+    </script>
 {% endblock %}
+{% block header %}福利中心{% endblock %}
 {% block main %}
-    <h1 style="font-size: 15px;">福利中心查詢</h1>
 <form id="form1" method="POST">
     <li>
         <label>福利中心選項: </label>
@@ -115,7 +125,7 @@
             <option value="month">分紅</option>
         </select>
         <label>環境: </label>
-        <select  id=day_env name=env>
+        <select  id='day_env' name='env'>
             <option value='dev02'>dev02</option>
             <option value='joy188' selected>joy188</option>
             <option value='phl58'>phl58</option>
@@ -153,7 +163,7 @@
             </li>
         </div>
     </div>
-    <input type="button" onclick="check()" value="確認">
+    <input type="button" onclick="check()" id="submit" value="確認">
 </form>
 <h3>進度條顯示</h3>
 <div class="progress" style="width: 750px;height: 22px; margin: 10px;">

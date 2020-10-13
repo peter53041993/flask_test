@@ -10,5 +10,14 @@ body > main > table > tbody > tr {
     text-align: center;
 }
 a.dropdown-item:hover {
-    background: radial-gradient(#eaabf5, transparent);
+    background: radial-gradient(#c2ced4, transparent);
+}
+#header {
+    background: radial-gradient(#1f3540, transparent);
+    color:white;
+    text-align:center;
+    font-family: monospace;
+}
+h1 {
+    font-size: 1.5rem;
 }

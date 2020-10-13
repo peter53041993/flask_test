@@ -5,6 +5,7 @@
 {% block script %}
     <script type="text/javascript">
          function check(){
+            button_disabled('#submit');
             $.ajax({url:"/report_APP",
                     type:'POST',
                     headers:{
@@ -12,6 +13,7 @@
                     },
                     data: form_trim("#form1"),
                     success:function(data){
+                    button_RemoveDisabeld('#submit')
                     $(window).attr("location","/report_AppData")
                     }
                     })
@@ -26,15 +28,15 @@
                     }
     </script>
 {% endblock %}
-{% block main %}
-<h1 style="font-size: 15px;">APP戰報測試</h1>    
+{% block header %}APP戰報測試{% endblock %}
+{% block main %} 
 <form id='form1' method='POST'>
     <label>環境: </label>
     <select name='env_type' id='env_type'>
         <option value="dev">dev</option>
         <option value="joy188">joy188</option>
     </select>
-    <p><input type="button" onclick="check()" value="执行"></p>
+    <p><input type="button" onclick="check()" id="submit" value="执行"></p>
 </form>
 <h3>進度條顯示</h3>
 <div class="progress" style="width: 750px;height: 22px; margin: 10px;">

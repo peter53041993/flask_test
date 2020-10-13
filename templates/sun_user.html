@@ -99,6 +99,7 @@ p{margin-top: 1%;}
 </script>
 
 {% endblock %}
+{% block header %}太陽城用戶查詢{% endblock %}
 {% block main %}
 
 <form id='form1' method='POST'>
@@ -115,7 +116,7 @@ p{margin-top: 1%;}
     </select>
     <br>
     請輸入用戶名<input type="text" id="user" name="user"
-    size="16"  maxlength="16">
+    size="20"  maxlength="20">
     <p><input type="button" onclick="check()" value="查詢用戶"></p>
     <p><input type="button" onclick="check2()" value="查詢轉移成功用戶"></p>
     <p><input type="button" onclick="check3()" value="查詢綁定域名"></p>

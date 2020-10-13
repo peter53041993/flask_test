@@ -1,17 +1,9 @@
-<!DOCTYPE html>
-<!-- saved from url=(0033)http:// /domain_list -->
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-      
+{% extends "base.html" %}
+{% block title %}域名列表{% endblock %}
+{%block head %}
+{{ super() }}
 <style>
-#header {
-    background-color:black;
-    width: 1300px;
-    height: 50px;
-    color:white;
-    text-align:center;
-/*    padding:5px;*/
-    margin: 0px auto;
-}
+
 h1{
     font-size: 30px;
 }
@@ -75,10 +67,11 @@ h1{
       text-align: left;
 }
 </style>
+{% endblock %}
 
-
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
-<script src="chrome-extension://mooikfkahbdckldjjndioackbalphokd/assets/prompt.js"></script>
+{% block script %}
+<!--script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+<script src="chrome-extension://mooikfkahbdckldjjndioackbalphokd/assets/prompt.js"></script-->
 <script>
     $(document).ready(function(){
         $("#url_8om").innerHTML = "background";
@@ -86,38 +79,31 @@ h1{
 </script>
 <script type="text/javascript">
     function check(){
+        button_disabled('.all_api')
         alert("請稍後");
         $.ajax({url:"/domain_status",
                     type:'GET',
-                    //data: $('#form1').serialize(),
                     success:function(data){
                         for(var key in data){
                             console.log(key,data[key])
                             var key_str = key.split('.')[1];
                             if (data[key]=='200'){
-                                //console.log('true')
-                                
-                                //console.log("%s"%key)
                                 $("i[id*="+key_str+"]").addClass('status')
                             }
                             else{
-                                
                                 console.log(key_str)
                                 $("i[id*="+key_str+"]").addClass('error')
                             }
                         }
-                        //console.log(length(data))
-                        //console.log(data['http://www.365kanfang.com'])
+                        button_RemoveDisabeld('.all_api')
                     }
         })
     }
 </script>
-</head>
+{% endblock %}
 
-<body>
-    <div id="header">
-        <h1>域名列表</h1>
-    </div>
+{% block header %}域名列表{% endblock %}
+{% block main %}
 <div align="center"><button onclick="check()" class='all_api' >url接口狀態確認</button></div>
    
     <div class="all_title">
@@ -397,4 +383,4 @@ h1{
             </tbody></table>  
         </div>
     </div>
-</body></html>
+    {% endblock %}
