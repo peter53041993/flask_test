@@ -72,14 +72,14 @@ button, input, optgroup, select, textarea {font-family: arial, Microsoft YaHei;}
             }
         }
     }
-    function add(){
-        $('#header').append('<li><label class="ui-label" for="header_key">key</label>\n<textarea class="header_key" name="header_key" cols="15" rows="1"></textarea>\n<label class="ui-label" for="header_value">value</label>\n<textarea class="header_value"name="header_value" cols="40" rows="1"></textarea></li>')
+    function add(){//增加header 
+        $('.header').append('<li><label class="ui-label" for="header_key">key</label>\n<textarea class="header_key" name="header_key" cols="15" rows="1"></textarea>\n<label class="ui-label" for="header_value">value</label>\n<textarea class="header_value"name="header_value" cols="40" rows="1"></textarea></li>')
         $('#delete_header').removeAttr('disabled')
     }
     function delete_(){
-        var delete_ele = document.querySelector("#header > li:nth-last-child(1)")
+        var delete_ele = document.querySelector(".header > li:nth-last-child(1)")
         delete_ele.remove()
-        if (document.querySelector("#header > li:nth-last-child(1)")==null){
+        if (document.querySelector(".header > li:nth-last-child(1)")==null){
             $('#delete_header').attr('disabled',true)
         }
     }
@@ -111,7 +111,7 @@ button, input, optgroup, select, textarea {font-family: arial, Microsoft YaHei;}
     $(document).ready(function(){
         $('#request').css('display','none');
         $('#cookie').css('display','none');
-        $('#header').css('display','none');
+        $('.header').css('display','none');
         $('#delete_header').attr('disabled',true)
 
         $('#data_able').change(function(){
@@ -132,11 +132,11 @@ button, input, optgroup, select, textarea {font-family: arial, Microsoft YaHei;}
         })
         $('#header_able').change(function(){
             if ($('#header_able').prop('checked') == false){//data勾選取消
-                $('#header').css('display','none');
+                $('.header').css('display','none');
                 
             }
             else{
-                $('#header').css('display','block');
+                $('.header').css('display','block');
             }
         })
     })
@@ -188,7 +188,7 @@ button, input, optgroup, select, textarea {font-family: arial, Microsoft YaHei;}
     </li>
     <input type="checkbox" id="header_able">
     <label for="header_able">header</label></div>
-    <li id='header'>
+    <li class='header'>
         <label class="ui-label" for="header_key">key</label>
         <textarea class="header_key"  name="header_key" cols="15" rows="1"></textarea>
         <label class="ui-label" for="header_value">value</label>
