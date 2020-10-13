@@ -30,7 +30,7 @@ class GameBox():
         {"member": {"currencyName": "UUS", "maxtransfer": 1000,"mintransfer": 1,"payRadioType": "2","username": "%s_test"%username}},
         {"member": {"currencyName": "CNY", "username": username },"oddType": "260301,260302" },
         {"member": {"password": password,"username": username}},
-        {"member": {"password": password,"username": username}}]
+        {"member": {"password":  'q'+password.upper(),"username": username}}]
         ],
         "login":["客戶/登入",
         "/api/member/login?agent_name=%s"%clientId,[
@@ -38,7 +38,7 @@ class GameBox():
         {"member": {"username":"%s_test"%username}},
         {"member": {"username":username}},
         {"lang": "CNY","member": {"password": password, "username": username}},
-        {"lang": "cs","type":"LC","member": {"password": password, "username": username}}]
+        {"lang": "cs","type":"LC","member": {"password":  'q'+password.upper(), "username": username}}]
         ],
         "freeLogin":["客戶/試玩登入",
         "/api/member/freeLogin?agent_name=%s"%clientId,[{"lang": "string"},"","","",""]
@@ -56,7 +56,7 @@ class GameBox():
         {"member": {"username": "%s_test"%username}},
         {"member": {"username": username,}},
         {"member": {"username": username,}},
-        {"member": {"username": username,}}]
+        {"member": {"username": username,"password": 'q'+password.upper()}}]
         ],
         "transfer":["客戶/会员存取款接口",
         "/api/member/transfer?agent_name=%s"%clientId,
@@ -64,7 +64,7 @@ class GameBox():
         {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount": 50,"currencyName": "UUS","username": "%s_test"%username}},
         {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount": "10","username": username,}},
         {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount": "10","username": username,}},
-        {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount": "10","password":password,"username": username,}}]
+        {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount": "10","password":'q'+password.upper(),"username": username,}}]
         ],
         "checkTransfer":["客戶/检查存取款操作是否成功",
         "/api/member/checkTransfer?agent_name=%s"%clientId,
