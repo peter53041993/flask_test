@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}GAMEBOX測試{% endblock %}
+{%block head %}
+{{ super() }}
+<style type="text/css">
+    #user,#game_type,#env_type{border-radius: 22px;}
+    li{list-style: none;}
+    p{margin-top: 1%;}
+    span{color: red;}
+</style>
+{% endblock %}
+{% block script %}
+    <script type="text/javascript">
+        var game_detail="";
+        function check(){
+            //var admin_check = $('.admin:checked').length
+            var user_check = $('.user:checked').length
+            if ($('#user').val()==''){
+                alert('用戶名為空')
+                return false;
+            }
+            else if (user_check==0){
+                alert('客戶端 需勾選');
+                return false;
+            }
+            else {
+                button_disabled('#submit')
+                myajax  = $.ajax({ 
+                url:"/gameBox",
+                type:"POST",
+                //dataType: "json",
+                headers:{
+                        Accept:"application/json; charset=utf-8"
+                    },
+                data: form_trim("#form1")+'&user_check='+user_check,//'&admin_check='+admin_check+'&user_check='+user_check,
+                success:function(data){
+                    button_RemoveDisabeld('#submit');
+                    game_detail = data;
+                    //console.log(data);
+                    if (data=='此環境沒有此訂單號'){
+                        alert(data);
+                        return false;
+                    }
+                    else {
+                        $(window).attr("location", "/report");
+                    }
+                    },
+                    error: function(data){
+                        alert('有錯誤');
+                        button_RemoveDisabeld('#submit');  
+                    }
+                    })
+                }
+                }
+    </script>
+    <script>
+        $(document).ready(function(){
+            $('.user').prop('checked',true)
+        })
+    </script>
+{% endblock %}
+{% block main %}
+    <form id='form1' method='POST'>
+        <label>環境: </label>
+        <select name='env_type' id='env_type'>
+            <option value="0">測試</option>
+            <option value="1">灰度</option>
+        </select>
+        <label>類型: </label>
+        <select name='game_type' id='game_type'>
+            <option value="0">DG</option>
+            <option value="1">沙巴</option>
+            <option value="2">Sexy</option>
+            <option value="3">Cq9</option>
+            <option value="4">Gpi</option>
+        </select>
+        <br>
+        請輸入用戶名<input type="text" id="user" name="user"
+            size="20">
+        </br>
+        <!--input type='checkbox'  class='admin'>管理端</label>
+        <select name='admin_name' id='admin_name'>
+            <option value='admin_all'>全部</option>
+            {% for name in admin_items %}
+            <option value= {{admin_items[name]}}>{{name}}</option>
+            {% endfor %}
+        </select-->
+        <input type='checkbox' class='user'>客戶端</label>
+        <select name='user_name' id='user_name'>
+            <option value='user_all'>全部</option>
+            {% for name in user_items %}
+            <option value= {{user_items[name]}}>{{name}}</option>
+            {% endfor %}
+        </select>     
+        <p><input type="button" onclick="check()"id=submit value="查詢" ></p>
+    </form>
+    <div id='game_detail'>
+    </div> 
+{% endblock %}
