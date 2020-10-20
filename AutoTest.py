@@ -500,7 +500,57 @@ class Joy188Test(unittest.TestCase):
                 card_num[index] = list(tuple_)
             # print(card_num)
         conn.close()
-
+    @staticmethod 
+    def select_FundCharge(conn,date,type_=""): #查詢 動態時間  ,充值金額, 用來數據分溪用
+        with conn.cursor() as cursor:
+            global data_fund 
+            if type_ == "month":# 月份
+                data_fund = {}
+                year = date.split('/')[0]#年份
+                month = date.split('/')[1]#月份
+                day_31 = [1,3,5,7,8,10,12]
+                today_day = datetime.datetime.now().day# 現在日期
+                today_month = datetime.datetime.now().month# 現在月份
+                if month == str(today_month):# 頁面選的月份 是當前月份
+                    day_range = today_day -1# 今天的還不用抓出來
+                else:
+                    if month  in list(map(str,day_31)):
+                        day_range = 31
+                    elif month == '2':
+                        day_range = 29
+                    else:
+                        day_range = 30
+                for day in range(1,day_range+1):
+                    date ='%s/%s/%s'%(year,month,day)
+                    sql = "select sum(REAL_CHARGE_AMT),sum(charge_fee),count(REAL_CHARGE_AMT) from fund_charge where status = 2 and apply_time between to_date('%s 00:00:00','YYYY/MM/DD HH24:MI:SS') \
+                    and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS')  order by apply_time desc"%(date,date)
+                    sql2 = "select count(id) from fund_charge where  apply_time between \
+                    to_date('%s 00:00:00','YYYY/MM/DD HH24:MI:SS') \
+                    and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS')  order by apply_time desc"%(date,date)
+                    cursor.execute(sql)
+                    rows = cursor.fetchall()
+                    for tuple_ in rows:
+                        data_fund[date] = list(tuple_)
+                    cursor.execute(sql2)#總充值個數
+                    rows = cursor.fetchall()
+                    for tuple_ in rows:
+                        for key in data_fund:
+                            data_fund[key].append(tuple_[0])
+            else:
+                if type_ == "":
+                    sql = "select sum(REAL_CHARGE_AMT),sum(charge_fee),count(REAL_CHARGE_AMT) from fund_charge where status = 2 and apply_time between to_date('%s 00:00:00','YYYY/MM/DD HH24:MI:SS') \
+                    and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS')  order by apply_time desc"%(date,date)
+                else: # 找出總出直個數 ,不代 status
+                    sql ="select count(id) from fund_charge where  apply_time between \
+                    to_date('%s 00:00:00','YYYY/MM/DD HH24:MI:SS') \
+                    and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS')  order by apply_time desc"%(date,date)
+                print(sql)
+                cursor.execute(sql)
+                rows = cursor.fetchall()
+                data_fund = {}
+                for index,tuple_ in enumerate(rows):
+                    data_fund[index] = tuple_
+        conn.close()
     @staticmethod
     def select_activeFund(conn, user):  # 查詢當月充值金額
         with conn.cursor() as cursor:
