@@ -72,16 +72,22 @@ def return_plan(return_plan):
     plan_type.append(return_plan)
 
 def get_rediskey(envs):  # env參數 決定是哪個環境
-    redis_dict = {'ip': ['10.13.22.152', '10.6.1.82']}  # 0:dev,1:188
+    redis_dict = {'ip': ['10.13.22.152', '10.6.1.82','127.0.0.1']}  # 0:dev,1:188 ,2: 本地
     global r
     pool = redis.ConnectionPool(host=redis_dict['ip'][envs], port=6379)
     r = redis.Redis(connection_pool=pool)
-
-
+def set_key(key_name,key_value):
+    json_str = json.dumps(key_value)# 轉成str 存入redis 
+    r.set(key_name,json_str)
+def get_key(key_name):
+    key_ = r.get(key_name)
+    if key_ is None:
+        return 'not exist'
+    else:
+        return json.loads(key_)#取出來 byte 轉成 dict
 def get_token(envs, user):#查詢用戶 APP token 時間
     get_rediskey(envs)
-    global redis_
-    redis_ = r_keys = (r.keys('USER_TOKEN_%s*' % re.findall(r'[0-9]+|[a-z]+', user)[0]))
+    r_keys = (r.keys('USER_TOKEN_%s*' % re.findall(r'[0-9]+|[a-z]+', user)[0]))
     for i in r_keys:
         if user in str(i):
             user_keys = (str(i).replace("'", '')[1:])
