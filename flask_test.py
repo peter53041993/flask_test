@@ -1576,6 +1576,92 @@ class Flask():
             print(frame)
             return frame.to_html()
         return render_template('FundFee.html')
+    @app.route('/FundCharge',methods=["POST","GET"])
+    def FundCharge():# 充值成功金額 查詢
+        if request.method == "POST":
+            env_type = request.form.get('env_type')
+            check_type =request.form.get('check_type')# '0'使用日期 , '1'使用月份
+            AutoTest.get_rediskey(2)# 連到本地 redis
+            if check_type == '0': 
+                day = request.form.get('day_day')
+                month = request.form.get('day_month')
+                year = request.form.get('day_year')
+                date = "%s/%s/%s"%(year,month,day)# 格式化日期 傳到  select_FundCharge
+                key_name = '%s/%s:%s'%(check_type,env_type,date)# 0/環境:日期
+                result = AutoTest.get_key(key_name)
+                print(result)
+                if result != 'not exist':# 代表 已經存 到redis過
+                    return result 
+                AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)),date)
+                data_fund = AutoTest.data_fund# key 為0 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
+                #print(data_fund)
+                if len(data_fund) == 0:
+                    sum_fund= 0
+                    len_fund = 0
+                    len_Allfund = 0
+                else: 
+                    if data_fund[0][1] is None:# 有手續費 是none
+                        fund_fee = 0
+                    else:
+                        fund_fee = int(data_fund[0][1])/10000
+                    if data_fund[0][0] is None:# 有充值金額 是none
+                        fund_apply = 0
+                    else:
+                        fund_apply = int(data_fund[0][0])/10000
+                    len_fund = data_fund[0][2]
+                    sum_fund = fund_apply- fund_fee# 發起充值金額 - 手續費 , 兩者相減
+                    AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)),date,'1')# 總個數
+                    len_Allfund = AutoTest.data_fund[0][0]
+                    try:
+                        fund_per = int(int(len_fund)/int(len_Allfund)*10000)/100
+                    except ZeroDivisionError:
+                        fund_per = 0
+                    #fund_list =  reduce(lambda x,y: x+y,fund_list)#計算列表裡數值總合
+                data_ = {"date":date,"sum_fund":sum_fund,"len_fund": len_fund,"len_Allfund":len_Allfund,'fund_per': fund_per }
+                AutoTest.set_key(key_name,data_)
+            else:#月份
+                month = request.form.get('month_month')
+                year = request.form.get('month_year')
+                date = "%s/%s"%(year,month)# 格式化日期 傳到  select_FundCharge
+                key_name = '%s/%s:%s'%(check_type,env_type,date)# 1/環境:日期
+                result = AutoTest.get_key(key_name)
+                print(result)
+                if result != 'not exist':
+                    return result
+                #print(date)
+                AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)),date,'month')
+                data_fund = AutoTest.data_fund# key 為日期 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
+                #print(data_fund)
+                date_list,sum_fund_list,len_fund_list,fund_per_list,len_Allfund_list = [],[],[],[],[]
+                for key,value in data_fund.items():
+                    date_list.append(key)
+                    if value[0] is None:# 發起金額
+                        fun_apply = 0
+                    else:
+                        fun_apply = value[0]/10000
+                    if value[1] is None:#手續費
+                        len_fund = 0
+                    else:
+                        len_fund = value[1]/10000
+                    sum_fund = fun_apply-len_fund# 充直總發起金額
+                    sum_fund_list.append(int(sum_fund*100)/100)
+                    len_fund = value[2]# 充值成功個數
+                    len_fund_list.append(len_fund)
+                    len_Allfund = value[3] # 充值 總個數
+                    len_Allfund_list.append(len_Allfund)
+                    try:
+                        fund_per = int(int(len_fund)/int(len_Allfund)*10000)/100
+                    except ZeroDivisionError:# 0/0 報的錯
+                        fund_per = 0
+                    fund_per_list.append(fund_per)# 充值 成功率
+                data_ = {"date":date_list,"sum_fund":sum_fund_list,"len_fund": len_fund_list,"len_Allfund":len_Allfund_list,
+                'fund_per': fund_per_list }
+                AutoTest.set_key(key_name,data_)
+            #print(data_)
+            return data_
+            #frame = pd.DataFrame(data,index=date_list)
+            #return frame.to_html()
+        return render_template('FundCharge.html')
     @app.route('/login_cookie',methods=["POST"])# 傳回登入cookie
     def login_cookie():
         env_url = request.form.get('env_type')
