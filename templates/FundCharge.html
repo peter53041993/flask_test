@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}充值金額查詢{% endblock %}
+
+{% block script %}
+    <script>
+        $(document).ready(function(){
+            var last_month = new Date().getMonth()//上個月 分紅用
+            var today_month =  new Date().getMonth()+1//當前月份
+            var today_day =  new Date().getDate()-1// -1 用意 ,統計日期 最新 為昨日
+            var cur_year = new Date().getFullYear()//今年
+            //var ben_today = document.getElementById('day_day').getElementsByTagName('option')[today_day].selected= true//日工資 日期預設
+            for (i=today_month; i>=today_month-1;i--){//設置月份
+                addOption(day_month,i,i)
+                addOption(month_month,i,i)
+            }
+            for (i=1;i<=today_day;i++){// 日期可查 今天
+                addOption(day_day,i,i)//設置日期
+            } 
+            addOption(day_year,cur_year,cur_year)//設置年分
+            addOption(month_year,cur_year,cur_year)//設置年分
+            $('#day_month option[value='+today_month+']').attr('selected','selected')
+            $('#month_month option[value='+today_month+']').attr('selected','selected')
+            $('#day_day option[value='+today_day+']').attr('selected','selected')
+            $('#day_year option[value='+cur_year+']').attr('selected','selected')
+            $('#month_year option[value='+cur_year+']').attr('selected','selected')
+
+            $('#day_month').change(function(){
+                if ($('#day_month').val()==today_month){//
+                    $('#day_day').empty()
+                    for (i=1;i<=today_day;i++){
+                        addOption(day_day,i,i)//設置日期
+                    } 
+                }
+                else{
+                    $('#day_day').empty()
+                    for (i=1;i<=31;i++){
+                        addOption(day_day,i,i)//設置日期
+                    } 
+                } 
+            })
+            $('#check_day:checkbox').prop('checked',true)//預設一個勾
+            $("#check_day").change(function () {//
+                //$('#check_day:checkbox').prop('checked',true)
+                //$('#check_month:checkbox').prop('checked',false)
+                $('#check_month:checkbox').prop('checked', $(this).is(':checked') ? false : true);
+            })
+            $("#check_month").change(function () {//
+                //$('#check_day:checkbox').prop('checked',false)
+                //$('#check_month:checkbox').prop('checked',true)
+                $('#check_day:checkbox').prop('checked', $(this).is(':checked') ? false : true);
+                
+            })
+        })
+    </script>
+    <script>
+        function check(){
+            var check_value = $('input:checkbox:checked[name="check_type"]').val()// 把勾選的 checkbox一起加進去
+            button_disabled('#submit')
+            if ($('.dataframe').length>0){
+                $('.dataTables_wrapper.no-footer').remove();//已經有了先清空
+        }
+        $.ajax({
+            url: '/FundCharge',
+            type:'POST', 
+            data: form_trim("#form1"),
+            success: function(data){
+                $('#user_detail').after("<table border='1' class='dataframe'><thead><tr style='text-align: right;'><th>日期</th><th>實際充值金額</th><th>成功充值個數</th><th>充值總數</th><th>充值率 %</th></tr></thead><tbody><tr><th></th></tr></tbody></table>")
+                console.log(data);
+                toCurrency(data['sum_fund'])
+                toCurrency(data['len_Allfund'])
+                toCurrency(data['len_fund'])
+                button_RemoveDisabeld('#submit');
+                if(check_value=='0'){ // 當日的 ,data 不用轉, 當月的 data 是array 包array ,DataTable 不用帶 columns 參數 
+                        var type_data = [data]
+                        $('.dataframe').DataTable( {
+                        data:  type_data ,
+                        columns: [
+                            { data: 'date' },    
+                            { data: 'sum_fund' }  ,
+                            { data: 'len_fund' },
+                            { data: 'len_Allfund' },
+                            { data: 'fund_per' },
+                        ]
+                        });
+                    }
+                else{// 月份
+                    var type_data = []
+                    var len_data = data['date'].length
+                    for (i=0;i<len_data;i++){
+                        a = []
+                        var key_name = Object.keys(data)
+                        a.push(data[key_name[0]][i],toCurrency(data[key_name[4]][i]),toCurrency(data[key_name[3]][i]),
+                        toCurrency(data[key_name[2]][i]),data[key_name[1]][i]);
+                        type_data.push(a)
+                    }
+                    $('.dataframe').DataTable( {
+                    data:  type_data ,
+                });
+                }
+                
+            },
+            error:function(status){
+                console.log(status);
+                button_RemoveDisabeld('#submit');
+            }
+        })
+        }
+    </script>
+{% endblock %}
+{% block header %}充值金額查詢{% endblock %}
+{% block main %}
+
+<form id='form1' method='POST'>
+    <label>環境: </label>
+    <select name='env_type' id='env_type'>
+        <option value="0">dev02</option>
+        <option value="1">joy188</option>
+        <option value="2">ph158</option>
+    </select>
+    <li id='day'>
+        <label for="check_day">當日</label>
+        <input type="checkbox" id=check_day name="check_type" value=0>
+        <label>年</label>
+        <select name='day_year' id='day_year'>
+        </select>
+        <label>月</label>
+        <select name='day_month' id='day_month'>
+        </select>
+        <label>日</label>
+        <select name='day_day' id='day_day'>
+        </select>
+    </li>
+    <li id='month'>
+        <label for="check_month">月份</label>
+        <input type="checkbox" id=check_month name="check_type" value=1>
+        <label>年</label>
+        <select name='month_year' id='month_year'>
+        </select>
+        <label>月</label>
+        <select name='month_month' id='month_month'>
+        </select>
+    </li>
+    <input type="button" onclick="check()" id="submit" value="確認">
+<form>
+    <div id="user_detail"></div>
+{% endblock %}
