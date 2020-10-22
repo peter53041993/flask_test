@@ -13,14 +13,14 @@
     <script type="text/javascript">
         var game_detail="";
         function check(){
-            //var admin_check = $('.admin:checked').length
+            var admin_check = $('.admin:checked').length
             var user_check = $('.user:checked').length
-            if ($('#user').val()==''){
+            if ($('#user').val()==''&&user_check==1){
                 alert('用戶名為空')
                 return false;
             }
-            else if (user_check==0){
-                alert('客戶端 需勾選');
+            else if (user_check==0&&admin_check==0){
+                alert('需勾選任一');
                 return false;
             }
             else {
@@ -32,7 +32,7 @@
                 headers:{
                         Accept:"application/json; charset=utf-8"
                     },
-                data: form_trim("#form1")+'&user_check='+user_check,//'&admin_check='+admin_check+'&user_check='+user_check,
+                data: form_trim("#form1"),
                 success:function(data){
                     button_RemoveDisabeld('#submit');
                     game_detail = data;
@@ -55,7 +55,16 @@
     </script>
     <script>
         $(document).ready(function(){
-            $('.user').prop('checked',true)
+            $('#user').val('')
+            $('.user').prop('checked',true);
+            $('.admin').prop('checked',false);
+            $('#user_name option[value="signUp"]').attr('selected','selected');
+            $(".user").change(function () {//
+                $('.admin:checkbox').prop('checked', $(this).is(':checked') ? false : true);  
+            })
+            $(".admin").change(function () {//
+                $('.user:checkbox').prop('checked', $(this).is(':checked') ? false : true);  
+            })
         })
     </script>
 {% endblock %}
@@ -74,19 +83,19 @@
             <option value="2">Sexy</option>
             <option value="3">Cq9</option>
             <option value="4">Gpi</option>
+            <option value="5">YB</option>
         </select>
         <br>
         請輸入用戶名<input type="text" id="user" name="user"
             size="20">
         </br>
-        <!--input type='checkbox'  class='admin'>管理端</label>
+        <input type='checkbox'  class='admin' name='check_type' value=0 >管理端</label>
         <select name='admin_name' id='admin_name'>
-            <option value='admin_all'>全部</option>
             {% for name in admin_items %}
             <option value= {{admin_items[name]}}>{{name}}</option>
             {% endfor %}
-        </select-->
-        <input type='checkbox' class='user'>客戶端</label>
+        </select>
+        <input type='checkbox' class='user' name='check_type' value=1>客戶端</label>
         <select name='user_name' id='user_name'>
             <option value='user_all'>全部</option>
             {% for name in user_items %}
