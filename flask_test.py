@@ -1466,46 +1466,37 @@ class Flask():
         return render_template('api_test.html')
     @app.route('/gameBox',methods=["POST","GET"])
     def gameBox():
-        admin_items,user_items = {},{}#管理端/客戶端
+        admin_items,user_items = {},{}#管理/客戶端
         for key in GameBox.GameBox().data_type.keys():
+            #print(key)
             # 中文名稱為key, 英文參數唯value,用意 顯示在頁面上中文
-            if key in ['createApp','updateIpWhitelist','updateSupplierAccount','token']:
+            if key == 'getClientInfo':# 管理端 用  獲得client信息即可,其它 不需動
                 admin_items[GameBox.GameBox().data_type[key][0]] = key
+            elif key in ['token','createApp','updateIpWhitelist','updateSupplierAccount']:# 管理端
+                pass
             else:
                 user_items[GameBox.GameBox().data_type[key][0]] = key
         if request.method == "POST":
             client_type = {
-            "api_key":["1566e8efbdb444dfb670cd515ab99fda","XT","9RJ0PYLC5Ko4O4vGsqd","","a93f661cb1fcc76f87cfe9bd96a3623f"]
-            ,"api_url":["https://api.dg99web.com","http://tsa.l0044.xtu168.com","https://testapi.onlinegames22.com","http://api.cqgame.games","http://gsmd.336699bet.com"]
-            ,"supplier_type":["dream_game","sa_ba_sports","ae_sexy","cq_9","gpi"]
-            ,"supplier_user":["DGTE01011T","6yayl95mkn","fhlmag","cq9_test","xo8v"]
-            ,"game_type" :["DG","沙巴","Sexy","Cq9",'GPI']
+            "api_key":["1566e8efbdb444dfb670cd515ab99fda","XT","9RJ0PYLC5Ko4O4vGsqd","","a93f661cb1fcc76f87cfe9bd96a3623f","BgRWofgSb0CsXgyY"]
+            ,"api_url":["https://api.dg99web.com","http://tsa.l0044.xtu168.com","https://testapi.onlinegames22.com","http://api.cqgame.games","http://gsmd.336699bet.com","https://testapi.onlinegames22.com"]
+            ,"supplier_type":["dream_game","sa_ba_sports","ae_sexy","cq_9","gpi","ya_bo_live"]
+            ,"supplier_user":["DGTE01011T","6yayl95mkn","fhlmag","cq9_test","xo8v","ZSCH5"]
+            ,"game_type" :["DG","沙巴","Sexy","Cq9",'GPI',"YB"]
             }
             cq_9Key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiI1ZjU5OWU3NTc4MDdhYTAwMDFlYTFjMjYiLCJhY2NvdW50IjoiYW1iZXJ1YXQiLCJvd25lciI6IjVkYzExN2JjM2ViM2IzMDAwMTA4ZTQ4NyIsInBhcmVudCI6IjVkYzExN2JjM2ViM2IzMDAwMTA4ZTQ4NyIsImN1cnJlbmN5IjoiVk5EIiwianRpIjoiNzkyMjU1MDIzIiwiaWF0IjoxNTk5NzA4Nzg5LCJpc3MiOiJDeXByZXNzIiwic3ViIjoiU1NUb2tlbiJ9.cyvPJaWFGwhX4dZV7fwcwgUhGM9d5dVv8sgyctlRijc"
             url_dict = {0:['http://43.240.38.15:21080','測試區'],1:['http://54.248.18.149:8203','灰度']}# 測試 / 灰度
             env_type = request.form.get('env_type')
             game_type = request.form.get('game_type')#  0 : DG , 1: 沙巴
             user = request.form.get('user')
-            #admin_check = request.form.get('admin_check')# 管理端
-            #user_check = request.form.get('user_check')#客戶端
-            print(env_type,game_type,user)
+            check_type = request.form.get('check_type') # 0 為管理端/ 1 : 客戶端
+            print(env_type,game_type,user,check_type)
             game_list = []# 存放前台選擇的 測試項目
-            '''
-            if admin_check == '1'  and user_check == '1':#兩者皆勾選
-                print('管理/用戶 皆勾選')
+            if check_type == '0':
+                game_list.append('token')# 管理端 先獲得 token
                 game_list.append(request.form.get('admin_name'))
-                game_list.append(request.form.get('user_name'))
-            elif  admin_check == '1':
-                print('管理端勾選')
-                game_list.append(request.form.get('admin_name'))
-                request.form.get('admin_name')
-            elif user_check == '1':
-                game_list.append(request.form.get('user_name'))
-                print('用戶端勾選')
             else:
-                print('錯誤需確認')
-            '''
-            game_list.append(request.form.get('user_name'))
+                game_list.append(request.form.get('user_name'))
             print(game_list)
 
             api_key = client_type["api_key"][int(game_type)]
@@ -1620,13 +1611,20 @@ class Flask():
                 data_ = {"date":date,"sum_fund":sum_fund,"len_fund": len_fund,"len_Allfund":len_Allfund,'fund_per': fund_per }
                 AutoTest.set_key(key_name,data_)
             else:#月份
+                now = datetime.datetime.now()
+                now_day = now.day# 今天日期
+                now_month =  now.month#這個月
                 month = request.form.get('month_month')
                 year = request.form.get('month_year')
                 date = "%s/%s"%(year,month)# 格式化日期 傳到  select_FundCharge
-                key_name = '%s/%s:%s'%(check_type,env_type,date)# 1/環境:日期
+                #print(month,now_month)
+                if month == str(now_month):# 頁面選擇的 月份 等於這個月, 需把 當下日期 一起加進去 , 因為 這個月每天進來 都會 有新的一天數據
+                    key_name = '%s/%s:%s%s'%(check_type,env_type,date,now_day)# 1/環境:日期 , 多增加今天日期為key
+                else:
+                    key_name = '%s/%s:%s'%(check_type,env_type,date)# 不是這個月, 不用管今天日期
                 result = AutoTest.get_key(key_name)
                 print(result)
-                if result != 'not exist':
+                if result != 'not exist':# result是 not exist, 代表 redis 沒值 ,不等於 就是 redis有值
                     return result
                 #print(date)
                 AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)),date,'month')
