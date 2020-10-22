@@ -12,14 +12,6 @@
 
     {% block script %}
     <script>
-        function addOption(selectbox, text, value) {//初始頁面後, 月份/日期 option ,value,text 直接 顯示
-            var option = document.createElement("option");
-            option.text = text;
-            option.value = value;
-            selectbox.options.add(option);
-        }
-    </script>
-    <script>
         $(document).ready(function(){
             var op= document.getElementById('benefit');
             var opt = op.getElementsByTagName('option');        
@@ -139,11 +131,9 @@
             <li>
                 <label>月份</label>
                 <select name='month' id='day_month'>
-                    <option value=''></option>
                 </select>
                 <label>日期</label>
                 <select name='day' id='day_day'>
-                    <option value=''></option>
                 </select>
             </li>
         </div>
@@ -153,7 +143,6 @@
             <li>
                 <label>月份</label>
                 <select name='month' id='month_month'>
-                    <option value=''></option>
                 </select>
                 <label>統計範圍</label>
                 <select name='day' id='month_day'>
