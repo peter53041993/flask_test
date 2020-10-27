@@ -2,7 +2,7 @@
 li{list-style: none;}
 .dataframe{font-size:11pt;border:2px solid #b613de;}
 .dataframe tr:hover{background:#dcd8d8;cursor:pointer;}
-#form1 > table > thead > tr > th{
+table > thead > tr > th{
     text-align: center;
     color: #efb000;
 }
