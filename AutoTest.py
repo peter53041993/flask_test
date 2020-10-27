@@ -225,7 +225,7 @@ class Joy188Test(unittest.TestCase):
         with conn.cursor() as cursor:
             sql = "select bet_type_code from game_bettype_status where lotteryid = '%s' and group_code_name||set_code_name||method_code_name = '%s'" % (
                 lotteryid, game_type)
-
+            print(sql)
             cursor.execute(sql)
             rows = cursor.fetchall()
 
@@ -871,7 +871,7 @@ class Joy188Test(unittest.TestCase):
             num = 9
             play_ = u'玩法名稱: %s.%s.%s' % (game_group['p3sanxing'], game_set['zhixuan'],
                                          game_method['fushi'])
-        elif lottery == 'bjkl8':
+        elif lottery in ['bjkl8','fckl8']:
             num = 10
             play_ = u'玩法名稱: %s.%s.%s' % (game_group['renxuan'], game_set['putongwanfa'],
             game_method['renxuan7'])
@@ -1545,7 +1545,9 @@ class Joy188Test3(unittest.TestCase):
         t = time.strftime('%Y%m%d %H:%M:%S')
         print(u'投注帳號: %s, 現在時間: %s' % (user, t))
         try:
-            for i in FF_Joy188.FF_().lottery_dict.keys():
+            #for i in FF_Joy188.FF_().lottery_dict.keys():
+            for i in lottery_list:
+                print(i)
                 if i in ['slmmc', 'sl115', 'btcctp']:
                     '''
                     data_ = {"head":{"sessionId":token_[user]},
