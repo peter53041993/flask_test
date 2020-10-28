@@ -36,7 +36,8 @@ class GameBox():
         {"member": {"currencyName": "CNY", "username": username },"oddType": "260301,260302" },
         {"member": {"password": password,"username": username}},
         {"member": {"password": 'q'+password.upper(),"username": username}},
-        {"lang": "cs","member": {"password": password, "username": username},"oddType":"4445"}]
+        {"lang": "cs","member": {"password": password, "username": username},"oddType":"4440"},
+        {"member": {"currencyName": "CNY", "username": username }}]
         ],
         "login":["客戶/登入",
         "/api/member/login?agent_name=%s"%clientId,[
@@ -46,11 +47,13 @@ class GameBox():
         {"lang": "cs","member": {"password": password, "username": username}},
         {"lang": "cs","type":"LC","member": {"password": 'q'+password.upper(), "username": username}},
         {"deviceId": "1","lang": "cs","member": {"password": password,"username": username},
-        "oddType": "4445","backUrl":"https://www.baidu.com"}]
+        "oddType": "4445","backUrl":"https://www.baidu.com"},
+        {"lang":"cs","member": {"username": username}}]
         ],
         "freeLogin":["客戶/試玩登入",
-        "/api/member/freeLogin?agent_name=%s"%clientId,[{"lang": "string"},{},{},{},{},
-        {"backUrl": "https://www.baidu.com","deviceId": "1","lang": "cs"}]
+        "/api/member/freeLogin?agent_name=%s"%clientId,[{"lang": "cs"},{},{},{},{},
+        {"backUrl": "https://www.baidu.com","deviceId": "1","lang": "cs"},
+        {"lang": "cs"}]
         ],
         "update":["客戶/修改会员信息","/api/member/update?agent_name=%s"%clientId,[
         {"member": {"status": 1, "winLimit": 0,"password": password, "username":username }}, 
@@ -58,7 +61,8 @@ class GameBox():
         {},
         {"member": {"password": password,"username": username}},
         {"member": {"password": 'q'+password.upper(),"oldPw": 'q'+password.upper(),"username": username}},
-        {"member": {"password": password,"username": username}}]
+        {"member": {"password": password,"username": username}},
+        {}]
         ],
         "balance":['客戶/获取会员余额接口',
         "/api/member/balance?agent_name=%s"%clientId,
@@ -67,6 +71,7 @@ class GameBox():
         {"member": {"username": username,}},
         {"member": {"username": username,}},
         {"member": {"username": username,"password": 'q'+password.upper()}},
+        {"member": {"username": username,}},
         {"member": {"username": username,}}]
         ],
         "transfer":["客戶/会员存取款接口",
@@ -77,6 +82,7 @@ class GameBox():
         {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}},
         {"billNo": '%s'%random.randint(1,1000000000),"member": 
          {"amount":amount ,"password": 'q'+password.upper(),"username": username,}},
+        {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}},
         {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}]
         ],
         "checkTransfer":["客戶/检查存取款操作是否成功",
@@ -84,37 +90,38 @@ class GameBox():
         [{"billNo": bill_No},{"billNo": bill_No},
         {"billNo": bill_No},{"billNo": bill_No},
         {},
-        {"billNo": bill_No,"member": {"username": username}}]
+        {"billNo": bill_No,"member": {"username": username}},
+        {}]
         ],
         "updateLimit":['客戶/修改会员限红组',
         "/api/member/updateLimit?agent_name=%s"%clientId,
         [{"member": {"username": username},"oddType": "A"},{},
-        {"member": {"username": "testsz8"},"oddType": "260301"},{},{},{}]
+        {"member": {"username": "testsz8"},"oddType": "260301"},{},{},{},{}]
         ],
         "checkOnline":["客戶/查询玩家在线状态",
         "/api/member/checkOnline?agent_name=%s"%clientId,
         [{"member": {"username": username.upper()}},{"member": {"username": "%s_test"%username.upper()}},
-        {},{"member": {"username": username}},{},{}]
+        {},{"member": {"username": username}},{},{},{}]
         ],
         "onlineCount":['客戶/查询在线玩家数量','/api/member/onlineCount?agent_name=%s'%clientId
-        ,[{},{},{},{},{},{}]
+        ,[{},{},{},{},{},{},{}]
         ],
         "offline":['客戶/踢人','/api/member/offline?agent_name=%s'%clientId,
         [{"member": {"memberId":member_Id}},{"member": {"username": "%s_test"%username}},
-        {"member": {"username": username}},{"member": {"username": username}},{},{}]
+        {"member": {"username": username}},{"member": {"username": username}},{},{},{}]
         ],
         "lockMember":['客戶/封鎖會員','/api/member/lockMember?agent_name=%s'%clientId,
         [{"member": {"password":password,"username": username}},
         {"member": {"username": "%s_test"%username}},{},{},{},
-        {"member": {"username": username}}]
+        {"member": {"username": username}},{}]
         ],
         "unlockMember":['客戶/解封鎖會員','/api/member/unlockMember?agent_name=%s'%clientId,
         [{"member": {"password":password,"username": username}},{"member": 
         {"username": "%s_test"%username}},{},{},{},
-        {"member": {"username": username}}]
+        {"member": {"username": username}},{}]
         ],
         "onlineMember":['客戶/查询在线玩家','/api/member/onlineMember?agent_name=%s&page=1&size=100'%clientId,
-        [{},{},{},{},{},{}]
+        [{},{},{},{},{},{},{}]
         ],  
         }
     def GameBox_Con(client_id,env):# 連線 mysql
@@ -165,15 +172,14 @@ class GameBox():
             #elif type_ in ['signUp','login','freeLogin','checkOnline','balance','transfer','updateLimit']:
             else:#客戶端
                 if type_ == 'checkOnline':
-                    if game_type in [2,4,5]:# sexy, gpi,YB 沒有 查詢再線玩家功能
-                        memberId = ''
-                        print("%s沒有查询玩家在线状态"%game_type)
-                        #return "sexy, gpi沒有查询玩家在线状态"
-                    else:
+                    if game_type in [0,1,3]: #大部分都沒有, 避免每次新增家都要加, 改寫
                         dr = webdriver.Chrome(executable_path=r'C:\python3\Scripts\jupyter_test\chromedriver_84.exe')
                         print('需先瀏覽器登入PC login_url: %s'%pc_url)
                         dr.get(pc_url)# 用 瀏覽器登入, 才能 獲得 memberid(DG踢人才需要 memberid)
                         dr.quit()
+                    else:
+                        memberId = ''
+                        print("%s沒有查询玩家在线状态"%game_type)
                 elif type_ == 'offline':# 踢人 ,在把 global memberid 傳還init
                     data_ =  GameBox(clientId,username,member_Id=memberId).data_type[type_]
                 elif type_ == 'checkTransfer':# 檢查 轉帳轉太, 需把 transfer的 bill_no 傳回來
