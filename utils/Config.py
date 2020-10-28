@@ -12,6 +12,7 @@ from utils.Connection import OracleConnection
 project_path = str(pathlib.Path(__file__).parent.parent.absolute())  # 專案路徑
 # project_path = os.path.abspath('.')  # 專案路徑
 chromeDriver_Path = project_path + r'\Drivers\chromedriver_85.exe'  # ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
+curl_path = project_path + r'\utils\curl.exe'  # ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
 reportHtml_Path = project_path + r"\templates\report.html"  # report.html 絕對路徑
 logging_config_path = project_path + r"\logs\logging_config.ini"
 
