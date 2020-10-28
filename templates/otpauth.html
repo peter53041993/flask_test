@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}自動化測試{% endblock %}
+{% block head %}
+    {{ super() }}
+    <style type="text/css">
+    </style>
+{% endblock %}
+{% block script %}
+    <script src="https://cdn.jsdelivr.net/npm/otpauth/dist/otpauth.umd.min.js"></script>
+    <script type="text/javascript">
+        function getOtp() {
+            // Create a new TOTP object.
+            let totp = new OTPAuth.TOTP({
+                issuer: 'ACME',
+                label: 'AzureDiamond',
+                algorithm: 'SHA1',
+                digits: 6,
+                period: 30,
+                secret: 'MNQW4Y3VOMZDAMRQGEYDENZRHAZDIMBZGUYA' // or "OTPAuth.Secret.fromB32('NB2W45DFOIZA')"
+            });
+
+            // Generate a token.
+            let token = totp.generate();
+
+            // Validate a token.
+            let delta = totp.validate({
+                token: token,
+                window: 1
+            });
+
+            // Convert to Google Authenticator key URI.
+            //   otpauth://totp/ACME:AzureDiamond?issuer=ACME&secret=NB2W45DFOIZA&algorithm=SHA1&digits=6&period=30
+            let uri = totp.toString(); // or "OTPAuth.URI.stringify(totp)"
+
+            // Convert from Google Authenticator key URI.
+            let parsedTotp = OTPAuth.URI.parse(uri);
+            document.getElementById('otp').innerText = token
+        }
+    </script>
+{% endblock %}
+
+
+{% block main %}
+    <h1>otpauth查詢</h1>
+    <div style="padding: 10px" >Dev02: <p id='otp'></p></div>
+    <input style="margin-left: 10px" type="button" onclick="getOtp()" value="查詢">
+{% endblock %}

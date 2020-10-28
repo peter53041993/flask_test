@@ -207,8 +207,6 @@ def test_sport(type_keys='全部'):  # 企鵝網
     # print(sport_list)
 
 
-# test_sport('全部')
-
 @app.route('/form', methods=['POST', 'GET'])
 def test_form():  # 輸入/form 頁面, 呼叫render_template的html
     if request.method == "POST":
@@ -360,8 +358,7 @@ def progress():  # 執行測試案例時, 目前 還位判斷 request街口狀�
                 percent = Config.CASE_AMOUNT[0] / Config.CASE_AMOUNT[1] * 100
             yield "data:" + str(math.floor(percent)) + "\n\n"  # data內容, 換行
             sleep(0.5)
-            print(f'percent = {percent}, CASE_AMOUNT = {Config.CASE_AMOUNT} // print')
-        print(f'While loop stopped !')
+
     return Response(generate(), mimetype='text/event-stream')
 
 
@@ -1479,21 +1476,25 @@ def get_qrcode_result():
     from page_objects.BasePages import LoginPage
     page = LoginPage(env_config=env_config)  # 頁面初始化
     driver = page.get_driver()
+    Config.test_cases_init(19)
 
     page.mouse_action(element=LoginPage.elements.id_j_dl_apple)
     canvas = driver.find_element_by_xpath('//div[@id="J-download-qrcode"]/canvas')
     canvas_url = str(driver.execute_script('return arguments[0].toDataURL("image/png").substring(22);', canvas))
     data.append(['登入頁_Apple下載', decode_base64(canvas_url), 'data:image/png;base64,' + canvas_url])
+    Config.test_cases_update(1)
 
     page.mouse_action(element=LoginPage.elements.id_j_dl_android)
     canvas = driver.find_element_by_xpath('//div[@id="J-download-qrcode"]/canvas')
     canvas_url = str(driver.execute_script('return arguments[0].toDataURL("image/png").substring(22);', canvas))
     data.append(['登入頁_Android下載', decode_base64(canvas_url), 'data:image/png;base64,' + canvas_url])
+    Config.test_cases_update(1)
 
     page.mouse_action(LoginPage.elements.xpath_fhlm_logo)
     fhlm_qrcode = driver.find_element_by_id('qr-image')
     data.append(
         ['登入頁_鳳凰聯盟驗證', decode_base64(fhlm_qrcode.get_attribute('src').split(',')[1]), fhlm_qrcode.get_attribute('src')])
+    Config.test_cases_update(1)
 
     """
         安全登入頁下載QRCode
@@ -1505,12 +1506,14 @@ def get_qrcode_result():
     canvas_url = str(
         driver.execute_script('return arguments[0].toDataURL("image/png").substring(22);', canvas))
     data.append(['安全登入頁_Apple下載', decode_base64(canvas_url), 'data:image/png;base64,' + canvas_url])
+    Config.test_cases_update(1)
 
     page.mouse_action(element=LoginPage.elements.id_j_dl_android)
     canvas = driver.find_element_by_xpath('//div[@id="J-download-qrcode"]/canvas')
     canvas_url = str(
         driver.execute_script('return arguments[0].toDataURL("image/png").substring(22);', canvas))
     data.append(['安全登入頁_Android下載', decode_base64(canvas_url), 'data:image/png;base64,' + canvas_url])
+    Config.test_cases_update(1)
 
     from page_objects.BasePages import ShowSecLoginPage
     page.mouse_action(ShowSecLoginPage.elements.xpath_fhlm_logo)
@@ -1518,6 +1521,7 @@ def get_qrcode_result():
     data.append(
         ['安全登入頁_鳳凰聯盟驗證', decode_base64(fhlm_qrcode.get_attribute('src').split(',')[1]),
          fhlm_qrcode.get_attribute('src')])
+    Config.test_cases_update(1)
 
     page = page.jump_to(ShowSecLoginPage.elements.id_return_normal)  # 返回登入頁
 
@@ -1534,6 +1538,7 @@ def get_qrcode_result():
          ['導航欄_棋牌', decode_base64(qr_codes[2].get_attribute('src').split(',')[1]), qr_codes[2].get_attribute('src')],
          ['導航欄_下載', decode_base64(qr_codes[3].get_attribute('src').split(',')[1]), qr_codes[3].get_attribute('src')],
          ['首頁_彩票', decode_base64(qr_codes[4].get_attribute('src').split(',')[1]), qr_codes[4].get_attribute('src')]])
+    Config.test_cases_update(5)
 
     app_download_url = driver.find_element_by_xpath('//div[@class="down-app-text"]/a').get_attribute('href')
     driver.get(app_download_url)
@@ -1541,9 +1546,12 @@ def get_qrcode_result():
     canvas_url = str(
         driver.execute_script('return arguments[0].toDataURL("image/png").substring(22);', qr_codes[0]))
     data.append(['App下載頁QRCode1', decode_base64(canvas_url), 'data:image/png;base64,' + canvas_url])
+    Config.test_cases_update(1)
+
     canvas_url = str(
         driver.execute_script('return arguments[0].toDataURL("image/png").substring(22);', qr_codes[1]))
     data.append(['App下載頁QRCode2', decode_base64(canvas_url), 'data:image/png;base64,' + canvas_url])
+    Config.test_cases_update(1)
 
     """
         比特幣分分彩投注頁 / 專題頁 / 代理模板預覽
@@ -1558,30 +1566,35 @@ def get_qrcode_result():
             ['比特幣分分彩_掃碼下載', decode_base64(qr_code.get_attribute('src').split(',')[1]), qr_code.get_attribute('src')])
     except:
         data.append(['比特幣分分彩_掃碼下載', 'QRCode取得失敗', '無圖片'])
+    Config.test_cases_update(1)
 
     driver.get(page.env_config.get_post_url() + '/activity/btchome')
     canvas = driver.find_element_by_xpath("//div[@class='qrcode-content']/canvas")
     canvas_url = str(
         driver.execute_script('return arguments[0].toDataURL("image/png").substring(22);', canvas))
     data.append(['比特幣專題頁_首頁', decode_base64(canvas_url), 'data:image/png;base64,' + canvas_url])
+    Config.test_cases_update(1)
 
     driver.get(page.env_config.get_post_url() + '/activity/introduce')
     canvas = driver.find_element_by_xpath("//div[@class='qrcode-content']/canvas")
     canvas_url = str(
         driver.execute_script('return arguments[0].toDataURL("image/png").substring(22);', canvas))
     data.append(['比特幣專題頁_彩種介紹', decode_base64(canvas_url), 'data:image/png;base64,' + canvas_url])
+    Config.test_cases_update(1)
 
     driver.get(page.env_config.get_post_url() + '/proxy/promotepreview?target=btc')
     canvas = driver.find_element_by_xpath("//div[@class='qrcode-content']/canvas")
     canvas_url = str(
         driver.execute_script('return arguments[0].toDataURL("image/png").substring(22);', canvas))
     data.append(['比特幣推廣模板_首頁', decode_base64(canvas_url), 'data:image/png;base64,' + canvas_url])
+    Config.test_cases_update(1)
 
     driver.get(page.env_config.get_post_url() + '/promote/btcintroduce?target=btc')
     canvas = driver.find_element_by_xpath("//div[@class='qrcode-content']/canvas")
     canvas_url = str(
         driver.execute_script('return arguments[0].toDataURL("image/png").substring(22);', canvas))
     data.append(['比特幣推廣模板_彩種介紹', decode_base64(canvas_url), 'data:image/png;base64,' + canvas_url])
+    Config.test_cases_update(1)
 
     """推廣頁推廣面"""
     driver.get(page.env_config.get_post_url() + '/proxy/promotepreview?target=shaibao')
@@ -1589,11 +1602,50 @@ def get_qrcode_result():
     canvas_url = str(
         driver.execute_script('return arguments[0].toDataURL("image/png").substring(22);', canvas))
     data.append(['安徽骰寶推廣模板_彩種介紹', decode_base64(canvas_url), 'data:image/png;base64,' + canvas_url])
+    Config.test_cases_update(1)
 
     driver.close()
     print(f'data = {data}')
     return jsonify({'success': 200, "msg": "ok", "content": data})
 
+
+@app.route('/monitor', methods=["GET"])
+def monitor():
+    return render_template('monitor.html')
+
+
+
+@app.route('/api/monitorAddDomain/<domain>', methods=["POST"])
+def monitor_add_domain(domain: str):
+    data = {domain: True}
+    print(domain)
+    # if request.method == 'POST':
+    #     data = request.form
+    return jsonify({'success': 200, "msg": "ok", "content": data})
+
+
+@app.route('/api/monitor_update/<domain>', methods=["GET"])
+def monitor_update(domain: str):
+    def update():
+        print(f'update start. domain:{domain}')
+        web, wap = 0, 0
+        while web == 0 or wap == 0:
+            web = curl_test(f'https://www.{domain}.com')
+            wap = curl_test(f'https://m.{domain}.com')
+            yield f'data: {{"web":{web}, "wap": {wap}}}\n\n'
+            print(f'domain: {domain}, web={web}, wap={wap}, pass:{web==0 and wap ==0}')
+            sleep(3)
+
+    def curl_test(host):
+        response = os.system(f'{Config.curl_path} -k {host}')
+        return 1 if response.numerator == 0 else 0
+
+    return Response(update(), mimetype='text/event-stream')
+
+
+@app.route('/otpauth', methods=["GET"])
+def otpauth():
+    return render_template('otpauth.html')
 
 @app.route('/error')  # 錯誤處理
 def error():
