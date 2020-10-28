@@ -12,7 +12,7 @@
     <script type="text/javascript">
         function check(){   
             if ($('.dataframe').length>0){
-                $("table").html("");//已經有了先清空
+                $(".dataframe").remove();//已經有了先清空
             }
             if($("#id").val() =="" && $("#token").val()=="" &&$('#user').val()==""){//判斷三著皆不能輸入
                 alert("請選擇單一輸入框");
@@ -65,7 +65,7 @@
     <script type="text/javascript">
         function check2(){
             if ($('.dataframe').length>0){
-                $("table").html("");//已經有了先清空
+                $(".dataframe").remove();//已經有了先清空
             }
             if($("#domain").val() ==""){//判斷倆著皆不能輸入
                 alert("請輸入網域名稱");

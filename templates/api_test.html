@@ -7,7 +7,13 @@
 #id{border-radius: 22px;}
 p{margin-top: 1%;}
 textarea{vertical-align: middle;}
-.ui-label,label[for=data_able],label[for=cookie_able],label[for=header_able]{color: #bf22da;}
+.ui-label,label[for=data_able],label[for=cookie_able],label[for=header_able]
+{color: #bf22da}
+.response {
+    color: #bf22da;
+    width: 70px;
+    padding: 3px;
+}
 #anvoid_cookie{color: #dca500}
 button, input, optgroup, select, textarea {font-family: arial, Microsoft YaHei;}
 #add_header{background-color: #fcedff;}
@@ -18,7 +24,7 @@ button, input, optgroup, select, textarea {font-family: arial, Microsoft YaHei;}
 {% block script %}
 <script type="text/javascript">
     function check(){
-        var event_id = event.target.id;
+        var event_id = event.target.id;//判斷 是哪個按紐
         $("#status").val('')
         $("#detail").val('')
         $("#req_time").val('')
@@ -82,6 +88,9 @@ button, input, optgroup, select, textarea {font-family: arial, Microsoft YaHei;}
         if (document.querySelector(".header > li:nth-last-child(1)")==null){
             $('#delete_header').attr('disabled',true)
         }
+    }
+    function clear_(){
+        $('#anvoid_cookie').val('')
     }
     function login_cookie(){
         if ($('#username').val()==''){
@@ -177,7 +186,9 @@ button, input, optgroup, select, textarea {font-family: arial, Microsoft YaHei;}
         <input type="text" name="username" id="username" size="10"/>
         <input type="button" id='cookie_submit' onclick="login_cookie()"value='取得登入cookie'>
         <label for="anvoid_cookie"></label>
+        <p>
         <input type="text" name="anvoid_cookie" id="anvoid_cookie" size="40"/>
+        <input type="button" id='clear_cookie' onclick="clear_()"value='清除'></p>
     </li>
     <input type="checkbox" id="data_able">
     <label for="data_able">data</label></div>
@@ -199,15 +210,16 @@ button, input, optgroup, select, textarea {font-family: arial, Microsoft YaHei;}
     <p><input type="button" id='normal_check' name="normal_check" onclick="check()" value="送出">
     <input type="button" id='thread_check' name="thread_check" onclick="check()" value="併發">
 </form>
+<fieldset>
 <li>
-<label class="ui-label" for="status">staus</label>
-    <textarea id="status"  name="status" cols="30" rows="2"></textarea>
-    <label class="ui-label" for="detail">reponse</label>
-    <textarea id="detail"  name="detail" cols="50" rows="10"></textarea>
-</li>
+    <label class="response" for="status">staus</label>
+    <textarea  id="status" cols="30" rows="2"></textarea></li>
 <li>
-    <label class="ui-label" for="detail">請求時間</label>
-    <textarea id="req_time"  name="req_time" cols="30" rows="2"></textarea>
-</li>
+    <label class="response" for="detail">reponse</label>
+    <textarea  id="detail" cols="50" rows="10"></textarea></li>
+<li>
+    <label class="response" for="req_time">請求時間</label>
+    <textarea  id="req_time" cols="30" rows="2"></textarea></li>
+</fieldset>
 
 {% endblock %}

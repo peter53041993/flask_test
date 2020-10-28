@@ -12,7 +12,7 @@ p{margin-top: 1%;}
 <script type="text/javascript">
     function check(){
         if ($('.dataframe').length>0){
-            $("table").html("");//已經有了先清空
+           $(".dataframe").remove();//已經有了先清空
         }
         if ($('#user').val()==""){
             alert('用戶名為空');

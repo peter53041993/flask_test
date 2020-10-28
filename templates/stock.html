@@ -28,7 +28,7 @@
         
             console.log(stock_num)
             if ($('.dataframe').length>0){
-                $("table").html("");//已經有了先清空
+                $(".dataframe").remove();//已經有了先清空
             }
             if ($('#img').html()!=''){// 不等於空 ,代表有圖,需先清除
                 $('#img').html('');
@@ -84,7 +84,7 @@
             var len_check = $('#form2').children(':checked').length;
             console.log(len_check)
             if ($('.dataframe').length>0){
-                $("table").html("");//已經有了先清空
+                $(".dataframe").remove();//已經有了先清空
             }
             if ($('#img').html()!=''){// 不等於空 ,代表有圖,需先清除
                 $('#img').html('');

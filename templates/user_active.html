@@ -14,7 +14,7 @@
         var game_detail="";
         function check(){
             if ($('.dataframe').length>0){
-                $("table").html("");//已經有了先清空
+                $(".dataframe").remove();//已經有了先清空
             }
             if($("#user").val() =="" ){//用戶名為空
                 alert("請輸入用戶名");
@@ -52,7 +52,7 @@
     <script>
             function check2(){
             if ($('.dataframe').length>0){
-                $("table").html("");//已經有了先清空
+                $(".dataframe").remove();//已經有了先清空
             }
             if($("#user").val() =="" ){//用戶名為空
                 alert("請輸入用戶名");
@@ -81,8 +81,7 @@
                         $("#user_detail").after(data)
                         }
                         button_RemoveDisabeld("#check_FF")
-                        button_RemoveDisabeld("#check_Third")
-            
+                        button_RemoveDisabeld("#check_Third")            
                     }
                 })
             }   
