@@ -27,13 +27,14 @@ def admin_Login(url):
 
         admin_url = 'http://admin.%s.com'%url
         username = 'cancus'
-        bindpwd = 123456
         if url in ['dev02','dev03']:
             password = '123qwe'
             envs = 0
+            bindpwd = 10293847
         elif url == 'joy188':
             password = 'amberrd'
             envs = 1
+            bindpwd = 123456
         else:#生產  phl58'
             admin_url = 'http://admin.phl58.com'
             username = 'tprd'
