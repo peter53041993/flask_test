@@ -1,10 +1,9 @@
 from bs4 import BeautifulSoup
 import json, cx_Oracle, requests, hashlib, time, urllib3, time
 from fake_useragent import UserAgent
-import flask_test, AutoTest
 
 
-class FF_():  # 4.0專案
+class FF_:  # 4.0專案
     status = []  # 紀錄請求狀態
     content = []  # 內容
     req_time = []  # 時間

@@ -35,7 +35,8 @@ class OracleConnection:
         logger.info(f"oracle_.get('password')[0] = {oracle_.get('password')[0]}")
         logger.info(f"oracle_.get('password')[self._env_id] = {oracle_.get('password')[self._env_id]}")
         logger.info(f"  oracle_.get('ip')[self._env_id] + ':1521/' = {oracle_.get('ip')[self._env_id] + ':1521/'}")
-        logger.info(f"  oracle_.get('sid')[self._env_id] + service_name = {oracle_.get('sid')[self._env_id] + service_name}")
+        logger.info(
+            f"  oracle_.get('sid')[self._env_id] + service_name = {oracle_.get('sid')[self._env_id] + service_name}")
         self._conn = cx_Oracle.connect(username, oracle_.get('password')[self._env_id],
                                        oracle_.get('ip')[self._env_id] + ':1521/' +
                                        oracle_.get('sid')[self._env_id] + service_name)
@@ -219,7 +220,7 @@ class OracleConnection:
         cursor.close()
         return domain_url
 
-    def select_game_result(self, result) -> list:  # 查詢用戶訂單號, 回傳訂單各個資訊
+    def select_game_result(self, result) -> Dict[int, str]:  # 查詢用戶訂單號, 回傳訂單各個資訊
         cursor = self._get_oracle_conn().cursor()
         sql = f"select a.order_time,a.status,a.totamount,f.lottery_name,\
         c.group_code_title,c.set_code_title,c.method_code_title,\
@@ -237,14 +238,12 @@ class OracleConnection:
         inner join game_series f on  a.lotteryid = f.lotteryid where a.order_code = '{result}' and d.bet_type=1"
         cursor.execute(sql)
         rows = cursor.fetchall()
-        detail_list = []  # 存放各細節
+        game_detail = {}  # 存放各細節
         # game_detail[result] = detail_list# 讓訂單為key,　value 為一個list 存放各訂單細節
-        for tuple_ in rows:
-            for i in tuple_:
-                # print(i)
-                detail_list.append(i)
+        for index, tuple_ in enumerate(rows):
+            game_detail[index] = tuple_
         cursor.close()
-        return detail_list
+        return game_detail
 
     def select_game_order(self, play_type):  # 輸入玩法,找尋訂單
         cursor = self._get_oracle_conn().cursor()
@@ -279,9 +278,9 @@ class OracleConnection:
 
     def select_active_app(self, user):  # 查詢APP 是否為有效用戶表
         cursor = self._get_oracle_conn().cursor()
-        sql = f"select *  from USER_CENTER_THIRDLY_ACTIVE where \
-        create_date >=  trunc(sysdate,'mm') and user_id in \
-        ( select id from user_customer where account = '{user}')"
+        sql = f"select *  from USER_CENTER_THIRDLY_ACTIVE " \
+              f"where create_date >=  trunc(sysdate,'mm') " \
+              f"and user_id in (select id from user_customer where account = '{user}')"
         cursor.execute(sql)
         rows = cursor.fetchall()
         active_app = []
@@ -298,13 +297,13 @@ class OracleConnection:
         app_bet = {}
         for third in ['ALL', 'LC', 'KY', 'CITY', 'GNS', 'FHLL', 'BBIN', 'IM', 'SB', 'AG']:
             if third == 'ALL':
-                sql = f"select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
-                from V_THIRDLY_AGENT_CENTER where account = '{user}' \
-                and create_date > trunc(sysdate,'mm')"
+                sql = f"select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 " \
+                      f"from V_THIRDLY_AGENT_CENTER where account = '{user}' and create_date > trunc(sysdate,'mm')"
             else:
-                sql = f"select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 \
-                from V_THIRDLY_AGENT_CENTER where account = '{user}' \
-                and create_date > trunc(sysdate,'mm') and plat='{third}'"
+                sql = f"select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 " \
+                      f"from V_THIRDLY_AGENT_CENTER where account = '{user}' " \
+                      f"and create_date > trunc(sysdate,'mm') " \
+                      f"and plat='{third}'"
             cursor.execute(sql)
             rows = cursor.fetchall()
             new_ = []  # 存放新的列表內容
@@ -322,15 +321,15 @@ class OracleConnection:
     def select_active_card(self, user, envs):  # 查詢綁卡是否有重複綁
         cursor = self._get_oracle_conn().cursor()
         if envs == 2:  # 生產另外一張表
-            sql = f"SELECT bank_number, count(id) FROM rd_view_user_bank \
-            WHERE bank_number in (SELECT bank_number FROM rd_view_user_bank WHERE account = '{user}' \
-            ) group BY bank_number"
+            sql = f"SELECT bank_number, count(id) FROM rd_view_user_bank " \
+                  f"WHERE bank_number in (SELECT bank_number FROM rd_view_user_bank WHERE account = '{user}' ) " \
+                  f"group BY bank_number"
         else:
-            sql = f"SELECT BANK_NUMBER,count(user_id) FROM USER_BANK \
-            WHERE BANK_NUMBER in \
-            (SELECT BANK_NUMBER FROM USER_BANK WHERE USER_ID= \
-            (SELECT ID FROM USER_CUSTOMER WHERE ACCOUNT='{user}')) \
-            group by bank_number"
+            sql = f"SELECT BANK_NUMBER,count(user_id) FROM USER_BANK " \
+                  f"WHERE BANK_NUMBER in " \
+                  f"(SELECT BANK_NUMBER FROM USER_BANK WHERE USER_ID= " \
+                  f"(SELECT ID FROM USER_CUSTOMER WHERE ACCOUNT='{user}')) " \
+                  f"group by bank_number"
         cursor.execute(sql)
         rows = cursor.fetchall()
         card_num = {}
@@ -342,8 +341,10 @@ class OracleConnection:
 
     def select_active_fund(self, user):  # 查詢當月充值金額
         cursor = self._get_oracle_conn().cursor()
-        sql = f"select sum(real_charge_amt) from fund_charge where status=2 and apply_time > trunc(sysdate,'mm')  \
-              and user_id in ( select id from user_customer where account = '{user}')"
+        sql = f"select sum(real_charge_amt) from fund_charge " \
+              f"where status=2 " \
+              f"and apply_time > trunc(sysdate,'mm') " \
+              f"and user_id in ( select id from user_customer where account = '{user}')"
         cursor.execute(sql)
         rows = cursor.fetchall()
         user_fund = []  # 當月充值金額
@@ -360,8 +361,10 @@ class OracleConnection:
         # today_time = '2019-06-10'#for 預售中 ,抓當天時間來比對,會沒獎期
         try:
             cursor = self._get_oracle_conn().cursor()
-            sql = f"select web_issue_code,issue_code from game_issue where lotteryid = '{lottery_id}' and sysdate between sale_start_time and sale_end_time"
-
+            sql = f"select web_issue_code,issue_code from game_issue " \
+                  f"where lotteryid = '{lottery_id}' " \
+                  f"and sysdate between sale_start_time " \
+                  f"and sale_end_time"
             cursor.execute(sql)
             rows = cursor.fetchall()
 
@@ -382,8 +385,9 @@ class OracleConnection:
 
     def select_red_id(self, user):  # 紅包加壁  的訂單號查詢 ,用來審核用
         cursor = self._get_oracle_conn().cursor()
-        sql = f"SELECT ID FROM RED_ENVELOPE_LIST WHERE status=1 and \
-        USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='{user}')"
+        sql = f"SELECT ID FROM RED_ENVELOPE_LIST " \
+              f"WHERE status=1 " \
+              f"and USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='{user}')"
         cursor.execute(sql)
         rows = cursor.fetchall()
 
@@ -395,8 +399,8 @@ class OracleConnection:
 
     def select_red_bal(self, user) -> list:
         cursor = self._get_oracle_conn().cursor()
-        sql = f"SELECT bal FROM RED_ENVELOPE WHERE \
-        USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='{user}')"
+        sql = f"SELECT bal FROM RED_ENVELOPE " \
+              f"WHERE USER_ID = (SELECT id FROM USER_CUSTOMER WHERE account ='{user}')"
         cursor.execute(sql)
         rows = cursor.fetchall()
 
@@ -465,6 +469,50 @@ class OracleConnection:
         result = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
         cursor.close()
         return result[0]
+
+    def select_number_record(self, lotteryid, issue_code):
+        cursor = self._get_oracle_conn().cursor()
+        sql = f"select number_record from game_issue " \
+              f"where issue_code = '{issue_code}' " \
+              f"and lotteryid = '{lotteryid}'"
+        print(sql)
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        number_record = {}
+        for index, tuple_ in enumerate(rows):
+            number_record[index] = tuple_[0]
+        cursor.close()
+        return number_record
+
+    def select_bonus(self, lottery_id, bet_type_code, detail=""):  # 用bet_type_code 找尋 平台獎金/理論獎金 ,detail 投注內容,
+        cursor = self._get_oracle_conn().cursor()
+        if detail == '':
+            sql = f"select actual_bonus,lhc_theory_bonus from game_award " \
+                  f"where LOTTERYID = {lottery_id} " \
+                  f"and bet_type_code like '%{bet_type_code}%'"
+        elif detail == 'FF_bonus':  # 用平台獎金 去都出 理論獎金  , 目前 PCDD 賠率使用
+            sql = "SELECT actual_bonus,lhc_theory_bonus FROM game_award WHERE lotteryid = %s" % lottery_id
+        elif type(detail) == int:  # 使用 award_group_id  來看
+            sql = r"select actual_bonus from game_award " \
+                  r"where LOTTERYID={lotteryid} " \
+                  r"and bet_type_code = '{bet_type_code}' " \
+                  r"and award_group_id = {detail}"
+        else:
+            sql = f"select actual_bonus,lhc_theory_bonus from game_award " \
+                  f"where LOTTERYID = {lottery_id} " \
+                  f"and  bet_type_code = '{bet_type_code}' " \
+                  f"and  lhc_code like '%{detail}%'"
+        print(sql)
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        bonus = {}
+        for index, tuple_ in enumerate(rows):
+            if detail == "FF_bonus":  # 抓出來需做 數值上的處理
+                bonus[float(tuple_[0] / 10000)] = tuple_[1] / 10000  # 用平台獎金當key : 理論獎金value
+            else:
+                bonus[index] = tuple_
+        cursor.close()
+        return bonus
 
     def close_conn(self):
         if self._conn is not None:

@@ -957,31 +957,24 @@ def game_result():
     if request.method == "POST":
         game_code = request.form.get('game_code')  # 訂單號
         game_type = request.form.get('game_type')  # 玩法
-        env = request.form.get('env_type')  # 環境
         envConfig = Config.EnvConfig(request.form.get('env_type'))
         cookies_ = request.cookies  # 瀏覽器上的cookie
-        session = requests.Session()
+        conn = OracleConnection(env_id=envConfig.get_env_id())
         print(cookies_, envConfig.get_admin_url())
-        if env == 'dev02':  # 傳給DB 環境 get_conn(env)用
-            envs = 0
-        else:
-            envs = 1
         if game_code != '':  # game_code 不為空,代表前台 是輸入 訂單號
-            AutoTest.Joy188Test.select_gameResult(AutoTest.Joy188Test.get_conn(envs), game_code)  # 傳回此方法.找出相關 訂單細節
-            game_detail = AutoTest.game_detail  # 將 global  game_detail 宣告變數 遊戲訂單的 內容
+            game_detail = conn.select_game_result(game_code)  # 將 取得 game_detail 宣告變數 遊戲訂單的 內容
             len_game = len(game_detail)
             print(game_detail)
             if len_game == 0:
                 return "此環境沒有此訂單號"
             else:
                 index_list, game_code_list, game_time_list, game_status_list, game_play_list, game_awardname_list = [], [], [], [], [], []
-                lotteryid_list, game_submit_list, theory_bonus_list, ff_bonus_list, game_point_list, bonus_list = [], [], [], [], [], []
+                lottery_id_list, game_submit_list, theory_bonus_list, ff_bonus_list, game_point_list, bonus_list = [], [], [], [], [], []
                 game_amount_list, game_retaward_list, game_moneymode_list, game_mul_list, game_award_list = [], [], [], [], []
                 game_awardmode_list = []
                 issue_code = game_detail[0][19]  # 旗號
-                lotteryid = game_detail[0][14]  # 彩種id
-                AutoTest.Joy188Test.select_numberRecord(AutoTest.Joy188Test.get_conn(envs), lotteryid, issue_code)
-                number_record = AutoTest.number_record[0]  # 開獎號
+                lottery_id = game_detail[0][14]  # 彩種id
+                number_record = conn.select_number_record(lottery_id, issue_code)[0]  # 開獎號
                 for key in game_detail.keys():
                     print(key)
                     index_list.append(key)
@@ -1000,11 +993,11 @@ def game_result():
                         game_status = '待確認'
                     game_status_list.append(game_status)
                     lottery_name = game_detail[key][3]
-                    game_playtype = game_detail[key][4] + game_detail[key][5] + game_detail[key][6]
-                    game_play_list.append(lottery_name + "/" + game_playtype)
+                    game_play_type = game_detail[key][4] + game_detail[key][5] + game_detail[key][6]
+                    game_play_list.append(lottery_name + "/" + game_play_type)
                     game_awardname_list.append(game_detail[key][8])
                     bet_type_code = game_detail[key][15]  # 玩法
-                    theory_bonus = game_detail[key][16]  # 理論獎金
+                    theory_bonus = float(game_detail[key][16])  # 理論獎金
 
                     game_submit = game_detail[key][7]  # 投注內容
                     game_submit_list.append(game_submit)
@@ -1020,8 +1013,7 @@ def game_result():
                     '''
                     if lottery_name == 'PC蛋蛋':
                         if bet_type_code not in ['66_28_71', '66_13_84', '66_74_107']:  # 同個玩法只有單一賠率
-                            AutoTest.Joy188Test.select_bonus(AutoTest.Joy188Test.get_conn(envs), lotteryid,
-                                                             bet_type_code)  # 使用bet_type_code like
+                            bonus = conn.select_bonus(lottery_id=lottery_id, bet_type_code=bet_type_code)
                         else:
                             game_map = Flask.game_map(type_=1)  # 呼叫玩法說明/遊戲mapping
                             print(game_map)
@@ -1047,39 +1039,34 @@ def game_result():
                             point_id = bet_type_code + "_" + game_map[game_submit]  # 前面bet_type_code一致, _後面 動態
 
                             # 相同賠率 有不同完髮的(ex: 投注內容 0和27, 賠率都是 900 ), 需再把 投注內容game_submit 進去 找
-                            AutoTest.Joy188Test.select_bonus(AutoTest.Joy188Test.get_conn(envs), lotteryid, point_id,
-                                                             game_submit)
-                        pc_dd_bonus = AutoTest.bonus
-                        theory_bonus = pc_dd_bonus[0][1] / 10000
-                        FF_bonus = pc_dd_bonus[0][0] / 10000
+                            bonus = conn.select_bonus(lottery_id=lottery_id, bet_type_code=point_id, detail=game_submit)
+                        theory_bonus = bonus[0][1] / 10000
                         # print(theory_bonus,FF_bonus)
                     else:  # 其他大眾彩種
                         theory_bonus = theory_bonus / 10000  # 理論將金
-                        point_id = bet_type_code + "_" + str(
-                            theory_bonus)  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
+                        point_id = bet_type_code + "_" + str(theory_bonus)  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
                         # for i in soup.find_all('span', id=re.compile("^(%s)" % point_id)):  # {'id':point_id}):
                         # FF_bonus = float(i.text)
                         award_group_id = game_detail[key][17]  # 用來查詢 用戶 獎金組 屬於哪種
-                        AutoTest.Joy188Test.select_bonus(AutoTest.Joy188Test.get_conn(envs), lotteryid, bet_type_code,
-                                                         award_group_id)  # 使用bet_type_code like
-                        pc_dd_bonus = AutoTest.bonus
-                        FF_bonus = pc_dd_bonus[0][0] / 10000
+                        bonus = conn.select_bonus(lottery_id, bet_type_code, award_group_id)  # 使用bet_type_code like
+                    pc_dd_bonus = bonus
+                    FF_bonus = pc_dd_bonus[0][0] / 10000
                     theory_bonus_list.append(theory_bonus)
                     ff_bonus_list.append(FF_bonus)
-                    game_point = float(game_detail[key][18] / 10000)
+                    game_point = float(float(game_detail[key][18]) / 10000)
                     game_point_list.append(game_point)
-                    game_retaward = float(game_detail[key][10] / 10000)  # 反點獎金 需除1萬
+                    game_retaward = float(float(game_detail[key][10]) / 10000)  # 反點獎金 需除1萬
                     game_retaward_list.append(game_retaward)
-                    game_awardmode = game_detail[key][9]  # 是否為高獎金
-                    if game_awardmode == 1:
-                        game_awardmode = '否'
-                        bonus = '%s - %s' % (FF_bonus, game_point)
+                    game_award_mode = game_detail[key][9]  # 是否為高獎金
+                    if game_award_mode == 1:
+                        game_award_mode = '否'
+                        bonus = f'{FF_bonus} - {game_point}'
                     else:
-                        game_awardmode = '是'
+                        game_award_mode = '是'
                         bonus = game_retaward + FF_bonus  # 高獎金的話, 獎金 模式 + 反點獎金
-                    game_awardmode_list.append(game_awardmode)
+                    game_awardmode_list.append(game_award_mode)
                     bonus_list.append(bonus)
-                    game_amount = float(game_detail[key][2] / 10000)  # 投注金額  需在除 1萬
+                    game_amount = float(float(game_detail[key][2]) / 10000)  # 投注金額  需在除 1萬
                     game_amount_list.append(game_amount)
                     game_moneymode = game_detail[key][12]  # 元角分模式 , 1:元, 2: 角
                     if game_moneymode == 1:
@@ -1090,7 +1077,7 @@ def game_result():
                         game_moneymode = '分'
                     game_moneymode_list.append(game_moneymode)
                     game_mul_list.append(game_detail[key][11])
-                    game_award = float(game_detail[key][13] / 10000)  # 中獎獎金
+                    game_award = float(float(game_detail[key][13]) / 10000)  # 中獎獎金
                     game_award_list.append(game_award)
                 if number_record is None:
                     number_record = ''
@@ -1108,7 +1095,7 @@ def game_result():
                 game_map = Flask.game_map()  # 呼叫玩法說明
                 frame = pd.DataFrame(data, index=index_list)
                 return frame.to_html()
-        elif game_type != '':  # game_type 不為空,拜表前台輸入 指定玩法
+        elif game_type != '':  # game_type 不為空, 代表前台輸入 指定玩法
             if "_" in game_type:  # 把頁面輸入  _   去除
                 print('有_需移除')
                 if "2000" in game_type:  # 超級2000 在DB格式 前面 多帶 _ ,不能移除
@@ -1124,9 +1111,9 @@ def game_result():
                 print('輸入玩法 有空格需去除掉')
                 game_type = game_type.replace(' ', '')
             print(game_type)
-            AutoTest.Joy188Test.select_gameorder(AutoTest.Joy188Test.get_conn(envs), '%' + game_type + '%')
-            game_order = AutoTest.game_order
-            len_order = AutoTest.len_order
+            order = conn.select_game_order(game_type)
+            game_order = order[0]
+            len_order = order[1]
             if len_order == 0:
                 return '沒有該玩法'
             order_list = []  # 因為可能有好幾個訂單,  傳入 dataframe 需為列表 ,訂單
@@ -1137,7 +1124,7 @@ def game_result():
             order_user = []  # 用戶名
             order_detail = []  # 投注內容
             order_record = []  # 開獎號碼
-            order_awardmode = []  # 獎金模式
+            order_award_mode = []  # 獎金模式
             for len_ in range(len_order):  # 取出長度
                 order_list.append(game_order[len_][2])  # 2為訂單號.
                 order_time.append(game_order[len_][1])
@@ -1158,13 +1145,13 @@ def game_result():
                 order_detail.append(game_order[len_][8])
                 order_record.append(game_order[len_][9])
                 if game_order[len_][10] == 1:
-                    awardmode = "一般獎金"
+                    award_mode = "一般獎金"
                 else:
-                    awardmode = '高獎金'
-                order_awardmode.append(awardmode)
+                    award_mode = '高獎金'
+                order_award_mode.append(award_mode)
             # print(order_list)
             data = {"訂單號": order_list, "用戶名": order_user, "投注時間": order_time, "投注彩種": order_lottery, "投注玩法": order_type,
-                    "投注內容": order_detail, "獎金模式": order_awardmode, "開獎號碼": order_record, "中獎狀態": order_status}
+                    "投注內容": order_detail, "獎金模式": order_award_mode, "開獎號碼": order_record, "中獎狀態": order_status}
             frame = pd.DataFrame(data)
             # test = frame.style.applymap(status_style)#增加狀態顏色 ,這是for jupyter_notebook可以直接使用
             print(frame)
