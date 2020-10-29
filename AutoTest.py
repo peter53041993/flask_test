@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import pymysql as p
-from Utils import Config
+from utils import Config
 import FF_Joy188,flask_test
 
 os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'  # 避免抓出oracle中文 為問號
@@ -2276,7 +2276,7 @@ class Joy188Test2(unittest.TestCase):
             else:
                 print('%s登入失敗' % user)
         except Exception as e:
-            from Utils.TestTool import traceLog
+            from utils.TestTool import traceLog
             traceLog(e)
 
     @staticmethod
