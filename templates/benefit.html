@@ -77,8 +77,8 @@
                 success:function(data){
                     button_RemoveDisabeld('#submit')
                     source.close();
-                    if (data=="此環境沒有該用戶"){
-                        alert('此環境沒有該用戶');
+                    if (data=="沒有該用戶"){
+                        alert('沒有該用戶');
                         return false;
                     }
                     else{
@@ -87,6 +87,10 @@
                     //alert(data);
                     }
                     //return false;
+                },
+                error: function(data){
+                    alert('有錯誤');
+                    button_RemoveDisabeld('#submit');
                 }
                 })
                 
