@@ -414,7 +414,7 @@ class ApiTestPC(unittest.TestCase):
         except IOError:
             self.fail(f'測試結果：登入失敗.\n接口回傳：{r.json()}')
 
-    def md(self, _password, _param):
+    def md(_password, _param):
         m = hashlib.md5()
         m.update(_password)
         sr = m.hexdigest()
