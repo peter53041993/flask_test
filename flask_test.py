@@ -1653,10 +1653,12 @@ def fund_activity():  # 充值紅包 查詢
 
 @app.route('/api_test', methods=["GET", "POST"])
 def api_test():
+    import FF_Joy188
     if request.method == "POST":
         print(request.cookies)
         request_type = request.form.get('request_type')
         content_type = request.form.get('Content_type')  # header
+        from urllib.parse import urlsplit
         url = urlsplit(request.form.get('url'))  # url 要切割
         url_domain = url.scheme + '://' + url.netloc  # 為網域名
         url_path = url.path  # .com/ 後面url路徑
@@ -1715,6 +1717,7 @@ def api_test():
 @app.route('/gameBox', methods=["POST", "GET"])
 def gameBox():
     admin_items, user_items = {}, {}  # 管理/客戶端
+    import GameBox
     for key in GameBox.GameBox().data_type.keys():
         # print(key)
         # 中文名稱為key, 英文參數唯value,用意 顯示在頁面上中文
@@ -1924,6 +1927,7 @@ def FundCharge():  # 充值成功金額 查詢
 
 @app.route('/login_cookie', methods=["POST"])  # 傳回登入cookie, 在api_test頁面.  取得登入cookie的方式
 def login_cookie():
+    import FF_Joy188
     env_url = request.form.get('env_type')
     envConfig = Config.EnvConfig(env_url)
     joint = envConfig.get_joint_venture(envConfig.get_env_id())
