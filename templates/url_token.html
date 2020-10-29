@@ -10,19 +10,25 @@
 {% endblock %}  
 {% block script %}
     <script type="text/javascript">
-        function check(){
+        function check(){   
             if ($('.dataframe').length>0){
-                $("table").html("");//已經有了先清空
+                $(".dataframe").remove();//已經有了先清空
             }
             if($("#id").val() =="" && $("#token").val()=="" &&$('#user').val()==""){//判斷三著皆不能輸入
                 alert("請選擇單一輸入框");
-                location.reload()
+                return false;
+                //location.reload()
             }
             else if ($("#id").val() !="" && $("#token").val()!="" ){//判斷倆著皆輸入
                 alert("只能擇一輸入框");
-                location.reload()
+                return false;
+            }
+            else if ($("#id").val() !="" && $("#user").val()!="" ){//判斷倆著皆輸入
+                alert("只能擇一輸入框");
+                return false;
             }
             else {
+                button_disabled('.submit')
             $.ajax({
                 url:"/url_token",
                 type:"POST",
@@ -30,8 +36,9 @@
                 headers:{
                         Accept:"application/json; charset=utf-8"
                     },
-                data:$("#form1").serialize(),
+                data:form_trim("#form1"),
                 success:function(data){
+                    button_RemoveDisabeld('.submit')
                     game_detail = data;
                     console.log(typeof(data))
                     if (data=='沒有該註冊碼'){
@@ -44,7 +51,6 @@
                     }
                     else if (data.indexOf('環境沒有該用戶')>=0){
                         alert(data);
-                        //location.reload();
                     }
                     else{
                     console.log(data);
@@ -58,13 +64,14 @@
     <script type="text/javascript">
         function check2(){
             if ($('.dataframe').length>0){
-                $("table").html("");//已經有了先清空
+                $(".dataframe").remove();//已經有了先清空
             }
             if($("#domain").val() ==""){//判斷倆著皆不能輸入
                 alert("請輸入網域名稱");
-                location.reload()
+                return false;
             }
             else{
+                button_disabled('.submit')
                 $.ajax({
                 url:"/url_token",
                 type:"POST",
@@ -72,8 +79,9 @@
                 headers:{
                         Accept:"application/json; charset=utf-8"
                     },
-                data:$("#form2").serialize(),
+                data:form_trim("#form2"),
                 success:function(data){
+                    button_RemoveDisabeld('.submit')
                     game_detail = data;
                     console.log(typeof(data))
                     if (data=='沒有該連結'){
@@ -98,6 +106,7 @@
         }
     </script>
 {% endblock %}
+{% block header %}註冊碼/註冊連結{% endblock %}
 {% block main %}
 
     <form id='form1' method='POST'>
@@ -119,12 +128,12 @@
         </br> 
         <p>
         請輸入開戶連結ID<input type="text" id="id" name="id"
-        size="8"  maxlength="8"></p>
+        size="10"  maxlength="8"></p>
         <p>
         請輸入用戶名<input type="text" id="user" name="user"
-        size="16"  maxlength="16"placeholder='查詢用戶從哪開出'>
+        size="20"  maxlength="16">
         </p>
-        <p><input type="button" onclick="check()" value="用戶連結查詢"></p>
+        <p><input type="button" onclick="check()" class='submit' value="連結查詢"></p>
     </form>
     <form id='form2' method='POST'>
         <label>環境: </label>
@@ -135,7 +144,7 @@
         </select>
         請輸入網域名稱<input type="text" id="domain" name="domain"
         size="30" title='格式: www.xxx.com' placeholder="不帶http">
-        <p><input type="button" onclick="check2()" value="註冊連結查詢"></p>
+        <p><input type="button" onclick="check2()"  class='submit' value="綁定註冊連結查詢"></p>
     </form>
     <div id='user_detail'>
     </div> 

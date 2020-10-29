@@ -28,7 +28,7 @@
         
             console.log(stock_num)
             if ($('.dataframe').length>0){
-                $("table").html("");//已經有了先清空
+                $(".dataframe").remove();//已經有了先清空
             }
             if ($('#img').html()!=''){// 不等於空 ,代表有圖,需先清除
                 $('#img').html('');
@@ -47,7 +47,7 @@
                     headers:{
                             Accept:"application/json; charset=utf-8"
                         },
-                    data:$("#form1").serialize(),
+                    data:form_trim("#form1"),
                     success:function(data){
                     console.log(data);
                     stock_detail = data;
@@ -84,7 +84,7 @@
             var len_check = $('#form2').children(':checked').length;
             console.log(len_check)
             if ($('.dataframe').length>0){
-                $("table").html("");//已經有了先清空
+                $(".dataframe").remove();//已經有了先清空
             }
             if ($('#img').html()!=''){// 不等於空 ,代表有圖,需先清除
                 $('#img').html('');
@@ -101,7 +101,7 @@
                 type:"POST",
                 headers:{
                 Accept:"application/json; charset=utf-8"},
-                data:$("#form2").serialize(),
+                data:form_trim("#form2"),
                 success:function(data){
                 stock_detail = data;
                 console.log(data);
@@ -118,7 +118,7 @@
             $.ajax({
                 url:'stock_search3',
                 type:"POST",
-                data:$('#form3').serialize(),
+                data:form_trim("#form3"),
                 success:function(data){
                     console.log(data);
                 }

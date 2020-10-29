@@ -1,11 +1,36 @@
 
-
+li{list-style: none;}
 .dataframe{font-size:11pt;border:2px solid #b613de;}
-.dataframe tr:hover{background:silver;cursor:pointer;}
-body > main > table > thead > tr > th {
+.dataframe tr:hover{background:#dcd8d8;cursor:pointer;}
+table > thead > tr > th{
     text-align: center;
     color: #efb000;
 }
+th.sorting,th.sorting_asc,th.sorting_desc {
+    text-align: center;
+    color: #efb000;
+}
+.odd {
+    text-align: center;
+}
+.even {
+    text-align: center;
+}
+.sorting_1 {
+    background: #fff0c4;
+}
 body > main > table > tbody > tr {
     text-align: center;
+}
+a.dropdown-item:hover {
+    background: radial-gradient(#c2ced4, transparent);
+}
+#header {
+    background: radial-gradient(#1f3540, transparent);
+    color:white;
+    text-align:center;
+    font-family: monospace;
+}
+h1 {
+    font-size: 1.5rem;
 }

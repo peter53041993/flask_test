@@ -678,17 +678,90 @@ def stock_search2():
     return frame.to_html()
 
 
-def game_map():  # 玩法 和 說明 mapping
-    global GAME_EXPLAN, GAME_PLAYTYPE  # 說明, 玩法
-    if '五星' in GAME_PLAYTYPE:
-        if GAME_PLAYTYPE in ['复式', '单式']:
-            GAME_EXPLAN = '五個號碼順續需全相同'
-        elif '组选120' in GAME_PLAYTYPE:
-            GAME_EXPLAN = '五個號碼相同,順續無需相同(開獎號無重覆號碼)'
-
+def number_map(number_record):  # 開獎號使用
+    if number_record == '':
+        return ''
+    play_dict = {}
+    print(number_record)
+    if lottery_name == 'PC蛋蛋':
+        sum_ = 0
+        try:
+            for i in number_record:
+                sum_ = sum_ + int(i)
+        except ValueError as e:
+            print(e)
+        for i in range(27):  # PC蛋蛋個號碼mapping 顏色
+            if i in [0, 13, 14, 27]:
+                number_color = '灰'
+            elif i in [1, 4, 7, 10, 16, 19, 22, 25]:
+                number_color = '綠'
+            elif i in [2, 5, 8, 1, 11, 17, 20, 23, 26]:
+                number_color = '藍'
+            else:
+                number_color = '紅'
+            play_dict[i] = number_color
+        record = number_record + "#總和:%s, 顏色:%s" % (sum_, play_dict[sum_])
+        return record
     else:
-        GAME_EXPLAN = 'test'
-    return GAME_EXPLAN
+        return number_record
+
+
+def game_map(type_=''):  # 玩法 和 說明 mapping,type_ 預設  '' ,為玩法說明,  不是 '' ,走其他邏輯
+    global game_playtype, game_theory, bonus, data  # 說明, 玩法
+    if lottery_name in ['slmmc']:
+        if '五星' in game_playtype:
+            if game_playtype in ['复式', '单式']:
+                game_explan = '#五個號碼順續需全相同'
+            elif '组选120' in game_playtype:
+                game_explan = '#五個號碼相同,順續無需相同(開獎號無重覆號碼)'
+        game_cal = 'test'
+    elif lottery_name == '凤凰比特币冲天炮':
+        game_theory = round(float(game_submit) / 0.9, 2)  # 快開  理論將金 另外算
+        game_cal = '%s*%s=%s' % (game_amount, game_submit, float(game_submit) * game_amount)
+        # '%s*(%s+%s*%s)'%(game_amount,game_submit,game_theory,game_point)# 獎金計算  原本公式 ,現在變成 直皆投注高度*金額
+        game_explan = game_cal + '/獎金計算: 投注金額*投注內容#快開改後不帶返點'  # '獎金計算: 投注金額*(投注內容+理論獎金*反點)'
+        bonus = (float(game_submit) + game_theory * game_point)
+        data['中獎率'] = '0.95/投注內容%s=%s' % (game_submit, round(0.95 / float(game_submit), 4))
+        data['理論獎金'] = str(game_theory) + "(投注內容/0.9)#快開改後不適用"
+        data['獎金模式'] = "快開改前: %s" % bonus
+        data['中獎獎金'] = '改前: %s/改後: %s' % (game_amount * bonus, game_award)
+        del data['反點獎金']  # 快開沒參考價值
+        del data['平台獎金']
+    elif lottery_name == 'PC蛋蛋':
+        if type_ == '':
+            theory_data = data['理論獎金']  # ex : [1,2,3,4,5]
+            theory_data[0] = str(theory_data[0]) + "#理論賠率"  # 只取列表第一個值 +  說明
+            data['理論獎金'] = theory_data
+
+            game_explan = '賠率=獎金#一注1元'
+        else:
+            pcdd_sum = {}
+            if bet_type_code == '66_28_71':  # PC蛋蛋  和值玩法, 要錯特殊處理
+                for i in range(28):  # 0-28 和值
+                    if i < 13:
+                        a = i + 72
+                    elif i in (13, 14):
+                        a = 85
+                    else:
+                        a = 99 - i
+                    pcdd_sum[str(i)] = str(a)  # a 是傳回 個和值 數值 的 獎金
+            elif bet_type_code == '66_13_84':  # 色波
+                pcdd_sum['RED'] = '88'
+                pcdd_sum['GREEN'] = '89'
+                pcdd_sum['BLUE'] = '90'
+            elif bet_type_code == '66_74_107':  # 大單,大雙 系列
+                pcdd_sum['DADAN'] = '47'
+                pcdd_sum['DASHUNG'] = '48'
+                pcdd_sum['XIAODAN'] = '49'
+                pcdd_sum['XIAOSHUNG'] = '50'
+            return pcdd_sum
+    else:
+        game_explan = '#未補上'
+        theory_data = data['理論獎金']  # ex : [1,2,3,4,5]
+        theory_data[0] = str(theory_data[0]) + "#未補上"  # 只取列表第一個值 +  說明
+        data['理論獎金'] = theory_data
+    # data['獎金計算'] = game_cal
+    data['遊戲說明'] = game_explan
 
 
 @app.route('/stock_search3', methods=["POST"])
@@ -708,114 +781,333 @@ def status_style(val):  # 判斷狀態,來顯示顏色屬性 , 給 game_order �
     return (f'color:{color}')
 
 
+@app.route('/get_cookie', methods=["GET"])
+def get_cookie():  # 存放cookie皆口
+    return cookie
+
+
+# @app.route('/game_result', methods=["GET", "POST"])  # 查詢方案紀錄定單號
+# def game_result():
+#     global GAME_EXPLAN, GAME_PLAYTYPE
+#     cookies_dict = {}  # 存放cookie,避免一隻 登入後台
+#     if request.method == "POST":
+#         game_code = request.form.get('game_code')  # 訂單號
+#         game_type = request.form.get('game_type')  # 玩法
+#         env = Config.EnvConfig(request.form.get('env_type'))  # 環境
+#         cookies_ = request.cookies  # 瀏覽器上的cookie
+#         conn = OracleConnection(env.get_env_id())
+#         print(cookies_)
+#         if game_code != '':  # game_code 不為空,代表前台 是輸入 訂單號
+#             game_detail = conn.select_game_result(result=game_code)  # 傳回此方法.找出相關 訂單細節
+#             if len(game_detail) == 0:
+#                 return "此環境沒有此訂單號"
+#             else:
+#                 game_status = game_detail[1]  # 需判斷  訂單狀態
+#                 if game_status == 1:
+#                     game_status = '等待開獎'
+#                 elif game_status == 2:
+#                     game_status = '中獎'
+#                 elif game_status == 3:
+#                     game_status = '未中獎'
+#                 elif game_status == 4:
+#                     game_status = '撤銷'
+#                 else:
+#                     game_status = '待確認'
+#                 game_amount = float(game_detail[2] / 10000)  # 投注金額  需在除 1萬
+#                 game_retaward = float(game_detail[10] / 10000)  # 反點獎金 需除1萬
+#                 game_moneymode = game_detail[12]  # 元角分模式 , 1:元, 2: 角
+#                 if game_moneymode == 1:
+#                     game_moneymode = '元'
+#                 elif game_moneymode == 2:
+#                     game_moneymode = '角'
+#                 else:
+#                     game_moneymode = '分'
+#
+#                 # 遊戲玩法 : 後三 + 不定位+ 一碼不定位 , 並回傳給 game_map 來做 mapping
+#                 GAME_PLAYTYPE = game_detail[4] + game_detail[5] + game_detail[6]
+#                 print(f"玩法: {GAME_PLAYTYPE}")
+#
+#                 game_award = float(game_detail[13] / 10000)  # 中獎獎金
+#
+#                 header = {'User-Agent': Config.UserAgent.PC.value,
+#                           'Content-Type': 'application/x-www-form-urlencoded'}
+#                 session = None
+#                 lottery_id = None
+#                 award_id = None
+#                 print(f'cookies_.keys() = {cookies_.keys()}')
+#                 if env.get_domain() not in cookies_.keys():
+#                     print("瀏覽器上 還沒有後台cookie,需登入")
+#                     award_id = game_detail[17]  # 獎金id, 傳后查詢尋是哪個獎金組
+#                     lottery_id = game_detail[14]  # 採種Id 傳給 後台 查詢哪個彩種
+#                     session = requests.Session()
+#                     header['Cookie'] = 'ANVOAID=' + env.get_admin_cookie()  # 後台 登入header
+#                     cookie = env.get_admin_cookie()  # 後台登入 cookie
+#
+#                     res = redirect('game_result')
+#                     res.set_cookie(env.get_domain(), cookie)  # 存放cookie
+#
+#                     # return res
+#                     # print(cookie)
+#                     # cookies_[env] = cookie
+#                 else:
+#                     print("瀏覽器已經存在cookie,無須登入")
+#                     header['Cookie'] = cookies_[env]
+#                     """若進入else, header / session / lotteryid / award_id 如何初始化?"""
+#
+#                 # header['Content-Type'] ='application/json'
+#                 r = session.get(
+#                     env.get_admin_url() + f"/gameoa/queryGameAward?lotteryId={lottery_id}&awardId={award_id}&status=1"
+#                     , headers=header)  # 登入後台 查詢 用戶獎金值
+#                 # print(r.text)
+#                 soup = BeautifulSoup(r.text, 'lxml')
+#                 bonus = []
+#                 if game_detail[16] == 0:  # 理論獎金為0, 代表一個完髮有可能有不同獎金
+#                     print('有多獎金玩法')
+#                     point_id = str(game_detail[15])
+#                     for i in soup.find_all('span', id=re.compile(f"^({point_id})")):
+#                         bonus.append(float(i.text))  # 有多個獎金
+#                     bonus = " ".join([str(x) for x in bonus])  # 原本bonus裡面裝 float  .需list裡轉成字元,
+#
+#                     # bonus = "".join(bonus)# dataframe 不能支援list
+#                 else:
+#                     point_id = str(game_detail[15]) + "_" + str(
+#                         game_detail[16])  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
+#                     for i in soup.find_all('span', id=re.compile(f"^({point_id})")):  # {'id':point_id}):
+#                         bonus = float(i.text)
+#                 print(bonus, point_id)
+#                 game_awardmode = game_detail[9]  # 是否為高獎金
+#                 if game_awardmode == 1:
+#                     game_awardmode = '否'
+#                 elif game_awardmode == 2:
+#                     game_awardmode = '是'
+#                     bonus = game_retaward + bonus  # 高獎金的話, 獎金 模式 + 反點獎金
+#                 # print(bonus)
+#                 game_map()  # 呼叫玩法說明
+#                 data = {"遊戲訂單號": game_code, "訂單時間": game_detail[0], "中獎狀態": game_status,
+#                         "投注金額": game_amount, "投注彩種": game_detail[3],
+#                         "投注玩法": GAME_PLAYTYPE,
+#                         "投注內容": game_detail[7], "獎金組": game_detail[8], "獎金模式": bonus,
+#                         "獎金模式狀態": game_awardmode, "反點獎金": game_retaward, "投注倍數": game_detail[11],
+#                         "元角分模式": game_moneymode, "中獎獎金": game_award, "遊戲說明": GAME_EXPLAN
+#                         }
+#                 FRAME = pd.DataFrame(data, index=[0])
+#                 print(FRAME)
+#                 # return frame
+#                 return FRAME.to_html()
+#         elif game_type != '':  # game_type 不為空,拜表前台輸入 指定玩法
+#             if "_" in game_type:  # 把頁面輸入  _   去除
+#                 print('有_需移除')
+#                 if "2000" in game_type:  # 超級2000 在DB格式 前面 多帶 _ ,不能移除
+#                     test_list = []  # 存放 超級2000 後新的列表,並join 新的 game_type
+#                     for i in game_type.split('_'):
+#                         if "2000" in i:
+#                             i = i + "_"
+#                         test_list.append(i)  # 新的列表
+#                     game_type = "".join(test_list)  # 超級2000符合的 DB mapping
+#                 else:
+#                     game_type = game_type.replace("_", "")  # 不是超級2000, _ 就值皆去除
+#             elif game_type[-1] == " ":  # 判斷輸入後面多增加空格:
+#                 print('輸入玩法 有空格需去除掉')
+#                 game_type = game_type.replace(' ', '')
+#             print(game_type)
+#             temp = conn.select_game_order('%' + game_type + '%')
+#             game_order = temp[0]
+#             len_order = temp[1]
+#             # print(game_order)
+#             order_list = []  # 因為可能有好幾個訂單,  傳入 dataframe 需為列表 ,訂單
+#             order_time = []  # 時間
+#             order_lottery = []  # 採種
+#             order_type = []  # 玩法
+#             order_status = []  # 狀態
+#             order_user = []  # 用戶名
+#             order_detail = []  # 投注內容
+#             order_record = []  # 開獎號碼
+#             for len_ in range(len_order):  # 取出長度
+#                 order_list.append(game_order[len_][2])  # 2為訂單號.
+#                 order_time.append(game_order[len_][1])
+#                 order_lottery.append(game_order[len_][0])
+#                 order_type.append(game_order[len_][3] + game_order[len_][4] + game_order[len_][5])
+#                 if game_order[len_][6] == 1:
+#                     game_order[len_][6] = '等待開獎'
+#                 elif game_order[len_][6] == 2:
+#                     game_order[len_][6] = '中獎'
+#                 elif game_order[len_][6] == 3:
+#                     game_order[len_][6] = '未中獎'
+#                 elif game_order[len_][6] == 4:
+#                     game_order[len_][6] = '撤銷'
+#                 else:
+#                     game_order[len_][6] = '確認狀態'
+#                 order_status.append(game_order[len_][6])
+#                 order_user.append(game_order[len_][7])
+#                 order_detail.append(game_order[len_][8])
+#                 order_record.append(game_order[len_][9])
+#             # print(order_list)
+#             data = {"訂單號": order_list, "用戶名": order_user, "投注時間": order_time, "投注彩種": order_lottery, "投注玩法": order_type,
+#                     "投注內容": order_detail, "開獎號碼": order_record, "中獎狀態": order_status}
+#             FRAME = pd.DataFrame(data)
+#             # test = frame.style.applymap(status_style)#增加狀態顏色 ,這是for jupyter_notebook可以直接使用
+#             print(FRAME)
+#             conn.close_conn()
+#             return FRAME.to_html()
+#     return render_template('game_result.html')
 @app.route('/game_result', methods=["GET", "POST"])  # 查詢方案紀錄定單號
 def game_result():
-    global GAME_EXPLAN, GAME_PLAYTYPE
-    cookies_dict = {}  # 存放cookie,避免一隻 登入後台
+    global game_playtype, game_amount, game_submit, game_point, lottery_name, game_theory, bonus, data, game_award, bet_type_code, len_game
+
     if request.method == "POST":
         game_code = request.form.get('game_code')  # 訂單號
         game_type = request.form.get('game_type')  # 玩法
-        env = Config.EnvConfig(request.form.get('env_type'))  # 環境
+        env = request.form.get('env_type')  # 環境
+        envConfig = Config.EnvConfig(request.form.get('env_type'))
         cookies_ = request.cookies  # 瀏覽器上的cookie
-        conn = OracleConnection(env.get_env_id())
-        print(cookies_)
+        session = requests.Session()
+        print(cookies_, envConfig.get_admin_url())
+        if env == 'dev02':  # 傳給DB 環境 get_conn(env)用
+            envs = 0
+        else:
+            envs = 1
         if game_code != '':  # game_code 不為空,代表前台 是輸入 訂單號
-            game_detail = conn.select_game_result(result=game_code)  # 傳回此方法.找出相關 訂單細節
-            if len(game_detail) == 0:
+            AutoTest.Joy188Test.select_gameResult(AutoTest.Joy188Test.get_conn(envs), game_code)  # 傳回此方法.找出相關 訂單細節
+            game_detail = AutoTest.game_detail  # 將 global  game_detail 宣告變數 遊戲訂單的 內容
+            len_game = len(game_detail)
+            print(game_detail)
+            if len_game == 0:
                 return "此環境沒有此訂單號"
             else:
-                game_status = game_detail[1]  # 需判斷  訂單狀態
-                if game_status == 1:
-                    game_status = '等待開獎'
-                elif game_status == 2:
-                    game_status = '中獎'
-                elif game_status == 3:
-                    game_status = '未中獎'
-                elif game_status == 4:
-                    game_status = '撤銷'
-                else:
-                    game_status = '待確認'
-                game_amount = float(game_detail[2] / 10000)  # 投注金額  需在除 1萬
-                game_retaward = float(game_detail[10] / 10000)  # 反點獎金 需除1萬
-                game_moneymode = game_detail[12]  # 元角分模式 , 1:元, 2: 角
-                if game_moneymode == 1:
-                    game_moneymode = '元'
-                elif game_moneymode == 2:
-                    game_moneymode = '角'
-                else:
-                    game_moneymode = '分'
+                index_list, game_code_list, game_time_list, game_status_list, game_play_list, game_awardname_list = [], [], [], [], [], []
+                lotteryid_list, game_submit_list, theory_bonus_list, ff_bonus_list, game_point_list, bonus_list = [], [], [], [], [], []
+                game_amount_list, game_retaward_list, game_moneymode_list, game_mul_list, game_award_list = [], [], [], [], []
+                game_awardmode_list = []
+                issue_code = game_detail[0][19]  # 旗號
+                lotteryid = game_detail[0][14]  # 彩種id
+                AutoTest.Joy188Test.select_numberRecord(AutoTest.Joy188Test.get_conn(envs), lotteryid, issue_code)
+                number_record = AutoTest.number_record[0]  # 開獎號
+                for key in game_detail.keys():
+                    print(key)
+                    index_list.append(key)
+                    game_code_list.append(game_code)  # 訂單號
+                    game_time_list.append(game_detail[key][0])
+                    game_status = game_detail[key][1]  # 需判斷  訂單狀態
+                    if game_status == 1:
+                        game_status = '等待開獎'
+                    elif game_status == 2:
+                        game_status = '中獎'
+                    elif game_status == 3:
+                        game_status = '未中獎'
+                    elif game_status == 4:
+                        game_status = '撤銷'
+                    else:
+                        game_status = '待確認'
+                    game_status_list.append(game_status)
+                    lottery_name = game_detail[key][3]
+                    game_playtype = game_detail[key][4] + game_detail[key][5] + game_detail[key][6]
+                    game_play_list.append(lottery_name + "/" + game_playtype)
+                    game_awardname_list.append(game_detail[key][8])
+                    bet_type_code = game_detail[key][15]  # 玩法
+                    theory_bonus = game_detail[key][16]  # 理論獎金
 
-                # 遊戲玩法 : 後三 + 不定位+ 一碼不定位 , 並回傳給 game_map 來做 mapping
-                GAME_PLAYTYPE = game_detail[4] + game_detail[5] + game_detail[6]
-                print(f"玩法: {GAME_PLAYTYPE}")
+                    game_submit = game_detail[key][7]  # 投注內容
+                    game_submit_list.append(game_submit)
+                    '''
+                    if theory_bonus == 0:  # 理論獎金為0, 代表一個完髮有可能有不同獎金
+                        bonus = []
+                        print('有多獎金玩法'+bet_type_code)
+                        for i in soup.find_all('span', id=re.compile("^(%s)" % bet_type_code)):
+                            bonus.append(float(i.text))  # 有多個獎金
+                        FF_bonus = " ".join([str(x) for x in bonus])  # 原本bonus裡面裝 float  .需list裡轉成字元,
+                    
+                    else:
+                    '''
+                    if lottery_name == 'PC蛋蛋':
+                        if bet_type_code not in ['66_28_71', '66_13_84', '66_74_107']:  # 同個玩法只有單一賠率
+                            AutoTest.Joy188Test.select_bonus(AutoTest.Joy188Test.get_conn(envs), lotteryid,
+                                                             bet_type_code)  # 使用bet_type_code like
+                        else:
+                            game_map = Flask.game_map(type_=1)  # 呼叫玩法說明/遊戲mapping
+                            print(game_map)
+                            if bet_type_code == '66_13_84':  # 色波
+                                color_dict = {
+                                    "红": "RED",
+                                    "绿": "GREEN",
+                                    "蓝": "BLUE"
+                                }
+                                game_submit = color_dict[game_submit]  # 換成 英文 , 因為要再去select_bonus  找  獎金
+                            elif bet_type_code == '66_74_107':  # 大單,大雙,,,,,,
+                                color_dict = {
+                                    "大双": "DASHUNG",
+                                    "小双": "XIAOSHUNG",
+                                    "大单": "DADAN",
+                                    "小单": "XIAODAN"
+                                }
+                                game_submit = color_dict[game_submit]  # 換成 英文 , 因為要再去select_bonus  找  獎金
+                            else:  # 和值
 
-                game_award = float(game_detail[13] / 10000)  # 中獎獎金
+                                pass  # 和值 0 -27 ,投注內容 keys不用做Mapping
+                            # print(game_submit)
+                            point_id = bet_type_code + "_" + game_map[game_submit]  # 前面bet_type_code一致, _後面 動態
 
-                header = {'User-Agent': Config.UserAgent.PC.value,
-                          'Content-Type': 'application/x-www-form-urlencoded'}
-                session = None
-                lottery_id = None
-                award_id = None
-                print(f'cookies_.keys() = {cookies_.keys()}')
-                if env.get_domain() not in cookies_.keys():
-                    print("瀏覽器上 還沒有後台cookie,需登入")
-                    award_id = game_detail[17]  # 獎金id, 傳后查詢尋是哪個獎金組
-                    lottery_id = game_detail[14]  # 採種Id 傳給 後台 查詢哪個彩種
-                    session = requests.Session()
-                    header['Cookie'] = 'ANVOAID=' + env.get_admin_cookie()  # 後台 登入header
-                    cookie = env.get_admin_cookie()  # 後台登入 cookie
-
-                    res = redirect('game_result')
-                    res.set_cookie(env.get_domain(), cookie)  # 存放cookie
-
-                    # return res
-                    # print(cookie)
-                    # cookies_[env] = cookie
-                else:
-                    print("瀏覽器已經存在cookie,無須登入")
-                    header['Cookie'] = cookies_[env]
-                    """若進入else, header / session / lotteryid / award_id 如何初始化?"""
-
-                # header['Content-Type'] ='application/json'
-                r = session.get(
-                    env.get_admin_url() + f"/gameoa/queryGameAward?lotteryId={lottery_id}&awardId={award_id}&status=1"
-                    , headers=header)  # 登入後台 查詢 用戶獎金值
-                # print(r.text)
-                soup = BeautifulSoup(r.text, 'lxml')
-                bonus = []
-                if game_detail[16] == 0:  # 理論獎金為0, 代表一個完髮有可能有不同獎金
-                    print('有多獎金玩法')
-                    point_id = str(game_detail[15])
-                    for i in soup.find_all('span', id=re.compile(f"^({point_id})")):
-                        bonus.append(float(i.text))  # 有多個獎金
-                    bonus = " ".join([str(x) for x in bonus])  # 原本bonus裡面裝 float  .需list裡轉成字元,
-
-                    # bonus = "".join(bonus)# dataframe 不能支援list
-                else:
-                    point_id = str(game_detail[15]) + "_" + str(
-                        game_detail[16])  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
-                    for i in soup.find_all('span', id=re.compile(f"^({point_id})")):  # {'id':point_id}):
-                        bonus = float(i.text)
-                print(bonus, point_id)
-                game_awardmode = game_detail[9]  # 是否為高獎金
-                if game_awardmode == 1:
-                    game_awardmode = '否'
-                elif game_awardmode == 2:
-                    game_awardmode = '是'
-                    bonus = game_retaward + bonus  # 高獎金的話, 獎金 模式 + 反點獎金
-                # print(bonus)
-                game_map()  # 呼叫玩法說明
-                data = {"遊戲訂單號": game_code, "訂單時間": game_detail[0], "中獎狀態": game_status,
-                        "投注金額": game_amount, "投注彩種": game_detail[3],
-                        "投注玩法": GAME_PLAYTYPE,
-                        "投注內容": game_detail[7], "獎金組": game_detail[8], "獎金模式": bonus,
-                        "獎金模式狀態": game_awardmode, "反點獎金": game_retaward, "投注倍數": game_detail[11],
-                        "元角分模式": game_moneymode, "中獎獎金": game_award, "遊戲說明": GAME_EXPLAN
+                            # 相同賠率 有不同完髮的(ex: 投注內容 0和27, 賠率都是 900 ), 需再把 投注內容game_submit 進去 找
+                            AutoTest.Joy188Test.select_bonus(AutoTest.Joy188Test.get_conn(envs), lotteryid, point_id,
+                                                             game_submit)
+                        pc_dd_bonus = AutoTest.bonus
+                        theory_bonus = pc_dd_bonus[0][1] / 10000
+                        FF_bonus = pc_dd_bonus[0][0] / 10000
+                        # print(theory_bonus,FF_bonus)
+                    else:  # 其他大眾彩種
+                        theory_bonus = theory_bonus / 10000  # 理論將金
+                        point_id = bet_type_code + "_" + str(
+                            theory_bonus)  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
+                        # for i in soup.find_all('span', id=re.compile("^(%s)" % point_id)):  # {'id':point_id}):
+                        # FF_bonus = float(i.text)
+                        award_group_id = game_detail[key][17]  # 用來查詢 用戶 獎金組 屬於哪種
+                        AutoTest.Joy188Test.select_bonus(AutoTest.Joy188Test.get_conn(envs), lotteryid, bet_type_code,
+                                                         award_group_id)  # 使用bet_type_code like
+                        pc_dd_bonus = AutoTest.bonus
+                        FF_bonus = pc_dd_bonus[0][0] / 10000
+                    theory_bonus_list.append(theory_bonus)
+                    ff_bonus_list.append(FF_bonus)
+                    game_point = float(game_detail[key][18] / 10000)
+                    game_point_list.append(game_point)
+                    game_retaward = float(game_detail[key][10] / 10000)  # 反點獎金 需除1萬
+                    game_retaward_list.append(game_retaward)
+                    game_awardmode = game_detail[key][9]  # 是否為高獎金
+                    if game_awardmode == 1:
+                        game_awardmode = '否'
+                        bonus = '%s - %s' % (FF_bonus, game_point)
+                    else:
+                        game_awardmode = '是'
+                        bonus = game_retaward + FF_bonus  # 高獎金的話, 獎金 模式 + 反點獎金
+                    game_awardmode_list.append(game_awardmode)
+                    bonus_list.append(bonus)
+                    game_amount = float(game_detail[key][2] / 10000)  # 投注金額  需在除 1萬
+                    game_amount_list.append(game_amount)
+                    game_moneymode = game_detail[key][12]  # 元角分模式 , 1:元, 2: 角
+                    if game_moneymode == 1:
+                        game_moneymode = '元'
+                    elif game_moneymode == 2:
+                        game_moneymode = '角'
+                    else:
+                        game_moneymode = '分'
+                    game_moneymode_list.append(game_moneymode)
+                    game_mul_list.append(game_detail[key][11])
+                    game_award = float(game_detail[key][13] / 10000)  # 中獎獎金
+                    game_award_list.append(game_award)
+                if number_record is None:
+                    number_record = ''
+                record_mapping = Flask.number_map(number_record)
+                number_record = record_mapping
+                print(number_record)
+                data = {"遊戲訂單號": game_code_list, "訂單時間": game_time_list, "中獎狀態": game_status_list,
+                        "投注彩種/投注玩法": game_play_list,
+                        "獎金組": game_awardname_list, "獎金模式狀態": game_awardmode_list,
+                        '理論獎金': theory_bonus_list, "平台獎金": ff_bonus_list, "投注金額": game_amount_list,
+                        "投注倍數": game_mul_list, "元角分模式": game_moneymode_list,
+                        "投注內容": game_submit_list, '用戶反點': game_point_list, "獎金模式": bonus_list,
+                        "反點獎金": game_retaward_list, "中獎獎金": game_award_list, "開獎號": number_record
                         }
-                FRAME = pd.DataFrame(data, index=[0])
-                print(FRAME)
-                # return frame
-                return FRAME.to_html()
+                game_map = Flask.game_map()  # 呼叫玩法說明
+                frame = pd.DataFrame(data, index=index_list)
+                return frame.to_html()
         elif game_type != '':  # game_type 不為空,拜表前台輸入 指定玩法
             if "_" in game_type:  # 把頁面輸入  _   去除
                 print('有_需移除')
@@ -832,10 +1124,11 @@ def game_result():
                 print('輸入玩法 有空格需去除掉')
                 game_type = game_type.replace(' ', '')
             print(game_type)
-            temp = conn.select_game_order('%' + game_type + '%')
-            game_order = temp[0]
-            len_order = temp[1]
-            # print(game_order)
+            AutoTest.Joy188Test.select_gameorder(AutoTest.Joy188Test.get_conn(envs), '%' + game_type + '%')
+            game_order = AutoTest.game_order
+            len_order = AutoTest.len_order
+            if len_order == 0:
+                return '沒有該玩法'
             order_list = []  # 因為可能有好幾個訂單,  傳入 dataframe 需為列表 ,訂單
             order_time = []  # 時間
             order_lottery = []  # 採種
@@ -844,6 +1137,7 @@ def game_result():
             order_user = []  # 用戶名
             order_detail = []  # 投注內容
             order_record = []  # 開獎號碼
+            order_awardmode = []  # 獎金模式
             for len_ in range(len_order):  # 取出長度
                 order_list.append(game_order[len_][2])  # 2為訂單號.
                 order_time.append(game_order[len_][1])
@@ -863,14 +1157,19 @@ def game_result():
                 order_user.append(game_order[len_][7])
                 order_detail.append(game_order[len_][8])
                 order_record.append(game_order[len_][9])
+                if game_order[len_][10] == 1:
+                    awardmode = "一般獎金"
+                else:
+                    awardmode = '高獎金'
+                order_awardmode.append(awardmode)
             # print(order_list)
             data = {"訂單號": order_list, "用戶名": order_user, "投注時間": order_time, "投注彩種": order_lottery, "投注玩法": order_type,
-                    "投注內容": order_detail, "開獎號碼": order_record, "中獎狀態": order_status}
-            FRAME = pd.DataFrame(data)
+                    "投注內容": order_detail, "獎金模式": order_awardmode, "開獎號碼": order_record, "中獎狀態": order_status}
+            frame = pd.DataFrame(data)
             # test = frame.style.applymap(status_style)#增加狀態顏色 ,這是for jupyter_notebook可以直接使用
-            print(FRAME)
-            conn.close_conn()
-            return FRAME.to_html()
+            print(frame)
+            return frame.to_html()
+
     return render_template('game_result.html')
 
 
@@ -996,6 +1295,8 @@ def app_bet():
             third_memo.append("#後台投注紀錄盈虧值 為用戶角度")
         elif third == 'BBIN':
             third_memo.append('#獎金不會小於0')
+        elif third == 'LC':
+            third_memo.append('#前台獎金=後台盈利額,前台投注金額=總投注,後台代理盈虧的遊戲獎金=有效投注額+投注紀錄的盈虧值')
         else:  # 待後續確認每個第三方 規則
             third_memo.append('')
     # print(user_list,active_bet,third_prize,third_report)
@@ -1343,6 +1644,313 @@ def fund_activity():  # 充值紅包 查詢
     return render_template('fund_activity.html')
 
 
+@app.route('/api_test', methods=["GET", "POST"])
+def api_test():
+    if request.method == "POST":
+        print(request.cookies)
+        request_type = request.form.get('request_type')
+        content_type = request.form.get('Content_type')  # header
+        url = urlsplit(request.form.get('url'))  # url 要切割
+        url_domain = url.scheme + '://' + url.netloc  # 為網域名
+        url_path = url.path  # .com/ 後面url路徑
+        url_query = url.query  # url 把參數加在面url的
+        if url_query != '':  # url有這段的化, 需加? 參數
+            url_query = '?%s' % url_query
+        data = request.form.get('request_data')
+        login_cookie = request.form.get('login_cookie')
+        check_type = request.form.get('check_type')
+        header_key = request.form.getlist('header_key')
+        header_value = request.form.getlist('header_value')
+        print(check_type, login_cookie, header_key, header_value)
+        header = {
+            "Content-Type": content_type,
+            'User-Agent': FF_Joy188.FF_().user_agent['Pc'],  # 這邊先寫死給一個
+        }
+        for key, value in zip(header_key, header_value):  # header_key/ header_value  為列表
+            if key == "":  # 如果為空 就不增加到 header裡
+                pass
+            else:
+                header[key] = value
+        if login_cookie != '':
+            header['Cookie'] = login_cookie
+        print(header)
+        print(request_type, content_type, url_domain, url_path, url_query, data)
+        threads, status, content, req_time = [], [], [], []
+        if request_type == 'post':
+            thread_func = FF_Joy188.FF_().session_post
+        else:
+            thread_func = FF_Joy188.FF_().session_get
+        if check_type == 'thread_check':  # 併發
+            num = 2
+        else:
+            num = 1
+        for i in range(num):
+            t = threading.Thread(target=thread_func, args=(url_domain, url_path + url_query, data, header))
+            threads.append(t)
+        # print(len(threads))
+        for i in threads:
+            i.start()
+        for i in threads:
+            i.join()
+            print(FF_Joy188.content)
+            status.append(FF_Joy188.status)
+            content.append(FF_Joy188.content)
+            req_time.append(FF_Joy188.req_time)
+        # print(FF_Joy188.content)
+        result = {}
+        result['status'] = '連線狀態: %s' % status[-1]
+        result['data'] = content[-1]
+        result['time'] = req_time[-1]
+        return result
+    return render_template('api_test.html')
+
+
+@app.route('/gameBox', methods=["POST", "GET"])
+def gameBox():
+    admin_items, user_items = {}, {}  # 管理/客戶端
+    for key in GameBox.GameBox().data_type.keys():
+        # print(key)
+        # 中文名稱為key, 英文參數唯value,用意 顯示在頁面上中文
+        if key == 'getClientInfo':  # 管理端 用  獲得client信息即可,其它 不需動
+            admin_items[GameBox.GameBox().data_type[key][0]] = key
+        elif key in ['token', 'createApp', 'updateIpWhitelist', 'updateSupplierAccount']:  # 管理端
+            pass
+        else:
+            user_items[GameBox.GameBox().data_type[key][0]] = key
+    if request.method == "POST":
+        client_type = {
+            "api_key": ["1566e8efbdb444dfb670cd515ab99fda", "XT", "9RJ0PYLC5Ko4O4vGsqd", "",
+                        "a93f661cb1fcc76f87cfe9bd96a3623f", "BgRWofgSb0CsXgyY", "b86fc6b051f63d73de262d4c34e3a0a9"]
+            , "api_url": ["https://api.dg99web.com", "http://tsa.l0044.xtu168.com",
+                          "https://testapi.onlinegames22.com", "http://api.cqgame.games",
+                          "http://gsmd.336699bet.com", "https://testapi.onlinegames22.com",
+                          "http://ab.test.gf-gaming.com"]
+            , "supplier_type": ["dream_game", "sa_ba_sports", "ae_sexy", "cq_9", "gpi", "ya_bo_live", "pg_game"]
+            , "supplier_user": ["DGTE01011T", "6yayl95mkn", "fhlmag", "cq9_test", "xo8v", "ZSCH5",
+                                "aba4d198602ba6f2a3a604edcebd08f1"]
+            , "game_type": ["DG", "沙巴", "Sexy", "Cq9", 'GPI', "YB", "PG"]
+        }
+        cq_9Key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiI1ZjU5OWU3NTc4MDdhYTAwMDFlYTFjMjYiLCJhY2NvdW50IjoiYW1iZXJ1YXQiLCJvd25lciI6IjVkYzExN2JjM2ViM2IzMDAwMTA4ZTQ4NyIsInBhcmVudCI6IjVkYzExN2JjM2ViM2IzMDAwMTA4ZTQ4NyIsImN1cnJlbmN5IjoiVk5EIiwianRpIjoiNzkyMjU1MDIzIiwiaWF0IjoxNTk5NzA4Nzg5LCJpc3MiOiJDeXByZXNzIiwic3ViIjoiU1NUb2tlbiJ9.cyvPJaWFGwhX4dZV7fwcwgUhGM9d5dVv8sgyctlRijc"
+        url_dict = {0: ['http://43.240.38.15:21080', '測試區'], 1: ['http://54.248.18.149:8203', '灰度']}  # 測試 / 灰度
+        env_type = request.form.get('env_type')
+        game_type = request.form.get('game_type')  # 0 : DG , 1: 沙巴
+        user = request.form.get('user')
+        check_type = request.form.get('check_type')  # 0 為管理端/ 1 : 客戶端
+        print(env_type, game_type, user, check_type)
+        game_list = []  # 存放前台選擇的 測試項目
+        if check_type == '0':
+            game_list.append('token')  # 管理端 先獲得 token
+            game_list.append(request.form.get('admin_name'))
+        else:
+            game_list.append(request.form.get('user_name'))
+        print(game_list)
+
+        api_key = client_type["api_key"][int(game_type)]
+        api_url = client_type["api_url"][int(game_type)]
+        supplier_type = client_type["supplier_type"][int(game_type)]
+        supplier_user = client_type["supplier_user"][int(game_type)]
+        clientId = client_type["supplier_user"][int(game_type)]
+        client_detail = GameBox.GameBox.GameBox_Con(client_id=clientId, env=int(env_type))
+        url = url_dict[int(env_type)][0]
+        url_type = '%s, ' % url + client_type['game_type'][int(game_type)] + url_dict[int(env_type)][1]
+        GameBox.suite_test(game_type=int(game_type), url_type=url_type, clientId=clientId, user=user,
+                           client_detail=client_detail,
+                           api_key=api_key, api_url=api_url, supplier_type=supplier_type, url=url,
+                           game_list=game_list, user_items=user_items, admin_items=admin_items, cq_9Key=cq_9Key)
+
+        return 'ok'
+    print(admin_items, user_items)
+    return render_template('gameBox.html', user_items=user_items, admin_items=admin_items)
+
+
+@app.route('/fund_fee', methods=["POST", "GET"])  # 充值/提線 手續費查詢
+def fund_fee():
+    if request.method == "POST":
+        select_type = request.form.get('type')
+        env_type = request.form.get('env_type')
+        user = request.form.get('user')
+        print(select_type, user)
+        # 總代: 因為parent_id  為 -1.需用 user_iD查
+        AutoTest.Joy188Test.select_Fee(AutoTest.Joy188Test.get_conn(int(env_type)), select_type, user)
+        fund_fee = AutoTest.fund_fee
+        print(fund_fee)
+        if select_type == "fund":  # 充值
+            type_msg = "充值"
+            if len(fund_fee) == 0:  # 總代線沒設定
+                rule_msg = "總代線沒設定,走平台設定"
+            else:  # 總代線有設定手續費
+                FF_list = []  # 存放平台的 充值
+                for key in fund_fee:
+                    if fund_fee[key][0] in [i for i in range(1, 16)]:  # [0] 是bank_id  , [1-15] 是 PC銀行卡
+                        ff_name = "PC銀行卡"
+                    elif fund_fee[key][2] == 1:  # APP
+                        ff_name = "APP%s" % fund_fee[key][3]
+                    elif fund_fee[key][2] == 0:  # PC
+                        ff_name = "PC%s" % fund_fee[key][3]
+                    FF_list.append(ff_name)
+                rule_msg = '走總代線設定%s' % set(FF_list)
+
+            data = {"手續費類型": type_msg, "手續費規則": rule_msg, "備註": "總代線有設定走平台/不管用戶身分"}
+        else:  # 提線
+            AutoTest.Joy188Test.select_userLvl(AutoTest.Joy188Test.get_conn(int(env_type)), user)
+            user_lvl = AutoTest.user_lvl
+            type_msg = "提現"
+            if len(fund_fee) == 0:  # 總代線沒設定
+                rule_msg = "總代線沒設定,走平台設定"
+            elif fund_fee[0][0] == 0:  # 手續費有設定,開關
+                rule_msg = "總代線开設定關閉,走平台"
+            elif user_lvl[0][1] == 0:  # 非星級
+                rule_msg = "一般用戶"
+                if user_lvl[0][0] >= 1:  # 柏金 vip
+                    rule_msg = rule_msg + ",vip/走平台"
+                else:
+                    rule_msg = rule_msg + ",非vip/走總代線設定"
+            elif user_lvl[0][1] == 1:  # 星級
+                rule_msg = "星級用戶"
+                if user_lvl[0][0] >= 3:  # 星級 3 等以上 vip
+                    rule_msg = rule_msg + ",vip/走平台"
+                else:
+                    rule_msg = rule_msg + ",非vip/走總代線設定"
+            data = {"手續費類型": type_msg, "手續費規則": rule_msg}
+        frame = pd.DataFrame(data, index=[0])
+        print(frame)
+        return frame.to_html()
+    return render_template('FundFee.html')
+
+
+@app.route('/FundCharge', methods=["POST", "GET"])
+def FundCharge():  # 充值成功金額 查詢
+    if request.method == "POST":
+        env_type = request.form.get('env_type')
+        check_type = request.form.get('check_type')  # '0'使用日期 , '1'使用月份
+        AutoTest.get_rediskey(2)  # 連到本地 redis
+        if check_type == '0':
+            day = request.form.get('day_day')
+            month = request.form.get('day_month')
+            year = request.form.get('day_year')
+            date = "%s/%s/%s" % (year, month, day)  # 格式化日期 傳到  select_FundCharge
+            key_name = '%s/%s:%s' % (check_type, env_type, date)  # 0/環境:日期
+            result = AutoTest.get_key(key_name)
+            print(result)
+            if result != 'not exist':  # 代表 已經存 到redis過
+                return result
+            AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)), date)
+            data_fund = AutoTest.data_fund  # key 為0 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
+            # print(data_fund)
+            if len(data_fund) == 0:
+                sum_fund = 0
+                len_fund = 0
+                len_Allfund = 0
+            else:
+                if data_fund[0][1] is None:  # 有手續費 是none
+                    fund_fee = 0
+                else:
+                    fund_fee = int(data_fund[0][1]) / 10000
+                if data_fund[0][0] is None:  # 有充值金額 是none
+                    fund_apply = 0
+                else:
+                    fund_apply = int(data_fund[0][0]) / 10000
+                len_fund = data_fund[0][2]
+                sum_fund = fund_apply - fund_fee  # 發起充值金額 - 手續費 , 兩者相減
+                AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)), date, '1')  # 總個數
+                len_Allfund = AutoTest.data_fund[0][0]
+                try:
+                    fund_per = int(int(len_fund) / int(len_Allfund) * 10000) / 100
+                except ZeroDivisionError:
+                    fund_per = 0
+                # fund_list =  reduce(lambda x,y: x+y,fund_list)#計算列表裡數值總合
+            data_ = {"date": date, "sum_fund": sum_fund, "len_fund": len_fund, "len_Allfund": len_Allfund,
+                     'fund_per': fund_per}
+            AutoTest.set_key(key_name, data_)
+        else:  # 月份
+            now = datetime.datetime.now()
+            now_day = now.day  # 今天日期
+            now_month = now.month  # 這個月
+            month = request.form.get('month_month')
+            year = request.form.get('month_year')
+            date = "%s/%s" % (year, month)  # 格式化日期 傳到  select_FundCharge
+            # print(month,now_month)
+            if month == str(now_month):  # 頁面選擇的 月份 等於這個月, 需把 當下日期 一起加進去 , 因為 這個月每天進來 都會 有新的一天數據
+                key_name = '%s/%s:%s%s' % (check_type, env_type, date, now_day)  # 1/環境:日期 , 多增加今天日期為key
+            else:
+                key_name = '%s/%s:%s' % (check_type, env_type, date)  # 不是這個月, 不用管今天日期
+            result = AutoTest.get_key(key_name)
+            print(result)
+            if result != 'not exist':  # result是 not exist, 代表 redis 沒值 ,不等於 就是 redis有值
+                return result
+            # print(date)
+            AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)), date, 'month')
+            data_fund = AutoTest.data_fund  # key 為日期 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
+            # print(data_fund)
+            date_list, sum_fund_list, len_fund_list, fund_per_list, len_Allfund_list = [], [], [], [], []
+            for key, value in data_fund.items():
+                date_list.append(key)
+                if value[0] is None:  # 發起金額
+                    fun_apply = 0
+                else:
+                    fun_apply = value[0] / 10000
+                if value[1] is None:  # 手續費
+                    len_fund = 0
+                else:
+                    len_fund = value[1] / 10000
+                sum_fund = fun_apply - len_fund  # 充直總發起金額
+                sum_fund_list.append(int(sum_fund * 100) / 100)
+                len_fund = value[2]  # 充值成功個數
+                len_fund_list.append(len_fund)
+                len_Allfund = value[3]  # 充值 總個數
+                len_Allfund_list.append(len_Allfund)
+                try:
+                    fund_per = int(int(len_fund) / int(len_Allfund) * 10000) / 100
+                except ZeroDivisionError:  # 0/0 報的錯
+                    fund_per = 0
+                fund_per_list.append(fund_per)  # 充值 成功率
+            data_ = {"date": date_list, "sum_fund": sum_fund_list, "len_fund": len_fund_list,
+                     "len_Allfund": len_Allfund_list,
+                     'fund_per': fund_per_list}
+            AutoTest.set_key(key_name, data_)
+        # print(data_)
+        return data_
+        # frame = pd.DataFrame(data,index=date_list)
+        # return frame.to_html()
+    return render_template('FundCharge.html')
+
+
+@app.route('/login_cookie', methods=["POST"])  # 傳回登入cookie
+def login_cookie():
+    env_url = request.form.get('env_type')
+    envConfig = Config.EnvConfig(env_url)
+    joint = envConfig.get_joint_venture(envConfig.get_env_id(), 'www.%s.com' % env_url)
+    user = request.form.get('username')
+    AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(envConfig.get_env_id()), user,
+                                      joint)  # 查詢用戶 userid
+    userid = AutoTest.userid
+    print(env_url)
+    if len(AutoTest.userid) == 0:
+        return ('該環境沒有此用戶')
+    password = str.encode(envConfig.get_password())
+    param = FF_Joy188.FF_().param[0]
+    postData = {
+        "username": user,
+        "password": AutoTest.Joy188Test.md(password, param),
+        "param": param
+    }
+    header = {
+        'User-Agent': FF_Joy188.FF_().user_agent['Pc']  # 從FF_joy188.py 取
+    }
+    print(user, envConfig.get_post_url())
+    FF_Joy188.FF_().session_post(envConfig.get_post_url(), '/login/login', postData, header)
+    cookies = FF_Joy188.r.cookies.get_dict()['ANVOID']
+    print(cookies)
+    return cookies
+
+
+@app.route('/remote_IP', methods=['POST'])  # 從瀏覽器 獲得本地 ip,方便 好記錄 查證使用
+def remote_IP():
+    ip = request.form
+    print(ip)
+    return 'ok'
+
+
 @app.route('/game_prize_cal', methods=["GET"])
 def game_prize_cal():
     return render_template('game_prize_calculator.html')
@@ -1614,7 +2222,6 @@ def monitor():
     return render_template('monitor.html')
 
 
-
 @app.route('/api/monitorAddDomain/<domain>', methods=["POST"])
 def monitor_add_domain(domain: str):
     data = {domain: True}
@@ -1633,7 +2240,7 @@ def monitor_update(domain: str):
             web = curl_test(f'https://www.{domain}.com')
             wap = curl_test(f'https://m.{domain}.com')
             yield f'data: {{"web":{web}, "wap": {wap}}}\n\n'
-            print(f'domain: {domain}, web={web}, wap={wap}, pass:{web==0 and wap ==0}')
+            print(f'domain: {domain}, web={web}, wap={wap}, pass:{web == 0 and wap == 0}')
             sleep(3)
 
     def curl_test(host):
@@ -1646,6 +2253,7 @@ def monitor_update(domain: str):
 @app.route('/otpauth', methods=["GET"])
 def otpauth():
     return render_template('otpauth.html')
+
 
 @app.route('/error')  # 錯誤處理
 def error():

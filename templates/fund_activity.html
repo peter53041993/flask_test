@@ -1,6 +1,6 @@
 
 {% extends "base.html" %}
-{% block title %}衝直紅包活動{% endblock %}
+{% block title %}充直紅包活動{% endblock %}
 {%block head %}
 {{ super() }}
 <style type="text/css">
@@ -12,9 +12,13 @@ p{margin-top: 1%;}
 <script type="text/javascript">
     function check(){
         if ($('.dataframe').length>0){
-            $("table").html("");//已經有了先清空
+           $(".dataframe").remove();//已經有了先清空
         }
-        
+        if ($('#user').val()==""){
+            alert('用戶名為空');
+            return false;
+        }
+        button_disabled('#submit')
         alert('請稍後');
         $.ajax({
             url:"/fund_activity",
@@ -23,14 +27,16 @@ p{margin-top: 1%;}
             headers:{
                     Accept:"application/json; charset=utf-8"
                 },
-            data:$("#form1").serialize(),
+            data: form_trim("#form1"),
             success:function(data){
                 if (data=='該環境沒有此用戶'){
                     alert('該環境沒有此用戶');
-                    return flase;
+                    button_RemoveDisabeld('#submit')
+                    return false;
                 }
                 console.log(data);
                 $("#user_detail").after(data)
+                button_RemoveDisabeld('#submit')
             }
     
             })
@@ -38,6 +44,7 @@ p{margin-top: 1%;}
 </script>
 
 {% endblock %}
+{% block header %}充直紅包活動{% endblock %}
 {% block main %}
 
 <form id='form1' method='POST'>
@@ -51,7 +58,7 @@ p{margin-top: 1%;}
     請輸入用戶名<input type="text" id="user" name="user"
     size="16"  maxlength="16">
     </p>
-    <p><input type="button" onclick="check()" value="查詢"></p>
+    <p><input type="button" onclick="check()" id='submit' value="查詢"></p>
 </form>
 <div id='user_detail'>
 </div> 

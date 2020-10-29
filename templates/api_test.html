@@ -1,0 +1,225 @@
+
+{% extends "base.html" %}
+{% block title %}API測試{% endblock %}
+{%block head %}
+{{ super() }}
+<style type="text/css">
+#id{border-radius: 22px;}
+p{margin-top: 1%;}
+textarea{vertical-align: middle;}
+.ui-label,label[for=data_able],label[for=cookie_able],label[for=header_able]
+{color: #bf22da}
+.response {
+    color: #bf22da;
+    width: 70px;
+    padding: 3px;
+}
+#anvoid_cookie{color: #dca500}
+button, input, optgroup, select, textarea {font-family: arial, Microsoft YaHei;}
+#add_header{background-color: #fcedff;}
+#delete_header{background-color: #23101024;}
+
+</style>
+{% endblock %}  
+{% block script %}
+<script type="text/javascript">
+    function check(){
+        var event_id = event.target.id;//判斷 是哪個按紐
+        $("#status").val('')
+        $("#detail").val('')
+        $("#req_time").val('')
+        if ($('#url').val()=='' || $('#url').val().indexOf('http')<0){
+            alert('url有誤');
+            return false;
+        }
+        $('#normal_check').attr('disabled','true');
+        $('#thread_check').attr('disabled','true');
+        //alert('請稍後');
+        $.ajax({
+            url:"/api_test",
+            type:"POST",
+            //dataType: "json",
+            headers:{
+                    Accept:"application/json; charset=utf-8"
+                },
+            data: form_trim("#form1")+'&login_cookie='+$('#anvoid_cookie').val()+'&check_type='+event_id,
+            success:function(data){
+                $('#normal_check').removeAttr('disabled');
+                $('#thread_check').removeAttr('disabled');
+                //var result =data;
+                if (data=='該環境沒有此用戶'){
+                    alert('該環境沒有此用戶');
+                    return false;
+                }
+                console.log(data);
+                $("#status").val(data['status'])
+                $("#detail").val(data['data'])
+                prettyPrint('#detail')
+                $('#req_time').val(data['time'])
+            },
+            error:function(status){
+                $('#normal_check').removeAttr('disabled');
+                $('#thread_check').removeAttr('disabled');
+            }
+            })
+        } 
+    function prettyPrint(id_name) {
+        var og_data = $(id_name).val()
+        try{
+            var obj = JSON.parse(og_data);
+            var pretty = JSON.stringify(obj, undefined, 4);
+            $(id_name).val(pretty);
+            return false;
+        }
+        catch (e){
+            if(id_name=='#request_data'){
+                alert('格式有誤');
+                return false; 
+            }
+        }
+    }
+    function add(){//增加header 
+        $('.header').append('<li><label class="ui-label" for="header_key">key</label>\n<textarea class="header_key" name="header_key" cols="15" rows="1"></textarea>\n<label class="ui-label" for="header_value">value</label>\n<textarea class="header_value"name="header_value" cols="40" rows="1"></textarea></li>')
+        $('#delete_header').removeAttr('disabled')
+    }
+    function delete_(){
+        var delete_ele = document.querySelector(".header > li:nth-last-child(1)")
+        delete_ele.remove()
+        if (document.querySelector(".header > li:nth-last-child(1)")==null){
+            $('#delete_header').attr('disabled',true)
+        }
+    }
+    function clear_(){
+        $('#anvoid_cookie').val('')
+    }
+    function login_cookie(){
+        if ($('#username').val()==''){
+            $('#anvoid_cookie').val('用戶名為空');
+            return false;
+        } 
+        $('#anvoid_cookie').val('');
+        $('#cookie_submit').attr('disabled','true');
+        $.ajax({
+            url: "login_cookie",
+            type: "POST",
+            data: form_trim("#form1"),
+            success:function(data){
+                if (data =='該環境沒有此用戶'){
+                    var anv_name = '';
+                }
+                else{
+                    var anv_name = 'ANVOID=';
+                }
+            $('#anvoid_cookie').val(anv_name+data);
+            $('#cookie_submit').removeAttr('disabled');
+            }
+        })
+    }
+</script>
+<script>
+    $(document).ready(function(){
+        $('#request').css('display','none');
+        $('#cookie').css('display','none');
+        $('.header').css('display','none');
+        $('#delete_header').attr('disabled',true)
+
+        $('#data_able').change(function(){
+            if ($('#data_able').prop('checked') == false){//data勾選取消
+                $('#request').css('display','none');
+            }
+            else{
+                $('#request').css('display','block');
+            }
+        })
+        $('#cookie_able').change(function(){
+            if ($('#cookie_able').prop('checked') == false){//data勾選取消
+                $('#cookie').css('display','none');
+            }
+            else{
+                $('#cookie').css('display','block');
+            }
+        })
+        $('#header_able').change(function(){
+            if ($('#header_able').prop('checked') == false){//data勾選取消
+                $('.header').css('display','none');
+                
+            }
+            else{
+                $('.header').css('display','block');
+            }
+        })
+    })
+</script>
+
+
+{% endblock %}
+{% block header %}API測試{% endblock %}
+{% block main %}
+
+<form id='form1'>
+    <label>請求類型 </label>
+    <select name='request_type' id='request_type'>
+        <option value= 'post'>POST</option>
+        <option value= 'get'>GET</option>
+    </select>
+    <label>Content-Type</label>
+    <select name='Content_type' id='Content_type'>
+        <option value= 'application/json'>application/json</option>
+        <option value= 'application/x-www-form-urlencoded'>
+        application/x-www-form-urlencoded</option>
+    </select>
+    <li>
+        <label for="url">url</label>
+        <input type="text" name="url" id="url" size="70"/>
+    </li>
+    <input type="checkbox" id=cookie_able value="cookie_able">
+    <label for='cookie_able'>cookie</label>
+    <li id='cookie'>
+        <label>登入環境</label>
+        <select name='env_type' id='env_type'>
+            <option value= 'dev02'>一般dev02</option>
+            <option value= 'fh82dev02'>合營dev02</option>
+            <option value= 'joy188'>一般188</option>
+            <option value= 'joy188.teny2020'>合營188</option>
+        </select>
+        <label for="username">用戶名</label>
+        <input type="text" name="username" id="username" size="10"/>
+        <input type="button" id='cookie_submit' onclick="login_cookie()"value='取得登入cookie'>
+        <label for="anvoid_cookie"></label>
+        <p>
+        <input type="text" name="anvoid_cookie" id="anvoid_cookie" size="40"/>
+        <input type="button" id='clear_cookie' onclick="clear_()"value='清除'></p>
+    </li>
+    <input type="checkbox" id="data_able">
+    <label for="data_able">data</label></div>
+    <li id='request'>
+        <label class="ui-label" for="request_data"></label>
+        <textarea id="request_data"  name="request_data" cols="60" rows="10"></textarea>
+        <input type="button" onclick="prettyPrint('#request_data')"value='pretty'>
+    </li>
+    <input type="checkbox" id="header_able">
+    <label for="header_able">header</label></div>
+    <li class='header'>
+        <label class="ui-label" for="header_key">key</label>
+        <textarea class="header_key"  name="header_key" cols="15" rows="1"></textarea>
+        <label class="ui-label" for="header_value">value</label>
+        <textarea class="header_value"  name="header_value" cols="40" rows="1"></textarea>
+        <input type="button" onclick="add()"value='+'   id='add_header'>
+        <input type="button" onclick="delete_()"value='-'id='delete_header'>
+    </li>
+    <p><input type="button" id='normal_check' name="normal_check" onclick="check()" value="送出">
+    <input type="button" id='thread_check' name="thread_check" onclick="check()" value="併發">
+</form>
+<fieldset>
+<li>
+    <label class="response" for="status">staus</label>
+    <textarea  id="status" cols="30" rows="2"></textarea></li>
+<li>
+    <label class="response" for="detail">reponse</label>
+    <textarea  id="detail" cols="50" rows="10"></textarea></li>
+<li>
+    <label class="response" for="req_time">請求時間</label>
+    <textarea  id="req_time" cols="30" rows="2"></textarea></li>
+</fieldset>
+
+{% endblock %}

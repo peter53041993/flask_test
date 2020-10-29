@@ -1,0 +1,78 @@
+
+{% extends "base.html" %}
+{% block title %}充/提手續費查詢{% endblock %}
+{%block head %}
+{{ super() }}
+<style type="text/css">
+#token,#id,#user,#domain{border-radius: 22px;}
+p{margin-top: 1%;}
+#form1 > table > tbody{
+    text-align: center;
+    }
+</style>
+{% endblock %}  
+{% block script %}
+<script type="text/javascript">
+    function check(){
+        if ($('.dataframe').length>0){
+            $(".dataframe").remove();//已經有了先清空
+        }
+        if($("#user").val() ==""){//判斷用戶名為空
+            alert("請輸入用戶名");
+            //location.reload()
+        }
+        else {
+        $('#submit').attr('disabled','true');
+        $.ajax({
+            url:"/fund_fee",
+            type:"POST",
+            //dataType: "json",
+            headers:{
+                    Accept:"application/json; charset=utf-8"
+                },
+            data: form_trim("#form1"),
+            success:function(data){
+                game_detail = data;
+                console.log(typeof(data))
+                if (data.indexOf('沒有該用戶')>=0){
+                    alert(data);
+                    //location.reload()  
+                }
+                else{
+                console.log(data);
+                $("#user_detail").after(data)}
+                $('#submit').removeAttr('disabled');  
+    
+            }
+        })
+        }   
+        }
+</script>
+
+
+
+{% endblock %}
+{% block header %}充/提手續費查詢{% endblock %}
+{% block main %}
+
+<form id='form1' method='POST'>
+    <label>環境: </label>
+    <select name='env_type' id='env_type'>
+        <option value="0">dev02</option>
+        <option value="1">joy188</option>
+        <option value="2">ph158</option>
+        
+    </select>
+    <label>手續費類型: </label>
+    <select name='type' id='type'>
+        <option value="fund">充值</option>
+        <option value="withdraw">提現</option>
+    </select>
+    <br>
+    請輸入用戶名<input type="text" id="user" name="user"
+    size="16"  maxlength="16">
+    <p><input type="button" onclick="check()" id="submit" value="查詢用戶"></p>
+<form>
+<div id='user_detail'>
+</div> 
+{% endblock %}

@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% block title %}自動化測試{% endblock %}
+{% block title %}玩法/遊戲單號{% endblock %}
 {%block head %}
 {{ super() }}
 <style type="text/css">
     #game_code,#game_type{border-radius: 22px;}
     li{list-style: none;}
     p{margin-top: 1%;}
+    span{color: red;}
 </style>
 {% endblock %}
 {% block script %}
@@ -13,47 +14,64 @@
         var game_detail="";
         function check(){
             if ($('.dataframe').length>0){
-                $("table").html("");//已經有了先清空
+                $('.dataframe').remove();
             }
             if($("#game_code").val() =="" && $("#game_type").val()=="" ){//判斷倆著皆不能輸入
                 alert("請選擇單一輸入框");
-                location.reload()
+                return false;
             }
             else if ($("#game_code").val() !="" && $("#game_type").val()!="" ){//判斷倆著皆輸入
                 alert("只能擇一輸入框");
-                location.reload()
+                $("#game_code").val('')
+                $("#game_type").val('')
+                return false;
             }
             else {
-            $.ajax({ 
+                button_disabled('#submit')
+                myajax  = $.ajax({ 
                 url:"/game_result",
                 type:"POST",
                 //dataType: "json",
                 headers:{
                         Accept:"application/json; charset=utf-8"
                     },
-                data:$("#form1").serialize(),
-                
+                data: form_trim("#form1"),
                 success:function(data){
-                    //console.log(XMLHttpRequest)
                     game_detail = data;
-                    //console.log(typeof(data))
-                    console.log(data);
+                    button_RemoveDisabeld('#submit')
+                    //console.log(data);
                     if (data=='此環境沒有此訂單號'){
                         alert(data);
-                        location.reload();
+                        $("#game_code").val('')
+                        return false;
                     }
-                    else if(data.indexOf('cookie')>3){
+                    else if (data=='沒有該玩法'){
                         alert(data);
-                        location.reload();
+                        $("#game_type").val('')
+                        return false;
                     }
                     else {
-                        $('#game_detail').after(data)
+                        $('#game_detail').after(data);
+                        var lottery_text = document.querySelector("body > main > table > tbody > tr > td:nth-child(5)").textContent
+                        var lottery_status = document.querySelector("body > main > table > tbody > tr > td:nth-child(4)").textContent
+                        if(lottery_text.indexOf("PC蛋蛋")>=0){
+                            if(lottery_status.indexOf('等待開獎')==-1){//未開獎
+                            pretty("body > main > table > tbody > tr > td:nth-last-child(2)",'#')}//開獎號
+                        }
+                        pretty("body > main > table > tbody > tr > td:nth-child(8)",'#')//理論獎金
+                        pretty("body > main > table > tbody > tr > td:nth-last-child(1)",'#')//遊戲說明
                     }
+                },
+                    error: function(data){
+                        alert('有錯誤');
+                        button_RemoveDisabeld('#submit')
                     }
-                    })
-                }}
+                })
+            }
+        }
     </script>
 {% endblock %}
+{% block header %}玩法/遊戲單號{% endblock %}
 {% block main %}
     <form id='form1' method='POST'>
         <label>環境: </label>
@@ -67,7 +85,7 @@
         </br>    
         請輸入遊戲玩法<input type="text" id="game_type" name="game_type"
             size="20" placeholder="請輸入簡體" >
-        <p><input type="button" onclick="check()" value="查詢" title="最近一個月內"></p>
+        <p><input type="button" onclick="check()"id=submit value="查詢" title="最近一個月內"></p>
     </form>
     <div id='game_detail'>
     </div> 

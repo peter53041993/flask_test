@@ -1,27 +1,24 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>福利-分紅</title>
-
-</head>
-<body>
-    <h1 style="font-size: 15px;">福利中心-分紅資料</h1>
+{% extends "base.html" %}
+{% block title %}分紅{% endblock %}
+{% block header %}分紅{% endblock %}
+{% block main %} 
     <div>
         <p>用戶名: {{result.user}}</p>
         <p>查詢日期: {{result.startTime}}到{{result.stopTime}},統計範圍: {{result.month_type}},
         註冊天數範圍: {{result.start_bronday}}~{{result.stop_bronday}}</p>
         <p>註冊天數: {{result.min_bronday}}</p>
         <p>日均銷量天數: {{result.day_range}}</p>
-        <p>4.0 總投注額: {{result.bet}}/總有效投注額: {{result.effectiveBet}}/真人有效投注額: {{result.trueBet}}</p>
-        <p>4.0 中獎金額: {{result.win}}, 反點: {{result.ret}}, 活動禮金: {{result.activityGifts}}, 紅包: {{result.totalRedDiscount}}</p>
+        <p>4.0 總投注額: {{result.bet}}/總有效投注額: {{result.effectiveBet}}/真人有效投注額: {{result.trueBet}}/
+            (超級2000投注額: {{result.super2kBet}})</p>
+        <p>4.0 中獎金額: {{result.win}}, 反點: {{result.ret}}, 活動禮金: {{result.activityGifts}}
+            ,總紅包: {{result.totalRedDiscount}}, 超級2000紅包: {{result.super2kRed}}</p>
         <p>真人 中獎金額: {{result.fh_win}}, 反點: {{result.fh_ret}}, 活動禮金: {{result.fh_activityGifts}}</p>
         <p>總投注額: {{result.Allbet_month}}/總有效銷量: {{result.effectiveBet_month}}, 總獎金: {{result.user_award}}</p>
-        <p>分紅日均銷量: {{result.averge}}, 總輸額: {{result.winLost_month}}</p>
+        <p>分紅日均銷量: {{result.averge}}, 總輸額: {{result.winLost_month}},(日均銷量/註冊天數"為派發條件,"輸額"是獎金依據)</p>
         <p style = "font-size:30px ; color: red">{{result.msg}}</p>
         <p>比例: {{result.per}}%,分紅派發: {{result.award}}</p>
-
     </div>
-
-</body>
-
-</html> 
+    <div id='memo' style="font-size:30px;color: #673AB7;">  
+        備註:分紅 "總銷量"和"有效銷量"只差別在"超級2000"投注, 如果超級2000 紅包有值,需把 總待盈虧的超級2000-紅包超級2000
+    </div>
+{% endblock %}
