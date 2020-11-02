@@ -14,6 +14,7 @@ import image_test
 import os
 
 from autoTest import AutoTest
+from autoTest import ApiTestPC
 from time import sleep
 import threading
 import test_benefit
@@ -28,6 +29,9 @@ import pandas as pd
 import re
 from utils import Config
 from utils.Connection import PostgresqlConnection, OracleConnection
+import FF_Joy188
+from urllib.parse import urlsplit
+
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
@@ -382,9 +386,12 @@ def benefit():
         testInfo['month'] = month
         testInfo['day'] = day
         testInfo['env'] = env
-
-        print(testInfo)  # 方便看資料用
-
+        env_ = Config.EnvConfig(env)
+        conn = OracleConnection(env_id=env_.get_env_id())
+        userid = conn.select_user_id(username)
+        if len(userid) == 0:
+            return '沒有該用戶' 
+        print(testInfo)  # 方便看資料
         if env not in cookies_.keys():  # 請求裡面 沒有 這些環境cookie,就再登入各環境後台
             test_benefit.admin_Login(env)  # 登入生產環境 後台
             admin_cookie = test_benefit.admin_cookie  # 呼叫  此function ,
@@ -1905,24 +1912,23 @@ def FundCharge():  # 充值成功金額 查詢
     return render_template('FundCharge.html')
 
 
-@app.route('/login_cookie', methods=["POST"])  # 傳回登入cookie
+@app.route('/login_cookie', methods=["POST"])  # 傳回登入cookie, 在api_test頁面.  取得登入cookie的方式
 def login_cookie():
     import FF_Joy188
     env_url = request.form.get('env_type')
     envConfig = Config.EnvConfig(env_url)
-    joint = envConfig.get_joint_venture(envConfig.get_env_id(), 'www.%s.com' % env_url)
+    joint = envConfig.get_joint_venture(envConfig.get_env_id())
     user = request.form.get('username')
-    AutoTest.Joy188Test.select_userid(AutoTest.Joy188Test.get_conn(envConfig.get_env_id()), user,
-                                      joint)  # 查詢用戶 userid
-    userid = AutoTest.userid
-    print(env_url)
-    if len(AutoTest.userid) == 0:
+    conn = OracleConnection(env_id=int(envConfig.get_env_id()))
+    userid = conn.select_user_id(user,joint)
+    print(userid)
+    if len(userid) == 0:
         return ('該環境沒有此用戶')
     password = str.encode(envConfig.get_password())
     param = FF_Joy188.FF_().param[0]
     postData = {
         "username": user,
-        "password": AutoTest.Joy188Test.md(password, param),
+        "password": ApiTestPC.ApiTestPC.md(_password=password,_param=param),
         "param": param
     }
     header = {
