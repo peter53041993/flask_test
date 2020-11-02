@@ -28,7 +28,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import re
 from utils import Config
-from utils.Connection import PostgresqlConnection, OracleConnection
+from utils.Connection import PostgresqlConnection, OracleConnection,RedisConnection
 import FF_Joy188
 from urllib.parse import urlsplit
 
@@ -1820,19 +1820,21 @@ def FundCharge():  # 充值成功金額 查詢
     if request.method == "POST":
         env_type = request.form.get('env_type')
         check_type = request.form.get('check_type')  # '0'使用日期 , '1'使用月份
-        AutoTest.get_rediskey(2)  # 連到本地 redis
-        if check_type == '0':
+        #AutoTest.get_rediskey(2)  # 連到本地 redis
+        if check_type == '0': # 單日
             day = request.form.get('day_day')
             month = request.form.get('day_month')
             year = request.form.get('day_year')
             date = "%s/%s/%s" % (year, month, day)  # 格式化日期 傳到  select_FundCharge
             key_name = '%s/%s:%s' % (check_type, env_type, date)  # 0/環境:日期
-            result = AutoTest.get_key(key_name)
+            result = RedisConnection.get_key(2,key_name)
+            #result = AutoTest.get_key(key_name)
             print(result)
             if result != 'not exist':  # 代表 已經存 到redis過
                 return result
-            AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)), date)
-            data_fund = AutoTest.data_fund  # key 為0 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
+            conn = OracleConnection(env_id=int(env_type))
+            data_fund = conn.select_FundCharge(date)
+            #data_fund = AutoTest.data_fund  # key 為0 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
             # print(data_fund)
             if len(data_fund) == 0:
                 sum_fund = 0
@@ -1849,8 +1851,8 @@ def FundCharge():  # 充值成功金額 查詢
                     fund_apply = int(data_fund[0][0]) / 10000
                 len_fund = data_fund[0][2]
                 sum_fund = fund_apply - fund_fee  # 發起充值金額 - 手續費 , 兩者相減
-                AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)), date, '1')  # 總個數
-                len_Allfund = AutoTest.data_fund[0][0]
+                len_Allfund = conn.select_FundCharge(date, '1')[0][0]  # 總個數
+                #len_Allfund = AutoTest.data_fund[0][0]
                 try:
                     fund_per = int(int(len_fund) / int(len_Allfund) * 10000) / 100
                 except ZeroDivisionError:
@@ -1858,7 +1860,8 @@ def FundCharge():  # 充值成功金額 查詢
                 # fund_list =  reduce(lambda x,y: x+y,fund_list)#計算列表裡數值總合
             data_ = {"date": date, "sum_fund": sum_fund, "len_fund": len_fund, "len_Allfund": len_Allfund,
                      'fund_per': fund_per}
-            AutoTest.set_key(key_name, data_)
+            RedisConnection.set_key(key_name, data_)
+            #AutoTest.set_key(key_name, data_)
         else:  # 月份
             now = datetime.datetime.now()
             now_day = now.day  # 今天日期
@@ -1871,13 +1874,16 @@ def FundCharge():  # 充值成功金額 查詢
                 key_name = '%s/%s:%s%s' % (check_type, env_type, date, now_day)  # 1/環境:日期 , 多增加今天日期為key
             else:
                 key_name = '%s/%s:%s' % (check_type, env_type, date)  # 不是這個月, 不用管今天日期
-            result = AutoTest.get_key(key_name)
+            result = RedisConnection.get_key(2,key_name)
+            #result = AutoTest.get_key(key_name)
             print(result)
             if result != 'not exist':  # result是 not exist, 代表 redis 沒值 ,不等於 就是 redis有值
                 return result
             # print(date)
-            AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)), date, 'month')
-            data_fund = AutoTest.data_fund  # key 為日期 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
+            conn = OracleConnection(env_id=int(env_type))
+            data_fund = conn.select_FundCharge(date,'month')
+            #AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)), date, 'month')
+            #data_fund = AutoTest.data_fund  # key 為日期 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
             # print(data_fund)
             date_list, sum_fund_list, len_fund_list, fund_per_list, len_Allfund_list = [], [], [], [], []
             for key, value in data_fund.items():
@@ -1904,7 +1910,7 @@ def FundCharge():  # 充值成功金額 查詢
             data_ = {"date": date_list, "sum_fund": sum_fund_list, "len_fund": len_fund_list,
                      "len_Allfund": len_Allfund_list,
                      'fund_per': fund_per_list}
-            AutoTest.set_key(key_name, data_)
+            RedisConnection.set_key(key_name, data_)
         # print(data_)
         return data_
         # frame = pd.DataFrame(data,index=date_list)
