@@ -13,6 +13,7 @@ import time
 from utils import Config, Logger
 from utils.TestTool import trace_log
 from utils.Config import LotteryData, func_time
+from utils.Connection import RedisConnection
 
 logger = Logger.create_logger(r"\AutoTest", 'auto_test_app')
 YFT_SIGN = None
@@ -95,7 +96,8 @@ class ApiTestApp(unittest.TestCase):
                 logger.error(trace_log(e))
                 self.fail(u"登入失敗")
             # user_list.setdefault(userid,token)
-        self.get_token(ENV_ID, self._user)
+        RedisConnection().get_token(ENV_ID, self._user)
+        #self.get_token(ENV_ID, self._user)
 
     def get_token(self, envs, user):
         redis_conn = self.get_rediskey(envs)
