@@ -32,115 +32,115 @@ class GameBox():
                                       "/admin/client/updateSupplierAccount?appId=%s&type=%s" % (app_Id, update_type), {
                                           "apiKey": api_key, "apiUrl": api_url, "password": "qwe123",
                                           "username": clientId, "supplierType": supplier_type}],
-            "signUp": ["客戶/註冊",
-                       "/api/member/signUp?agent_name=%s" % clientId, [
-                           {"member": {"currencyName": "CNY", "password": password, "username": username,
-                                       "winLimit": 0}, "oddType": "A"},
-                           {"member": {"currencyName": "UUS", "maxtransfer": 1000, "mintransfer": 1,
-                                       "payRadioType": "2",
-                                       "username": "%s_test" % username}},
-                           {"member": {"currencyName": "CNY", "username": username}, "oddType": "260301,260302"},
-                           {"member": {"password": password, "username": username}},
-                           {"member": {"password": 'q' + password.upper(), "username": username}},
-                           {"lang": "cs", "member": {"password": password, "username": username}, "oddType": "4440"},
-                           {"member": {"currencyName": "CNY", "username": username}}]
-                       ],
-            "login": ["客戶/登入",
-                      "/api/member/login?agent_name=%s" % clientId, [
-                          {"lang": "CNY", "member": {"password": password, "username": username}},
-                          {"member": {"username": "%s_test" % username}},
-                          {"member": {"username": username}},
-                          {"lang": "cs", "member": {"password": password, "username": username}},
-                          {"lang": "cs", "type": "LC",
-                           "member": {"password": 'q' + password.upper(), "username": username}},
-                          {"deviceId": "1", "lang": "cs", "member": {"password": password, "username": username},
-                           "oddType": "4445", "backUrl": "https://www.baidu.com"},
-                          {"lang": "cs", "member": {"username": username}}]
-                      ],
-            "freeLogin": ["客戶/試玩登入",
-                          "/api/member/freeLogin?agent_name=%s" % clientId, [{"lang": "cs"}, {}, {}, {}, {},
-                                                                             {"backUrl": "https://www.baidu.com",
-                                                                              "deviceId": "1", "lang": "cs"},
-                                                                             {"lang": "cs"}]
-                          ],
-            "update": ["客戶/修改会员信息", "/api/member/update?agent_name=%s" % clientId, [
-                {"member": {"status": 1, "winLimit": 0, "password": password, "username": username}},
-                {"member": {"maxtransfer": 1000, "mintransfer": 1, "payRadioType": "2",
-                            "username": "%s_test" % username}},
+            "signUp":["客戶/註冊",
+                "/api/member/signUp?agent_name=%s"%clientId,[
+                {"member": {"currencyName": "CNY", "password": password, "username": username, "winLimit": 0 },"oddType": "A" },
+                {"member": {"currencyName": "UUS", "maxtransfer": 1000,"mintransfer": 1,"payRadioType": "2",
+                    "username": "%s_test"%username}},
+                {"member": {"currencyName": "CNY", "username": username },"oddType": "260301,260302" },
+                {"member": {"password": password,"username": username}},
+                {"member": {"password": 'q'+password.upper(),"username": username}},
+                {"lang": "cs","member": {"password": password, "username": username},"oddType":"4440"},
+                {"member": {"currencyName": "CNY", "username": username }},
+                {"agentLogin": "amberdev","member": {"username": username}}]
+                ],
+            "login":["客戶/登入",
+                "/api/member/login?agent_name=%s"%clientId,[
+                {"lang": "CNY","member": {"password": password, "username": username}},
+                {"member": {"username":"%s_test"%username}},
+                {"member": {"username":username}},
+                {"lang": "cs","member": {"password": password, "username": username}},
+                {"lang": "cs","type":"LC","member": {"password": 'q'+password.upper(), "username": username}},
+                {"deviceId": "1","lang": "cs","member": {"password": password,"username": username},
+                "oddType": "4445","backUrl":"https://www.baidu.com"},
+                {"lang":"cs","member": {"username": username}},
+                {"deviceId": "1","lang":"cs","backUrl":"http:///www.baidu.com","agentLogin": "amberdev","member": {"username": username}}]
+                ],
+            "freeLogin":["客戶/試玩登入",
+                "/api/member/freeLogin?agent_name=%s"%clientId,[{"lang": "cs"},{},{},{},{},
+                {"backUrl": "https://www.baidu.com","deviceId": "1","lang": "cs"},
+                {"lang": "cs"},
+                {"deviceId": "4","lang":"cs","backUrl":"http:///www.baidu.com"}]
+                ],
+            "update":["客戶/修改会员信息","/api/member/update?agent_name=%s"%clientId,[
+                {"member": {"status": 1, "winLimit": 0,"password": password, "username":username }}, 
+                {"member":{"maxtransfer": 1000,"mintransfer": 1,"payRadioType": "2","username": "%s_test"%username}},
                 {},
-                {"member": {"password": password, "username": username}},
-                {"member": {"password": 'q' + password.upper(), "oldPw": 'q' + password.upper(), "username": username}},
-                {"member": {"password": password, "username": username}},
+                {"member": {"password": password,"username": username}},
+                {"member": {"password": 'q'+password.upper(),"oldPw": 'q'+password.upper(),"username": username}},
+                {"member": {"password": password,"username": username}},
+                {},
                 {}]
-                       ],
-            "balance": ['客戶/获取会员余额接口',
-                        "/api/member/balance?agent_name=%s" % clientId,
-                        [{"member": {"username": username, }},
-                         {"member": {"username": "%s_test" % username}},
-                         {"member": {"username": username, }},
-                         {"member": {"username": username, }},
-                         {"member": {"username": username, "password": 'q' + password.upper()}},
-                         {"member": {"username": username, }},
-                         {"member": {"username": username, }}]
-                        ],
-            "transfer": ["客戶/会员存取款接口",
-                         "/api/member/transfer?agent_name=%s" % clientId,
-                         [{"billNo": '%s' % random.randint(1, 1000000000),
-                           "member": {"amount": amount, "username": username, }},
-                          {"billNo": '%s' % random.randint(1, 1000000000),
-                           "member": {"amount": amount, "currencyName": "UUS", "username": "%s_test" % username}},
-                          {"billNo": '%s' % random.randint(1, 1000000000),
-                           "member": {"amount": amount, "username": username, }},
-                          {"billNo": '%s' % random.randint(1, 1000000000),
-                           "member": {"amount": amount, "username": username, }},
-                          {"billNo": '%s' % random.randint(1, 1000000000), "member":
-                              {"amount": amount, "password": 'q' + password.upper(), "username": username, }},
-                          {"billNo": '%s' % random.randint(1, 1000000000),
-                           "member": {"amount": amount, "username": username, }},
-                          {"billNo": '%s' % random.randint(1, 1000000000),
-                           "member": {"amount": amount, "username": username, }}]
-                         ],
-            "checkTransfer": ["客戶/检查存取款操作是否成功",
-                              "/api/member/checkTransfer?agent_name=%s" % clientId,
-                              [{"billNo": bill_No}, {"billNo": bill_No},
-                               {"billNo": bill_No}, {"billNo": bill_No},
-                               {},
-                               {"billNo": bill_No, "member": {"username": username}},
-                               {}]
-                              ],
-            "updateLimit": ['客戶/修改会员限红组',
-                            "/api/member/updateLimit?agent_name=%s" % clientId,
-                            [{"member": {"username": username}, "oddType": "A"}, {},
-                             {"member": {"username": "testsz8"}, "oddType": "260301"}, {}, {}, {}, {}]
-                            ],
-            "checkOnline": ["客戶/查询玩家在线状态",
-                            "/api/member/checkOnline?agent_name=%s" % clientId,
-                            [{"member": {"username": username.upper()}},
-                             {"member": {"username": "%s_test" % username.upper()}},
-                             {}, {"member": {"username": username}}, {}, {}, {}]
-                            ],
-            "onlineCount": ['客戶/查询在线玩家数量', '/api/member/onlineCount?agent_name=%s' % clientId
-                , [{}, {}, {}, {}, {}, {}, {}]
-                            ],
-            "offline": ['客戶/踢人', '/api/member/offline?agent_name=%s' % clientId,
-                        [{"member": {"memberId": member_Id}}, {"member": {"username": "%s_test" % username}},
-                         {"member": {"username": username}}, {"member": {"username": username}}, {}, {}, {}]
-                        ],
-            "lockMember": ['客戶/封鎖會員', '/api/member/lockMember?agent_name=%s' % clientId,
-                           [{"member": {"password": password, "username": username}},
-                            {"member": {"username": "%s_test" % username}}, {}, {}, {},
-                            {"member": {"username": username}}, {}]
-                           ],
-            "unlockMember": ['客戶/解封鎖會員', '/api/member/unlockMember?agent_name=%s' % clientId,
-                             [{"member": {"password": password, "username": username}}, {"member":
-                                 {
-                                     "username": "%s_test" % username}},
-                              {}, {}, {},
-                              {"member": {"username": username}}, {}]
-                             ],
-            "onlineMember": ['客戶/查询在线玩家', '/api/member/onlineMember?agent_name=%s&page=1&size=100' % clientId,
-                             [{}, {}, {}, {}, {}, {}, {}]
-                             ],
+                ],
+            "balance":['客戶/获取会员余额接口',
+                "/api/member/balance?agent_name=%s"%clientId,
+                [{"member": {"username": username,}},
+                {"member": {"username": "%s_test"%username}},
+                {"member": {"username": username,}},
+                {"member": {"username": username,}},
+                {"member": {"username": username,"password": 'q'+password.upper()}},
+                {"member": {"username": username,}},
+                {"member": {"username": username,}},
+                {"agentLogin": "amberdev","member": {"username": username}}]
+                ],
+            "transfer":["客戶/会员存取款接口",
+                "/api/member/transfer?agent_name=%s"%clientId,
+                [{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}},
+                {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"currencyName": "UUS","username": "%s_test"%username}},
+                {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount,"username": username,}},
+                {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}},
+                {"billNo": '%s'%random.randint(1,1000000000),"member": 
+                {"amount":amount ,"password": 'q'+password.upper(),"username": username,}},
+                {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}},
+                {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}},
+                {"billNo": '%s'%random.randint(1,1000000000),"agentLogin": "amberdev","member": {"amount":amount,"username": username}}]
+                ],
+            "checkTransfer":["客戶/检查存取款操作是否成功",
+                "/api/member/checkTransfer?agent_name=%s"%clientId,
+                [{"billNo": bill_No},{"billNo": bill_No},
+                {"billNo": bill_No},{"billNo": bill_No},
+                {},
+                {"billNo": bill_No,"member": {"username": username}},
+                {},
+                {}]
+                ],
+            "updateLimit":['客戶/修改会员限红组',
+                "/api/member/updateLimit?agent_name=%s"%clientId,
+                [{"member": {"username": username},"oddType": "A"},{},
+                {"member": {"username": "testsz8"},"oddType": "260301"},{},{},{},{},
+                {}]
+                ],
+            "checkOnline":["客戶/查询玩家在线状态",
+                "/api/member/checkOnline?agent_name=%s"%clientId,
+                [{"member": {"username": username.upper()}},{"member": {"username": "%s_test"%username.upper()}},
+                {},{"member": {"username": username}},{},{},{},
+                {}]
+                ],
+            "onlineCount":['客戶/查询在线玩家数量','/api/member/onlineCount?agent_name=%s'%clientId
+                ,[{},{},{},{},{},{},{},
+                {}]
+                ],
+            "offline":['客戶/踢人','/api/member/offline?agent_name=%s'%clientId,
+                [{"member": {"memberId":member_Id}},{"member": {"username": "%s_test"%username}},
+                {"member": {"username": username}},{"member": {"username": username}},{},{},{},
+                {"agentLogin": "amberdev","member": {"username": username}}]
+                ],
+            "lockMember":['客戶/封鎖會員','/api/member/lockMember?agent_name=%s'%clientId,
+                [{"member": {"password":password,"username": username}},
+                {"member": {"username": "%s_test"%username}},{},{},{},
+                {"member": {"username": username}},{},
+                {"agentLogin": "amberdev","member": {"username": username}}]
+                ],
+            "unlockMember":['客戶/解封鎖會員','/api/member/unlockMember?agent_name=%s'%clientId,
+                [{"member": {"password":password,"username": username}},{"member": 
+                {"username": "%s_test"%username}},{},{},{},
+                {"member": {"username": username}},{},
+                {"agentLogin": "amberdev","member": {"username": username}}]
+                ],
+            "onlineMember":['客戶/查询在线玩家','/api/member/onlineMember?agent_name=%s&page=1&size=100'%clientId,
+                [{},{},{},{},{},{},{},
+                {}]
+                ],  
         }
 
     def GameBox_Con(client_id, env):  # 連線 mysql
@@ -240,7 +240,7 @@ class GameBox():
             elif type_ == 'login':
                 pc_url = r_json['data']['pc']  # 拿來 checkOnline  要先登入,才能  獲得memberId
             elif type_ == 'transfer':
-                if game_type in [3, 4, 5]:  # cq_9,gpi,YB response不會回傳  billNo , 需自己帶
+                if game_type in [3,4,5,7]:  # cq_9,gpi,YB,bg   response不會回傳  billNo , 需自己帶
                     billNo = data["billNo"]
                 else:
                     billNo = r_json['data']['billNo']
