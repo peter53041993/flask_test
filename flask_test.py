@@ -1717,15 +1717,16 @@ def gameBox():
     if request.method == "POST":
         client_type = {
             "api_key": ["1566e8efbdb444dfb670cd515ab99fda", "XT", "9RJ0PYLC5Ko4O4vGsqd", "",
-                        "a93f661cb1fcc76f87cfe9bd96a3623f", "BgRWofgSb0CsXgyY", "b86fc6b051f63d73de262d4c34e3a0a9"]
+                        "a93f661cb1fcc76f87cfe9bd96a3623f", "BgRWofgSb0CsXgyY", "b86fc6b051f63d73de262d4c34e3a0a9",
+                        "8153503006031672EF300005E5EF6AEF"]
             , "api_url": ["https://api.dg99web.com", "http://tsa.l0044.xtu168.com",
                           "https://testapi.onlinegames22.com", "http://api.cqgame.games",
                           "http://gsmd.336699bet.com", "https://testapi.onlinegames22.com",
-                          "http://ab.test.gf-gaming.com"]
-            , "supplier_type": ["dream_game", "sa_ba_sports", "ae_sexy", "cq_9", "gpi", "ya_bo_live", "pg_game"]
+                          "http://ab.test.gf-gaming.com","http://am.bgvip55.com/open-cloud/api/"]
+            , "supplier_type": ["dream_game", "sa_ba_sports", "ae_sexy", "cq_9", "gpi", "ya_bo_live", "pg_game","bg_game"]
             , "supplier_user": ["DGTE01011T", "6yayl95mkn", "fhlmag", "cq9_test", "xo8v", "ZSCH5",
-                                "aba4d198602ba6f2a3a604edcebd08f1"]
-            , "game_type": ["DG", "沙巴", "Sexy", "Cq9", 'GPI', "YB", "PG"]
+                                "aba4d198602ba6f2a3a604edcebd08f1","am00"]
+            , "game_type": ["DG", "沙巴", "Sexy", "Cq9", 'GPI', "YB", "PG","BG"]
         }
         cq_9Key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiI1ZjU5OWU3NTc4MDdhYTAwMDFlYTFjMjYiLCJhY2NvdW50IjoiYW1iZXJ1YXQiLCJvd25lciI6IjVkYzExN2JjM2ViM2IzMDAwMTA4ZTQ4NyIsInBhcmVudCI6IjVkYzExN2JjM2ViM2IzMDAwMTA4ZTQ4NyIsImN1cnJlbmN5IjoiVk5EIiwianRpIjoiNzkyMjU1MDIzIiwiaWF0IjoxNTk5NzA4Nzg5LCJpc3MiOiJDeXByZXNzIiwic3ViIjoiU1NUb2tlbiJ9.cyvPJaWFGwhX4dZV7fwcwgUhGM9d5dVv8sgyctlRijc"
         url_dict = {0: ['http://43.240.38.15:21080', '測試區'], 1: ['http://54.248.18.149:8203', '灰度']}  # 測試 / 灰度
