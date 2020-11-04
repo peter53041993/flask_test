@@ -479,29 +479,30 @@ def report_AppData():
 def domain_list():
     return render_template('domain_list.html')
 
-
-def session_get(url):
-    urllib3.disable_warnings()  # 解決 會跳出 request InsecureRequestWarning問題
-    header = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36'
-    }
-    global R, URL_DICT
-    try:
-        R = requests.get(url + '/', headers=header, verify=False, timeout=5)
-    except:
-        pass
-    URL_DICT[url] = R.status_code
     # print(url_dict)
-
+def domain_get(url):# domain_list , url 訪問後  ,回傳 url_dict
+        urllib3.disable_warnings()  # 解決 會跳出 request InsecureRequestWarning問題
+        header = {
+            'User-Agent': FF_Joy188.FF_().user_agent['Pc']
+        }
+        global r, URL_DICT
+        try:
+            r = requests.get(url + '/', headers=header, verify=False, timeout=5)
+        except:
+            pass
+        URL_DICT[url] = r.status_code
 
 @app.route('/domain_status', methods=["GET"])
 def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
     global URL_DICT
     urllib3.disable_warnings()  # 解決 會跳出 request InsecureRequestWarning問題
+    print(request.url)#"http://3eeb8f01ffe7.ngrok.io/domain_status"
+    url_split = urlsplit(request.url)
+    request_url = "%s://%s"%(url_split.scheme,url_split.netloc)# 動態切割 當前url
     header = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.100 Safari/537.36'
+        'User-Agent': FF_Joy188.FF_().user_agent['Pc']
     }
-    r = requests.get('http://66dca985.ngrok.io' + '/domain_list', headers=header)
+    r = requests.get(request_url + '/domain_list', headers=header)
     # print(r.text)
     soup = BeautifulSoup(r.text, 'lxml')
     URL_DICT = {}  # 存放url 和 皆口狀態
@@ -515,7 +516,7 @@ def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
                     URL_DICT[a.text] = ''
         threads = []
         for url_key in URL_DICT:
-            threads.append(threading.Thread(target=session_get, args=(url_key,)))
+            threads.append(threading.Thread(target= domain_get, args=(url_key,)))
         for i in threads:
             i.start()
         for i in threads:
