@@ -1023,8 +1023,8 @@ def game_result():
                         if bet_type_code not in ['66_28_71', '66_13_84', '66_74_107']:  # 同個玩法只有單一賠率
                             bonus = conn.select_bonus(lottery_id=lottery_id, bet_type_code=bet_type_code)
                         else:
-                            game_map = Flask.game_map(type_=1)  # 呼叫玩法說明/遊戲mapping
-                            print(game_map)
+                            game_map_ = game_map(type_=1)  # 呼叫玩法說明/遊戲mapping
+                            print(game_map_)
                             if bet_type_code == '66_13_84':  # 色波
                                 color_dict = {
                                     "红": "RED",
@@ -1044,7 +1044,7 @@ def game_result():
 
                                 pass  # 和值 0 -27 ,投注內容 keys不用做Mapping
                             # print(game_submit)
-                            point_id = bet_type_code + "_" + game_map[game_submit]  # 前面bet_type_code一致, _後面 動態
+                            point_id = bet_type_code + "_" + game_map_[game_submit]  # 前面bet_type_code一致, _後面 動態
 
                             # 相同賠率 有不同完髮的(ex: 投注內容 0和27, 賠率都是 900 ), 需再把 投注內容game_submit 進去 找
                             bonus = conn.select_bonus(lottery_id=lottery_id, bet_type_code=point_id, detail=game_submit)
@@ -1089,9 +1089,9 @@ def game_result():
                     game_award_list.append(game_award)
                 if number_record is None:
                     number_record = ''
-                record_mapping = Flask.number_map(number_record)
+                record_mapping = number_map(number_record)
                 number_record = record_mapping
-                print(number_record)
+                #print(number_record)
                 data = {"遊戲訂單號": game_code_list, "訂單時間": game_time_list, "中獎狀態": game_status_list,
                         "投注彩種/投注玩法": game_play_list,
                         "獎金組": game_awardname_list, "獎金模式狀態": game_awardmode_list,
@@ -1100,7 +1100,7 @@ def game_result():
                         "投注內容": game_submit_list, '用戶反點': game_point_list, "獎金模式": bonus_list,
                         "反點獎金": game_retaward_list, "中獎獎金": game_award_list, "開獎號": number_record
                         }
-                game_map = Flask.game_map()  # 呼叫玩法說明
+                game_map()  # 呼叫玩法說明,更新data 
                 frame = pd.DataFrame(data, index=index_list)
                 return frame.to_html()
         elif game_type != '':  # game_type 不為空, 代表前台輸入 指定玩法
