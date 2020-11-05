@@ -225,7 +225,7 @@ class OracleConnection:
         sql = f"select a.order_time,a.status,a.totamount,f.lottery_name,\
         c.group_code_title,c.set_code_title,c.method_code_title,\
         b.bet_detail,e.award_name,b.award_mode,b.ret_award,b.multiple,b.money_mode,b.evaluate_win\
-        ,a.lotteryid,b.bet_type_code,c.theory_bonus,a.award_group_id\
+        ,a.lotteryid,b.bet_type_code,c.theory_bonus,a.award_group_id,d.direct_ret,b.issue_code\
         from(((\
         (game_order a inner join game_slip b on\
         a.id = b.orderid and a.userid=b.userid and a.lotteryid=b.lotteryid) inner join \
@@ -248,7 +248,7 @@ class OracleConnection:
     def select_game_order(self, play_type):  # 輸入玩法,找尋訂單
         cursor = self._get_oracle_conn().cursor()
         sql = f"select f.lottery_name,a.order_time,a.order_code,\
-        c.group_code_title,c.set_code_title,c.method_code_title,a.status,g.account,b.bet_detail,h.number_record\
+        c.group_code_title,c.set_code_title,c.method_code_title,a.status,g.account,b.bet_detail,h.number_record,b.award_mode\
         from((((((\
         game_order a inner join  game_slip b on \
         a.id = b.orderid and a.userid=b.userid and a.lotteryid=b.lotteryid) inner join game_bettype_status c on \
@@ -261,9 +261,10 @@ class OracleConnection:
         a.userid = g.id and d.userid = g.id) inner join game_issue h on\
         a.lotteryid = h.lotteryid and a.issue_code = h.issue_code\
         where a.order_time >sysdate - interval '1' month and \
-        c.group_code_title||c.set_code_title||c.method_code_title like '{play_type}' and d.bet_type=1  and a.status !=1 \
+        c.group_code_title||c.set_code_title||c.method_code_title like '%{play_type}%' and d.bet_type=1  and a.status !=1 \
         order by a.order_time desc"
         cursor.execute(sql)
+        print(sql)
         rows = cursor.fetchall()
         game_order = {}
         len_order = len(rows)  # 需傳回去長度
@@ -493,10 +494,10 @@ class OracleConnection:
         elif detail == 'FF_bonus':  # 用平台獎金 去都出 理論獎金  , 目前 PCDD 賠率使用
             sql = "SELECT actual_bonus,lhc_theory_bonus FROM game_award WHERE lotteryid = %s" % lottery_id
         elif type(detail) == int:  # 使用 award_group_id  來看
-            sql = r"select actual_bonus from game_award " \
-                  r"where LOTTERYID={lotteryid} " \
-                  r"and bet_type_code = '{bet_type_code}' " \
-                  r"and award_group_id = {detail}"
+            sql = f"select actual_bonus from game_award " \
+                  f"where LOTTERYID={lottery_id} " \
+                  f"and bet_type_code = '{bet_type_code}' " \
+                  f"and award_group_id = {detail}"
         else:
             sql = f"select actual_bonus,lhc_theory_bonus from game_award " \
                   f"where LOTTERYID = {lottery_id} " \
