@@ -235,8 +235,10 @@ class OracleConnection:
         a.lotteryid = d.lotteryid and a.userid=d.userid) inner join \
         game_award_group e on \
         a.award_group_id = e.id and a.lotteryid =e.lotteryid) \
-        inner join game_series f on  a.lotteryid = f.lotteryid where a.order_code = '{result}' and d.bet_type=1"
+        inner join game_series f on  a.lotteryid = f.lotteryid where a.order_code = '{result}' and d.bet_type=1 \
+        AND a.order_time > SYSDATE - INTERVAL '6' MONTH"
         cursor.execute(sql)
+        print(sql)
         rows = cursor.fetchall()
         game_detail = {}  # 存放各細節
         # game_detail[result] = detail_list# 讓訂單為key,　value 為一個list 存放各訂單細節
@@ -260,7 +262,7 @@ class OracleConnection:
         inner join game_series f on a.lotteryid = f.lotteryid) inner join user_customer g on\
         a.userid = g.id and d.userid = g.id) inner join game_issue h on\
         a.lotteryid = h.lotteryid and a.issue_code = h.issue_code\
-        where a.order_time >sysdate - interval '1' month and \
+        where a.order_time >sysdate - interval '6' month and \
         c.group_code_title||c.set_code_title||c.method_code_title like '%{play_type}%' and d.bet_type=1  and a.status !=1 \
         order by a.order_time desc"
         cursor.execute(sql)
@@ -296,25 +298,25 @@ class OracleConnection:
     def select_app_bet(self, user):  # 查詢APP 代理中心 銷量
         cursor = self._get_oracle_conn().cursor()
         app_bet = {}
+        '''
         for third in ['ALL', 'LC', 'KY', 'CITY', 'GNS', 'FHLL', 'BBIN', 'IM', 'SB', 'AG']:
             if third == 'ALL':
-                sql = f"select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 " \
-                      f"from V_THIRDLY_AGENT_CENTER where account = '{user}' and create_date > trunc(sysdate,'mm')"
+                sql = f"select sum(cost) 用戶總有效銷量, sum(prize) ,sum(prize) - sum(cost) 用戶總盈虧 " \
+                      f"from THIRDLY_AGENT_CENTER where account = '{user}' and create_date > trunc(sysdate,'mm')"
             else:
-                sql = f"select sum(bet) 總投注額 ,sum(cost) 用戶總有效銷量, sum(prize)總獎金 ,sum(bet)- sum(prize)用戶總盈虧 " \
-                      f"from V_THIRDLY_AGENT_CENTER where account = '{user}' " \
+                sql = f"select sum(cost) 用戶總有效銷量, sum(prize) ,sum(prize) - sum(cost) 用戶總盈虧 " \
+                      f"from THIRDLY_AGENT_CENTER where account = '{user}' " \
                       f"and create_date > trunc(sysdate,'mm') " \
                       f"and plat='{third}'"
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            new_ = []  # 存放新的列表內容
-            for tuple_ in rows:
-                for i in tuple_:
-                    if i is None:  # 就是 0
-                        i = 0
-                    new_.append(i)
-                app_bet[third] = new_
-
+        '''
+        sql = f"SELECT SUM(cost) 用戶總有效銷量, SUM(prize), SUM(prize) - SUM(cost) 用戶總盈虧, plat " \
+            f"FROM thirdly_agent_center WHERE account = '{user}'AND create_date > trunc(SYSDATE,'mm') group by plat "
+        print(sql)
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        print(rows)
+        for tuple_,con in enumerate(rows):
+            app_bet[tuple_] = con 
         print(app_bet)
         cursor.close()
         return app_bet
@@ -565,6 +567,38 @@ class OracleConnection:
                 data_fund[index] = tuple_
         cursor.close()
         return data_fund
+
+    def select_Fee(self,type_,user):#查詢 用戶 總代線 手續費
+        cursor = self._get_oracle_conn().cursor()
+        if type_ == 'fund':#充值
+            sql = "SELECT fee.bank_id, fee.fee,fee.mobile,bank.name FROM TOP_AGENT_RECHARGE_FEE fee \
+            INNER JOIN user_customer user_ ON fee.user_id = user_.id inner join FUND_BANK bank  on fee.bank_id = bank.code \
+            WHERE user_.account in (select regexp_substr(user_chain,'[^/]+') from user_customer where account = '%s')"%user
+        else:#提線
+            sql = "SELECT fee.enable,fee.bank_fee,fee.bank_limit_count,fee.usdt_fee,fee.usdt_limit_count, \
+            user_.vip_lvl,user_.new_vip_flag FROM top_agent_withdraw_fee fee \
+            INNER JOIN user_customer user_ ON fee.user_id = user_.id WHERE \
+            user_.account in (select regexp_substr(user_chain,'[^/]+') from user_customer where account = '%s')"%user
+        print(sql)
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        fund_fee = {}
+        for num,index in enumerate(rows):
+            fund_fee[num] = index
+        cursor.close()
+        return fund_fee
+
+    def select_userLvl(self,user):#用戶 vip 和是否為 星級
+        cursor = self._get_oracle_conn().cursor()
+        sql = "select vip_lvl,new_vip_flag from user_customer where account = '%s'"%user
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        user_lvl = []
+        for i in rows:
+            user_lvl.append(i)
+        cursor.close()
+        return user_lvl
+        
     def close_conn(self):
         if self._conn is not None:
             self._conn.close()
