@@ -58,7 +58,7 @@ class OracleConnection:
         sql = "select GDL.domain, GDL.agent, UU.url, GDL.register_display, GDL.app_download_display, GDL.domain_type, GDL.status " \
               "from GLOBAL_DOMAIN_LIST GDL " \
               "inner join user_url UU on GDL.register_url_id = UU.id " \
-              f"where GDL.domain = '{domain}'"
+              f"where GDL.domain like '%{domain}%'"
         logger.info(f'get_domain_default_url sql = {sql}')
         cursor.execute(sql)
         rows = cursor.fetchall()
@@ -72,21 +72,19 @@ class OracleConnection:
     def select_url_token(self, token, joint_venture):  # 輸入 token 查詢 連結
         cursor = self._get_oracle_conn().cursor()
         if len(token) == 4:  # 代表是用 註冊碼  ,4位
-            sql = "select UC.account,UU.url " \
-                  "from user_customer UC " \
-                  "inner join user_url UU  on UC.id= UU.creator  " \
-                  f"where UU.url like  '%token={token}%' and UC.joint_venture = {joint_venture}"
+            condition = f'%token={token}%'
         else:  # 使用id 去找 url
-            sql = "select UC.account,UU.url " \
-                  "from user_customer UC " \
-                  "inner join user_url UU  on UC.id= UU.creator " \
-                  f"where UU.url like  '%id={token}%' and UC.joint_venture = {joint_venture}"
+            condition = f'%id={token}%'
+        sql = "select uc.account, uu.GMT_CREATED,uu.url,uu.days,uu.registers " \
+                "from user_customer UC " \
+                "inner join user_url UU  on UC.id= UU.creator " \
+                f"where UU.url like  '%s' and UC.joint_venture = {joint_venture}"%condition
         print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
-        token_url = []
+        token_url = {}
         for num, user in enumerate(rows):
-            token_url.append(list(user))
+            token_url[num] = list(user)
         cursor.close()
         return token_url
 
@@ -132,7 +130,7 @@ class OracleConnection:
             sql = "select url " \
                   "from user_url " \
                   f"where url like '%{_user}%' and days=-1"
-        elif _type == 2:  # user 為用戶名,這個表如果沒有, 有可能是 上級開戶連結 刪除,導致空 ,再去做else 那段
+        elif _type == 2:  # user 為用戶名,這個表如果沒有, 有可能是 上級開戶連結 刪除,導致空 
             sql = "select UC.account, UU.url, UC.user_chain, UC.device, UU.days " \
                   "from user_customer UC " \
                   "inner join  user_url UU on UC.url_id = UU.id " \
@@ -143,6 +141,7 @@ class OracleConnection:
                   f"where account = '{_user}' and joint_venture = '{_joint_type}'"
         logger.info(f'select_user_url -> sql : {sql}')
         cursor.execute(sql)
+        print(sql)
         rows = cursor.fetchall()
         for num, url in enumerate(rows):
             user_url.append(list(url))
