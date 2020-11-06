@@ -36,7 +36,6 @@
                     console.log(typeof(data))
                     if (data=='此環境沒有該用戶'){
                         alert(data);
-                        return false; 
                     }
                     else{
                     console.log(data);
@@ -60,7 +59,7 @@
             }
             else {
                 button_disabled('#check_FF')
-                button_disabled('#check_Third')    
+                button_disabled('#check_Third')
                 $.ajax({
                     url:"/app_bet",
                     type:"POST",
@@ -70,18 +69,17 @@
                         },
                     data:form_trim("#form1"),
                     success:function(data){
+                        button_RemoveDisabeld("#check_FF")
+                        button_RemoveDisabeld("#check_Third") 
                         game_detail = data;
                         console.log(typeof(data))
                         if (data=='此環境沒有該用戶'){
-                            alert(data);
-                            return false;  
+                            alert(data);  
                         }
                         else{
                         console.log(data);
                         $("#user_detail").after(data)
-                        }
-                        button_RemoveDisabeld("#check_FF")
-                        button_RemoveDisabeld("#check_Third")            
+                        }           
                     }
                 })
             }   
