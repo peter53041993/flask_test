@@ -1184,45 +1184,63 @@ def url_token():
             print('頁面輸入token')
             token_url = conn.select_url_token(token, joint_type)
             print(token_url)
+            if len(token_url) == 0:
+                return(f'{env_type}沒有該註冊碼: {token}')
             user = []
-            user_url = []
-            len_data = []  # 用註冊碼查, 長度可能會有多個
+            url_created = []
+            url = []
+            day_list = []  # 用註冊碼查, 長度可能會有多個
+            register_list = []
+            len_data = []
             for i in token_url.keys():
                 user.append(token_url[i][0])
-                user_url.append(token_url[i][1])
+                url_created.append(token_url[i][1])
+                url.append(token_url[i][2])
+                days = token_url[i][3]
+                register = token_url[i][4]
+                if days == -1:
+                    days = '無窮'
+                elif days == 0:
+                    days = '失效'
+                else:
+                    days = '有效性時間: %s天'%days
+                day_list.append(days)
+                if register is None:
+                    register = '無'
+                register_list.append(register)
                 len_data.append(i)
-            data = {'用戶名': user, '開戶連結': user_url}
+            data = {'用戶名': user,'創立時間':url_created , '開戶連結': url,'失效性': day_list,'註冊數': register_list}
         elif id_ not in ['', None]:
             print('頁面輸入id')
             token_url = conn.select_url_token(id_, joint_type)
             print(token_url)
-            user = []
-            user_url = []
-            for i in token_url.keys():
-                user.append(token_url[i][0])
-                user_url.append(token_url[i][1])
-
-            data = {'用戶名': user, '開戶連結': user_url}
+            if len(token_url) == 0:
+                return(f'{env_type}沒有該id: {id_}')
+            # id是唯一值 , key 值接待0 即可
+            user = token_url[0][0]
+            url_created = token_url[0][1]
+            url = token_url[0][2]
+            days = token_url[0][3]
+            register = token_url[0][4]
+            if days == '-1':
+                days = '無窮'
+            else:
+                days = '失效,有效性時間: %s'%days
+            if register is None:
+                register = '無'
+            data = {'用戶名': user,'創立時間':url_created , '開戶連結': url,'失效性': days,'註冊數': register}
             len_data = [0]  # 輸入ID 查 連結, ID 為唯一直
         elif user not in ['', None]:  # 頁面輸入 用戶名 查詢用戶從哪開出
             print('頁面輸入用戶名')
-            user_url = conn.select_user_url(user, 2, joint_type)
-            print(user_url)
-            if len(user_url) == 0:  # user_url 有可能找不到 ,再從 user_customer 的refere去找
-                user_url = conn.select_user_url(user, joint_type)  # 檢查環境是否有這用戶
-                if not user_url:
-                    raise Exception(f'{env_type}環境沒有該用戶: {user}')
-
+            user_id = conn.select_user_id(user)  # 查詢頁面上 該環境是否有這用戶
+            if len(user_id) == 0:
+                return(f'{env_type}環境沒有該用戶: {user}')
+            user_url = conn.select_user_url(user, 2,joint_type)  #查詢用戶 被開出的連結 , 2 為type_  
+            if len(user_url) == 0:# user_url 為空 ,被刪除
                 data = {'用戶名': user, '用戶從此連結開出': '被刪除'}
                 frame = pd.DataFrame(data, index=[0])
                 print(frame)
                 return frame.to_html()
-
-            elif user_url[0][4] != -1:  # '失效'
-                print('連結失效,從referer找')
-                days = '是'  # user_url 找不到的連結 ,一定失效或被刪除
-                user_url = conn.select_user_url(user, 0)
-                print(user_url)
             else:  # 這邊代表  user_url 是有值,  在去從days 判斷是否失效
                 if user_url[0][4] == -1:
                     days = '否'
@@ -1234,25 +1252,10 @@ def url_token():
         else:  # 輸入domain 查尋 預設連結
             try:  # 對頁面輸入的domain, 做格式化處理
                 domain = request.form.get('domain').strip()  # 頁面網域名稱 . strip 避免有空格問題
-                '''
-                if 'joy188' in domain:# joy188 前面為www2
-                    if 'www2' in domain:
-                        pass
-                    else:
-                        domain = f'www2.{domain}.com'
-                elif any(s in domain for s in ['com','www']):# 網域名稱 有帶 www /com 不用額外更動
-                    pass #  後續可以 對 開頭是否有 http ,尾不是 com  去做處理
-                else: # 沒有帶  www
-                    
-                    if any(s in domain for s in ['fh888','fh666']):
-                        domain = f'www.{domain}.bet'
-                    else:
-                        domain = f'www.{domain}.com'
-                '''
                 print(domain)
                 # env = domain_keys[domain][1]#  1 為環境 ,0 為預設連結
             except KeyError:  #
-                raise KeyError('沒有該連結')
+                raise KeyError('連結格式有誤')
             domain_url = conn.select_domain_default_url(domain)
             print(domain_url)
             if len(domain_url) != 0:  # 代表該預名 在後台全局管理有做設置
@@ -1277,7 +1280,6 @@ def url_token():
                 else:
                     domain_type = '歡樂期排'
                 env_type = domain_type + "/" + env_type  # 還台有設置 ,不能用damain_keys來看, 有可能 業務後台增加, damain_keys沒有
-
                 status = domain_url[0][6]
                 if status == 0:
                     status = '上架'
@@ -1289,14 +1291,14 @@ def url_token():
             else:  # 就走預設的設定
                 try:
                     if domain_keys[domain][1] != int(env):
-                        raise Exception("該環境沒有此domain")
+                        return("該環境沒有此domain")
                     domain_admin = '否'
                     admin_url = '無'  # 後台沒設置
                     url = domain_keys[domain][0]  # 沒設定 ,為空, 走預設連結
                     register_status = domain_keys[domain][2]
                     env_type = domain_keys[domain][3] + "/" + env_type  # 後台沒設置, 就從domain_keys 原本 預設的規則走
                 except KeyError:
-                    raise KeyError('沒有該連結')
+                    return "網域名稱有誤"
 
                 data = {"網域名": domain, '環境': env_type, '後台是否有設置該網域': domain_admin, '預設連結': url,
                         '預設註冊按紐': register_status}
