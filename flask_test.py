@@ -31,6 +31,7 @@ from utils import Config
 from utils.Connection import PostgresqlConnection, OracleConnection,RedisConnection
 import FF_Joy188
 from urllib.parse import urlsplit
+from functools import reduce
 
 
 app = Flask(__name__)  # name 為模塊名稱
@@ -715,14 +716,17 @@ def number_map(number_record):  # 開獎號使用
 
 
 def game_map(type_=''):  # 玩法 和 說明 mapping,type_ 預設  '' ,為玩法說明,  不是 '' ,走其他邏輯
-    global game_playtype, game_theory, bonus, data  # 說明, 玩法
-    if lottery_name in ['slmmc']:
-        if '五星' in game_playtype:
-            if game_playtype in ['复式', '单式']:
+    global game_theory, bonus, data  # 說明, 玩法
+    if lottery_name in ['凤凰顺利秒秒彩']:
+        print(game_play_type)
+        if '五星' in game_play_type:
+            if any(s in game_play_type for s in ['复式', '单式']):
+            #if game_play_type in ['复式', '单式']:
                 game_explan = '#五個號碼順續需全相同'
-            elif '组选120' in game_playtype:
+            elif '组选120' in game_play_type:
                 game_explan = '#五個號碼相同,順續無需相同(開獎號無重覆號碼)'
-        game_cal = 'test'
+        else:
+            game_explan = '#test'
     elif lottery_name == '凤凰比特币冲天炮':
         game_theory = round(float(game_submit) / 0.9, 2)  # 快開  理論將金 另外算
         game_cal = '%s*%s=%s' % (game_amount, game_submit, float(game_submit) * game_amount)
@@ -763,6 +767,11 @@ def game_map(type_=''):  # 玩法 和 說明 mapping,type_ 預設  '' ,為玩法
                 pcdd_sum['XIAODAN'] = '49'
                 pcdd_sum['XIAOSHUNG'] = '50'
             return pcdd_sum
+    elif lottery_name in ['北京快乐8','快乐8全球彩','福彩快乐8']:# 後續再增加
+        game_explan = "上盘(01-40),下盘(41-80)/ #合值>810(大)"
+        theory_data = data['理論獎金']
+        theory_data[0] = str(theory_data[0]) + "#多獎金,理論/平台獎金 有誤"  # 只取列表第一個值 +  說明
+        data['理論獎金'] = theory_data
     else:
         game_explan = '#未補上'
         theory_data = data['理論獎金']  # ex : [1,2,3,4,5]
@@ -794,173 +803,10 @@ def get_cookie():  # 存放cookie皆口
     return cookie
 
 
-# @app.route('/game_result', methods=["GET", "POST"])  # 查詢方案紀錄定單號
-# def game_result():
-#     global GAME_EXPLAN, GAME_PLAYTYPE
-#     cookies_dict = {}  # 存放cookie,避免一隻 登入後台
-#     if request.method == "POST":
-#         game_code = request.form.get('game_code')  # 訂單號
-#         game_type = request.form.get('game_type')  # 玩法
-#         env = Config.EnvConfig(request.form.get('env_type'))  # 環境
-#         cookies_ = request.cookies  # 瀏覽器上的cookie
-#         conn = OracleConnection(env.get_env_id())
-#         print(cookies_)
-#         if game_code != '':  # game_code 不為空,代表前台 是輸入 訂單號
-#             game_detail = conn.select_game_result(result=game_code)  # 傳回此方法.找出相關 訂單細節
-#             if len(game_detail) == 0:
-#                 return "此環境沒有此訂單號"
-#             else:
-#                 game_status = game_detail[1]  # 需判斷  訂單狀態
-#                 if game_status == 1:
-#                     game_status = '等待開獎'
-#                 elif game_status == 2:
-#                     game_status = '中獎'
-#                 elif game_status == 3:
-#                     game_status = '未中獎'
-#                 elif game_status == 4:
-#                     game_status = '撤銷'
-#                 else:
-#                     game_status = '待確認'
-#                 game_amount = float(game_detail[2] / 10000)  # 投注金額  需在除 1萬
-#                 game_retaward = float(game_detail[10] / 10000)  # 反點獎金 需除1萬
-#                 game_moneymode = game_detail[12]  # 元角分模式 , 1:元, 2: 角
-#                 if game_moneymode == 1:
-#                     game_moneymode = '元'
-#                 elif game_moneymode == 2:
-#                     game_moneymode = '角'
-#                 else:
-#                     game_moneymode = '分'
-#
-#                 # 遊戲玩法 : 後三 + 不定位+ 一碼不定位 , 並回傳給 game_map 來做 mapping
-#                 GAME_PLAYTYPE = game_detail[4] + game_detail[5] + game_detail[6]
-#                 print(f"玩法: {GAME_PLAYTYPE}")
-#
-#                 game_award = float(game_detail[13] / 10000)  # 中獎獎金
-#
-#                 header = {'User-Agent': Config.UserAgent.PC.value,
-#                           'Content-Type': 'application/x-www-form-urlencoded'}
-#                 session = None
-#                 lottery_id = None
-#                 award_id = None
-#                 print(f'cookies_.keys() = {cookies_.keys()}')
-#                 if env.get_domain() not in cookies_.keys():
-#                     print("瀏覽器上 還沒有後台cookie,需登入")
-#                     award_id = game_detail[17]  # 獎金id, 傳后查詢尋是哪個獎金組
-#                     lottery_id = game_detail[14]  # 採種Id 傳給 後台 查詢哪個彩種
-#                     session = requests.Session()
-#                     header['Cookie'] = 'ANVOAID=' + env.get_admin_cookie()  # 後台 登入header
-#                     cookie = env.get_admin_cookie()  # 後台登入 cookie
-#
-#                     res = redirect('game_result')
-#                     res.set_cookie(env.get_domain(), cookie)  # 存放cookie
-#
-#                     # return res
-#                     # print(cookie)
-#                     # cookies_[env] = cookie
-#                 else:
-#                     print("瀏覽器已經存在cookie,無須登入")
-#                     header['Cookie'] = cookies_[env]
-#                     """若進入else, header / session / lotteryid / award_id 如何初始化?"""
-#
-#                 # header['Content-Type'] ='application/json'
-#                 r = session.get(
-#                     env.get_admin_url() + f"/gameoa/queryGameAward?lotteryId={lottery_id}&awardId={award_id}&status=1"
-#                     , headers=header)  # 登入後台 查詢 用戶獎金值
-#                 # print(r.text)
-#                 soup = BeautifulSoup(r.text, 'lxml')
-#                 bonus = []
-#                 if game_detail[16] == 0:  # 理論獎金為0, 代表一個完髮有可能有不同獎金
-#                     print('有多獎金玩法')
-#                     point_id = str(game_detail[15])
-#                     for i in soup.find_all('span', id=re.compile(f"^({point_id})")):
-#                         bonus.append(float(i.text))  # 有多個獎金
-#                     bonus = " ".join([str(x) for x in bonus])  # 原本bonus裡面裝 float  .需list裡轉成字元,
-#
-#                     # bonus = "".join(bonus)# dataframe 不能支援list
-#                 else:
-#                     point_id = str(game_detail[15]) + "_" + str(
-#                         game_detail[16])  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
-#                     for i in soup.find_all('span', id=re.compile(f"^({point_id})")):  # {'id':point_id}):
-#                         bonus = float(i.text)
-#                 print(bonus, point_id)
-#                 game_awardmode = game_detail[9]  # 是否為高獎金
-#                 if game_awardmode == 1:
-#                     game_awardmode = '否'
-#                 elif game_awardmode == 2:
-#                     game_awardmode = '是'
-#                     bonus = game_retaward + bonus  # 高獎金的話, 獎金 模式 + 反點獎金
-#                 # print(bonus)
-#                 game_map()  # 呼叫玩法說明
-#                 data = {"遊戲訂單號": game_code, "訂單時間": game_detail[0], "中獎狀態": game_status,
-#                         "投注金額": game_amount, "投注彩種": game_detail[3],
-#                         "投注玩法": GAME_PLAYTYPE,
-#                         "投注內容": game_detail[7], "獎金組": game_detail[8], "獎金模式": bonus,
-#                         "獎金模式狀態": game_awardmode, "反點獎金": game_retaward, "投注倍數": game_detail[11],
-#                         "元角分模式": game_moneymode, "中獎獎金": game_award, "遊戲說明": GAME_EXPLAN
-#                         }
-#                 FRAME = pd.DataFrame(data, index=[0])
-#                 print(FRAME)
-#                 # return frame
-#                 return FRAME.to_html()
-#         elif game_type != '':  # game_type 不為空,拜表前台輸入 指定玩法
-#             if "_" in game_type:  # 把頁面輸入  _   去除
-#                 print('有_需移除')
-#                 if "2000" in game_type:  # 超級2000 在DB格式 前面 多帶 _ ,不能移除
-#                     test_list = []  # 存放 超級2000 後新的列表,並join 新的 game_type
-#                     for i in game_type.split('_'):
-#                         if "2000" in i:
-#                             i = i + "_"
-#                         test_list.append(i)  # 新的列表
-#                     game_type = "".join(test_list)  # 超級2000符合的 DB mapping
-#                 else:
-#                     game_type = game_type.replace("_", "")  # 不是超級2000, _ 就值皆去除
-#             elif game_type[-1] == " ":  # 判斷輸入後面多增加空格:
-#                 print('輸入玩法 有空格需去除掉')
-#                 game_type = game_type.replace(' ', '')
-#             print(game_type)
-#             temp = conn.select_game_order('%' + game_type + '%')
-#             game_order = temp[0]
-#             len_order = temp[1]
-#             # print(game_order)
-#             order_list = []  # 因為可能有好幾個訂單,  傳入 dataframe 需為列表 ,訂單
-#             order_time = []  # 時間
-#             order_lottery = []  # 採種
-#             order_type = []  # 玩法
-#             order_status = []  # 狀態
-#             order_user = []  # 用戶名
-#             order_detail = []  # 投注內容
-#             order_record = []  # 開獎號碼
-#             for len_ in range(len_order):  # 取出長度
-#                 order_list.append(game_order[len_][2])  # 2為訂單號.
-#                 order_time.append(game_order[len_][1])
-#                 order_lottery.append(game_order[len_][0])
-#                 order_type.append(game_order[len_][3] + game_order[len_][4] + game_order[len_][5])
-#                 if game_order[len_][6] == 1:
-#                     game_order[len_][6] = '等待開獎'
-#                 elif game_order[len_][6] == 2:
-#                     game_order[len_][6] = '中獎'
-#                 elif game_order[len_][6] == 3:
-#                     game_order[len_][6] = '未中獎'
-#                 elif game_order[len_][6] == 4:
-#                     game_order[len_][6] = '撤銷'
-#                 else:
-#                     game_order[len_][6] = '確認狀態'
-#                 order_status.append(game_order[len_][6])
-#                 order_user.append(game_order[len_][7])
-#                 order_detail.append(game_order[len_][8])
-#                 order_record.append(game_order[len_][9])
-#             # print(order_list)
-#             data = {"訂單號": order_list, "用戶名": order_user, "投注時間": order_time, "投注彩種": order_lottery, "投注玩法": order_type,
-#                     "投注內容": order_detail, "開獎號碼": order_record, "中獎狀態": order_status}
-#             FRAME = pd.DataFrame(data)
-#             # test = frame.style.applymap(status_style)#增加狀態顏色 ,這是for jupyter_notebook可以直接使用
-#             print(FRAME)
-#             conn.close_conn()
-#             return FRAME.to_html()
-#     return render_template('game_result.html')
+
 @app.route('/game_result', methods=["GET", "POST"])  # 查詢方案紀錄定單號
 def game_result():
-    global game_playtype, game_amount, game_submit, game_point, lottery_name, game_theory, bonus, data, game_award, bet_type_code, len_game
+    global game_play_type, game_amount, game_submit, game_point, lottery_name, game_theory, bonus, data, game_award, bet_type_code, len_game
 
     if request.method == "POST":
         game_code = request.form.get('game_code')  # 訂單號
@@ -1009,16 +855,6 @@ def game_result():
 
                     game_submit = game_detail[key][7]  # 投注內容
                     game_submit_list.append(game_submit)
-                    '''
-                    if theory_bonus == 0:  # 理論獎金為0, 代表一個完髮有可能有不同獎金
-                        bonus = []
-                        print('有多獎金玩法'+bet_type_code)
-                        for i in soup.find_all('span', id=re.compile("^(%s)" % bet_type_code)):
-                            bonus.append(float(i.text))  # 有多個獎金
-                        FF_bonus = " ".join([str(x) for x in bonus])  # 原本bonus裡面裝 float  .需list裡轉成字元,
-                    
-                    else:
-                    '''
                     if lottery_name == 'PC蛋蛋':
                         if bet_type_code not in ['66_28_71', '66_13_84', '66_74_107']:  # 同個玩法只有單一賠率
                             bonus = conn.select_bonus(lottery_id=lottery_id, bet_type_code=bet_type_code)
@@ -1180,7 +1016,7 @@ def user_acitve():  # 驗證第三方有校用戶
         # 查詢用戶 userid
         print(user, env)
         if len(userid) == 0:
-            raise Exception("此環境沒有該用戶")
+            return("此環境沒有該用戶")
         else:
             active_app = conn.select_active_app(user)
             # 查詢APP有效用戶 是否有值  ,沒值 代表 沒投注
@@ -1262,7 +1098,7 @@ def user_acitve():  # 驗證第三方有校用戶
 
 
 @app.route('/app_bet', methods=["POST"])
-def app_bet():
+def app_bet():# user_active, 第三方 銷量計算 接口
     user = request.form.get('user')
     env = Config.EnvConfig(request.form.get('env_type'))
     conn = OracleConnection(env_id=env.get_env_id())
@@ -1274,19 +1110,13 @@ def app_bet():
     third_prize = []  # 第三方獎金
     third_report = []  # 第三方盈虧
     third_memo = []  # 第三方memo
-    user_list = []
-    for third in app_bet.keys():
+    for third_ in app_bet.keys():
+        third = app_bet[third_][3]# 第三方名稱
         third_list.append(third)
-        active_bet.append(app_bet[third][0])  # 有效銷量 為列表 1
-        third_prize.append(app_bet[third][1])
-        third_report.append(app_bet[third][2])
-        if third == "ALL":
-            user_list.append(user)
-        else:
-            user_list.append("")
-        if third == "ALL":
-            third_memo.append("用戶盈虧: 總獎金-有效銷量")
-        elif third == 'CITY':
+        active_bet.append(app_bet[third_][0])  # 有效銷量 為列表 1
+        third_prize.append(app_bet[third_][1])
+        third_report.append(app_bet[third_][2])
+        if third == 'CITY':
             third_memo.append("#後台投注紀錄盈虧值 為用戶角度")
         elif third == 'BBIN':
             third_memo.append('#獎金不會小於0')
@@ -1294,10 +1124,17 @@ def app_bet():
             third_memo.append('#前台獎金=後台盈利額,前台投注金額=總投注,後台代理盈虧的遊戲獎金=有效投注額+投注紀錄的盈虧值')
         else:  # 待後續確認每個第三方 規則
             third_memo.append('')
+    third_memo.append("用戶盈虧: 總獎金-有效銷量")
+    third_list.append('ALL')
+    active_bet.append(reduce(lambda x,y: x+y,active_bet))# reduce 方法 為 可以計算列表總合, 再加到陣列裡
+    third_prize.append(reduce(lambda x,y: x+y,third_prize))
+    third_report.append(reduce(lambda x,y: x+y,third_report))
+    
     # print(user_list,active_bet,third_prize,third_report)
 
-    data = {"用戶名": user_list, "有效銷量": active_bet, "總獎金": third_prize, "用戶盈虧": third_report,
+    data = {"有效銷量": active_bet, "總獎金": third_prize, "用戶盈虧": third_report,
             "備註": third_memo}
+    print(data)
     frame = pd.DataFrame(data, index=third_list)
     print(frame)
     conn.close_conn()
@@ -1770,8 +1607,9 @@ def fund_fee():
         user = request.form.get('user')
         print(select_type, user)
         # 總代: 因為parent_id  為 -1.需用 user_iD查
-        AutoTest.Joy188Test.select_Fee(AutoTest.Joy188Test.get_conn(int(env_type)), select_type, user)
-        fund_fee = AutoTest.fund_fee
+        conn = OracleConnection(env_id=int(env_type))
+        fund_fee = conn.select_Fee(select_type, user)
+        #fund_fee = AutoTest.fund_fee
         print(fund_fee)
         if select_type == "fund":  # 充值
             type_msg = "充值"
@@ -1791,8 +1629,7 @@ def fund_fee():
 
             data = {"手續費類型": type_msg, "手續費規則": rule_msg, "備註": "總代線有設定走平台/不管用戶身分"}
         else:  # 提線
-            AutoTest.Joy188Test.select_userLvl(AutoTest.Joy188Test.get_conn(int(env_type)), user)
-            user_lvl = AutoTest.user_lvl
+            user_lvl = conn.select_userLvl(user)
             type_msg = "提現"
             if len(fund_fee) == 0:  # 總代線沒設定
                 rule_msg = "總代線沒設定,走平台設定"
