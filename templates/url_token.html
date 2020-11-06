@@ -41,9 +41,8 @@
                     button_RemoveDisabeld('.submit')
                     game_detail = data;
                     console.log(typeof(data))
-                    if (data=='沒有該註冊碼'){
+                    if (data.indexOf('沒有該註冊碼')>=0){
                         alert(data);
-                        //location.reload()  
                     }
                     else if (data=='DATA有錯誤'){
                         alert(data);
@@ -52,10 +51,16 @@
                     else if (data.indexOf('環境沒有該用戶')>=0){
                         alert(data);
                     }
+                    else if (data.indexOf('沒有該id')>=0){
+                        alert(data);
+                    }
                     else{
                     console.log(data);
-                    $("#user_detail").after(data)}
-        
+                    $("#user_detail").after(data)
+                    }
+                    $('#id').val('');
+                    $('#user').val('');
+                    $('#token').val('');
                 }
             })
             }   
@@ -92,8 +97,13 @@
                         alert(data);
                         //location.reload();
                     }
-                    else if (data.indexOf('環境沒有此domain')>0){
+                    else if (data.indexOf('連結格式有誤')>=0){
                         alert(data);
+                        return false;
+                    }
+                    else if (data.indexOf('網域名稱有誤')>=0){
+                        alert(data);
+                        return false;
                     }
                     else{
                     console.log(data);
