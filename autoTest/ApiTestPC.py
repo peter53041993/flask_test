@@ -7,6 +7,7 @@ import hashlib
 import json
 import requests
 import time
+import FF_Joy188
 
 from utils import Config, Logger
 from utils.Config import LotteryData, func_time
@@ -26,7 +27,7 @@ class ApiTestPC(unittest.TestCase):
     def setUp(self):
         logger.info(f'ApiTestPC setUp : {self._testMethodName}')
 
-    def __init__(self, case, env_config, _user, red_type, money_unit, award_mode, oracle, mysql):
+    def __init__(self, case, env_config, _user, red_type, money_unit, award_mode, oracle, mysql,lottery_name):
         super().__init__(case)
         global COOKIE
         self._env_config = env_config
@@ -51,17 +52,13 @@ class ApiTestPC(unittest.TestCase):
         if COOKIE:  # 若已有Cookie則加入Header
             logger.info('已有Cookie')
             self._header['Cookie'] = f'ANVOID={COOKIE}'
+        self.lottery_name = lottery_name
 
     def web_issue_code(self, lottery):  # 頁面產生  獎期用法,  取代DB連線問題
         now_time = int(time.time())
         r = self.SESSION.get(self._en_url + f'/gameBet/{lottery}/dynamicConfig?_={now_time}', headers=self._header)
-        try:
-            return r.json()['data']['issueCode']
-        except:
-            pass
-        if lottery == 'lhc':
-            pass
-
+        return r.json()['data']['issueCode']
+                
     def plan_num(self, evn, lottery, plan_len):  # 追號生成
         plan_ = []  # 存放 多少 長度追號的 list
         issue = self._conn_oracle.select_issue(LotteryData.lottery_dict[lottery][1])
@@ -268,6 +265,20 @@ class ApiTestPC(unittest.TestCase):
             logger.error(trace_log(e))
             return False
 
+    def test_PcPlan(self):
+        """追號測試"""
+        awardmode = self._award_mode
+        for lottery in self.lottery_name:
+            if awardmode == '0':#預設
+                if lottery in ['xyft','btcctp','btcffc','xyft168']:
+                   awardmode = 2
+                else:
+                  awardmode = 1  
+            else: 
+                awardmode = awardmode
+            FF_Joy188.FF_().Pc_Submit(lottery=lottery,envs=self._env_config.get_env_id(),account=self._user,em_url=self._env_config.get_em_url(),header=self._header,awardmode=awardmode,
+            type_=10,stop="")
+
     def test_PCLotterySubmit(self, plan=1):  # 彩種投注
         """投注測試"""
         _money_unit = 1  # 初始元模式
@@ -279,8 +290,8 @@ class ApiTestPC(unittest.TestCase):
         else:
             print('不使用紅包投注')
         try:
-            logger.info(f' LotteryData.lottery_dict = {LotteryData.lottery_dict}')
-            for i in LotteryData.lottery_dict.keys():
+            for i in self.lottery_name:
+                logger.info(f' LotteryData.lottery_dict = {LotteryData.lottery_dict[i]}')
                 global MUL_  # 傳回 投注出去的組合訊息 req_post_submit 的 content裡
                 global MUL
                 ball_type_post = self.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
