@@ -1,7 +1,8 @@
 from bs4 import BeautifulSoup
 import json, cx_Oracle, requests, hashlib, time, urllib3, time
 from fake_useragent import UserAgent
-
+from utils.Config import LotteryData
+from utils.Connection import OracleConnection
 
 class FF_:  # 4.0專案
     status = []  # 紀錄請求狀態
@@ -22,22 +23,7 @@ class FF_:  # 4.0專案
         }
         self.param = b'ba359dddc3c5dfd979169d056de72638',  # 固定寫死即可
         self.session = requests.Session()
-        self.lottery_dict = {
-            'cqssc': [u'重慶', '99101'], 'xjssc': [u'新彊時彩', '99103'], 'tjssc': [u'天津時彩', '99104'],
-            'hljssc': [u'黑龍江', '99105'], 'llssc': [u'樂利時彩', '99106'], 'shssl': [u'上海時彩', '99107'],
-            'jlffc': [u'吉利分彩', '99111'], 'slmmc': [u'順利秒彩', '99112'], 'txffc': [u'騰訊分彩', '99114'],
-            'btcffc': [u'比特幣分彩', '99115'], 'fhjlssc': [u'吉利時彩', '99116'],
-            'sd115': [u'山東11選5', '99301'], 'jx115': [u"江西11選5", '99302'],
-            'gd115': [u'廣東11選5', '99303'], 'sl115': [u'順利11選5', '99306'], 'jsk3': [u'江蘇快3', '99501'],
-            'ahk3': [u'安徽快3', '99502'], 'jsdice': [u'江蘇骰寶', '99601'], 'jldice1': [u'吉利骰寶(娛樂)', '99602'],
-            'jldice2': [u'吉利骰寶(至尊)', '99603'], 'fc3d': [u'3D', '99108'], 'p5': [u'排列5', '99109'],
-            'ssq': [u'雙色球', '99401'], 'lhc': [u'六合彩', '99701'], 'btcctp': [u'快開', '99901'],
-            'bjkl8': [u'快樂8', '99201'], 'pk10': [u"pk10", '99202'], 'v3d': [u'吉利3D', '99801'],
-            'xyft': [u'幸運飛艇', '99203'], 'fhxjc': [u'鳳凰新疆', '99118'], 'fhcqc': [u'鳳凰重慶', '99117'],
-            'hnffc': [u'河內分彩', '99119'], '360ffc': [u'360紛紛採', '99121'], '3605fc': [u'360五分彩', '99122'],
-            'hn5fc': [u'河內五分彩', '99120'], 'n3d': [u'越南3d', '99124'], 'np3': [u'越南福利彩', '99123'],
-            'pcdd': [u'PC蛋蛋', '99204'], 'xyft168': [u'168幸運飛艇', '99205'], 'fckl8': ['福彩快樂8', '99206']
-        }
+        self.lottery_dict = LotteryData.lottery_dict# 吃config ,後續只需增加一邊
 
     def session_post(self, request_url, request_func, postData,
                      header):  # 共用 request.post方式 ,url 為動態 請求url ,source預設走PC
@@ -70,32 +56,7 @@ class FF_:  # 4.0專案
                                  oracle_['sid'][env] + service_name)
         return conn
 
-    def select_issue(self, conn, lottery, type_):  # 查詢正在銷售的 期號 ,lotttery參數,對應 lotteryid
-        # today_time = '2019-06-10'#寫死 for預售中
-        if type_ == 1:  # 一般投注
-            sql = "select issue_code from game_issue where lotteryid = '%s' \
-            and sysdate between sale_start_time and sale_end_time" % (self.lottery_dict[lottery][1])
-        else:  # 追號
-            sql = "select issue_code from game_issue where lotteryid = '%s' \
-            and sale_start_time > trunc(sysdate,'DD') and \
-            status !=7 and period_status !=2" % (self.lottery_dict[lottery][1])
-        with conn.cursor() as cursor:
-            # print(sql)
-            cursor.execute(sql)
-            rows = cursor.fetchall()
-            issue_code = {}
-            if lottery in ['slmmc', 'sl115']:  # 順利秒彩,順利11選5  不需 講期
-                issue_code[lottery] = "1"  # 獎棋給空 ,傳到 投注
-            else:
-                if type_ == 1:
-                    issue_code[lottery] = rows[0][0]  # rows 為一個 list 理包 一個tuple
-                else:
-                    issue_plan = []  # 追號 放期數
-                    for i in rows:  # i為 追號 期號 , 為一個tuple直
-                        issue_plan.append(i[0])
-                    issue_code[lottery] = issue_plan
-            return issue_code
-
+    
     def plan_return(self, type_, issuelist):  # 根據 type_ 判斷是不是追號, 生成動態的 動態order
         plan_ = []
         try:
@@ -106,21 +67,18 @@ class FF_:  # 4.0專案
         except IndexError as e:
             print(e)
 
-    def web_planIssue(self, account, lottery):  # 從頁面  dynamicConfig 皆口去獲得
+    @staticmethod
+    def web_planIssue(lottery,em_url,header):  # 從頁面  dynamicConfig 皆口去獲得
         now_time = int(time.time())
-        header = {
-            'User-Agent': self.user_agent['Pc'],
-            'Cookie': 'ANVOID=' + AutoTest.cookies_[account]
-        }
-        FF_().session_get(AutoTest.em_url, '/gameBet/%s/dynamicConfig?_=%s' % (lottery, now_time), '',
+        FF_().session_get(em_url, '/gameBet/%s/dynamicConfig?_=%s' % (lottery, now_time), '',
                           header)  # dynamicConfig 有歷史獎其資訊
         issuecode = r.json()['data']['gamenumbers']
         return issuecode
 
     ## 各採種 對應的 投注格式 , isTrace,traceWinStop ,traceStopValue  從 pc_submit  傳回來
-    def submit_json(self, account, lottery, awardmode, isTrace, traceWinStop, traceStopValue, type_, envs):
+    def submit_json(self,em_url,account,lottery, awardmode, isTrace, traceWinStop, traceStopValue, type_, envs,header):
         # issueCode = FF_().select_issue(FF_().get_conn(envs),lottery,type_)[lottery]# 奖期api , 為一個dict ,key為採種
-        issuecode = FF_().web_planIssue(account, lottery)  # 追號獎其
+        issuecode =  FF_().web_planIssue(lottery,em_url,header)  # 追號獎其
         print(lottery)
         if type_ != 1:  # 追號
             issue_list = issuecode[:type_]
@@ -1234,13 +1192,9 @@ class FF_:  # 4.0專案
                      "multiple": 1, "awardMode": awardmode, "num": 1}], "orders": order_plan, "amount": 6 * len_order}
         elif lottery == 'pcdd':
             # 需查出用戶反點, 如果是高獎金的話, odds 需用 平台獎金 * 用戶反點
-            AutoTest.Joy188Test.select_lotteryPoint(AutoTest.Joy188Test.get_conn(envs), self.lottery_dict[lottery][1],
-                                                    account)
-            user_point = AutoTest.lottery_point[0][2] / 10000  # DB抓出來反點 需除 10000
-            # print(user_point,type(user_point))
-            AutoTest.Joy188Test.select_bonus(AutoTest.Joy188Test.get_conn(envs), self.lottery_dict[lottery][1], '',
-                                             'FF_bonus')
-            bonus = AutoTest.bonus  # 平台獎金:理論獎金, 那去下面 算出odds賠率
+            conn = OracleConnection(env_id=envs)
+            user_point = conn.select_lotteryPoint(self.lottery_dict[lottery][1],account)/ 10000
+            bonus =  conn.select_bonus(self.lottery_dict[lottery][1], '','FF_bonus')
             # print(bonus)
             if awardmode == 1:  # 一般玩法, odds 就直接用 bonus 的key
                 list_keys = list(bonus.keys())
@@ -1356,7 +1310,7 @@ class FF_:  # 4.0專案
                 traceStopValue = -1
                 print('追中不停')
             isTrace = 1
-        postData = FF_().submit_json(account, lottery, awardmode, isTrace, traceWinStop, traceStopValue, type_, envs)
+        postData = FF_().submit_json(em_url,account,lottery, awardmode, isTrace, traceWinStop, traceStopValue, type_, envs,header)
         # 呼叫各採種 投注data api
         FF_().session_post(em_url, '/gameBet/%s/submit' % lottery, json.dumps(postData), header)
         print('%s投注,彩種: %s' % (account, self.lottery_dict[lottery][0]))
