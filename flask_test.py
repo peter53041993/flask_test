@@ -301,6 +301,10 @@ def auto_test():
             api_test_app = request.form.getlist('api_test_app')  # 回傳 測試案例data內容
             integration_test_pc = request.form.getlist('integration_test_pc')  # 回傳 測試案例data內容
             env_config = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
+            try:
+                lottery_name = request.form.get('lottery_name')# 4.0選擇採種名稱
+            except:#怕影響 yft ,沒有這個參數
+                pass
             red = request.form.get('red_type')  # 紅包選擇
             award_mode = request.form.get('awardmode')  # 獎金組設置
             money_unit = request.form.get('moneymode')  # 金額模式
@@ -338,15 +342,17 @@ def auto_test():
                     f"money_unit={money_unit}, award_mode={award_mode}")
                 Config.test_cases_init(sum(len(cases) for cases in test_cases))  # 初始化測試案例數目，後續供進度條讀取百分比
                 AutoTest.suite_test(test_cases, user_name, env_config.get_domain(),
-                                    red, money_unit, award_mode)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
+                                    red, money_unit, award_mode,lottery_name)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
                 return redirect('report')
             else:
                 return '此環境沒有該用戶'
+        else:
+            lottery_dict = FF_Joy188.FF_().lottery_dict
         # return redirect("/report")
     except Exception as e:
         from utils.TestTool import trace_log
         print(trace_log(e))
-    return render_template('autoTest.html')
+    return render_template('autoTest.html',test=lottery_dict)
 
 
 @app.route("/report", methods=['GET'])
@@ -1667,7 +1673,7 @@ def FundCharge():  # 充值成功金額 查詢
             month = request.form.get('day_month')
             year = request.form.get('day_year')
             date = "%s/%s/%s" % (year, month, day)  # 格式化日期 傳到  select_FundCharge
-            key_name = '%s/%s:%s' % (check_type, env_type, date)  # 0/環境:日期
+            key_name = 'FundCharge: %s/%s/%s' % (check_type, env_type, date)  # 0/環境:日期
             result = RedisConnection.get_key(2,key_name)
             #result = AutoTest.get_key(key_name)
             print(result)
@@ -1712,9 +1718,9 @@ def FundCharge():  # 充值成功金額 查詢
             date = "%s/%s" % (year, month)  # 格式化日期 傳到  select_FundCharge
             # print(month,now_month)
             if month == str(now_month):  # 頁面選擇的 月份 等於這個月, 需把 當下日期 一起加進去 , 因為 這個月每天進來 都會 有新的一天數據
-                key_name = '%s/%s:%s%s' % (check_type, env_type, date, now_day)  # 1/環境:日期 , 多增加今天日期為key
+                key_name = 'FundCharge: %s/%s/%s-%s' % (check_type, env_type, date, now_day)  # 1/環境:日期 , 多增加今天日期為key
             else:
-                key_name = '%s/%s:%s' % (check_type, env_type, date)  # 不是這個月, 不用管今天日期
+                key_name = 'FundCharge: %s/%s/%s' % (check_type, env_type, date)  # 不是這個月, 不用管今天日期
             result = RedisConnection.get_key(2,key_name)
             #result = AutoTest.get_key(key_name)
             print(result)
