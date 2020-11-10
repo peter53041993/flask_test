@@ -597,6 +597,20 @@ class OracleConnection:
             user_lvl.append(i)
         cursor.close()
         return user_lvl
+    
+    def select_lotteryPoint(self,lotteryid,user):# 用戶彩種反點, FF_Joy188  高獎金玩法,會拿來算獎金
+        cursor = self._get_oracle_conn().cursor()
+        sql = "SELECT  user_.account,user_.register_date,game_award.direct_ret,game_award_group.award_name \
+        FROM game_award_user_group game_award INNER JOIN user_customer user_ ON game_award.userid = user_.id \
+        INNER JOIN game_award_group ON game_award.sys_award_group_id = game_award_group.id \
+        WHERE game_award.lotteryid = %s AND user_.account = '%s' and game_award.bet_type = 1"%(lotteryid,user)
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        lottery_point = {}
+        for index,content in enumerate(rows):
+            lottery_point[index] = content
+        cursor.close()
+        return lottery_point
         
     def close_conn(self):
         if self._conn is not None:
