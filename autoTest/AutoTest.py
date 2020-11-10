@@ -10,6 +10,8 @@ from utils import Config
 from utils.Connection import PostgresqlConnection, OracleConnection, MysqlConnection
 from utils.Logger import create_logger
 from utils.TestTool import trace_log
+from utils.Config import LotteryData
+
 
 os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'  # 避免抓出oracle中文 為問號
 
@@ -23,7 +25,7 @@ def date_time():  # 給查詢 獎期to_date時間用, 今天時間
     return f'{year}-{month}-{format_day}'
 
 
-def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mode):
+def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mode,lottery_name):
     """
     autoTest 初始化
     :param award_mode: 獎金模式 (0:預設 / 1:高獎金 / 2:高獎金)
@@ -49,14 +51,17 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mo
         _conn2 = None
 
         logger.info(f"suite_test with test_cases : {test_cases}")
-
+        if lottery_name == 'all':
+                lottery_name = LotteryData.lottery_dict.keys()#頁面選全部, 從config取lottery資訊
+        else:
+            lottery_name =  [lottery_name]# test_PCLotterySubmit , loop取出lottery , 所以寫在list裡
         if _env_config.get_env_id() in (0, 1):
             _conn = OracleConnection(_env_config.get_env_id())
             _conn2 = MysqlConnection(_env_config.get_env_id())
             for case in test_cases[0]:
                 _suite_list.append(
                     ApiTestPC(case=case, env_config=_env_config, _user=user_name, red_type=is_use_red,
-                              money_unit=money_unit, award_mode=award_mode, oracle=_conn, mysql=_conn2))
+                              money_unit=money_unit, award_mode=award_mode, oracle=_conn, mysql=_conn2,lottery_name=lottery_name))
             for case in test_cases[1]:
                 _suite_list.append(ApiTestApp(case_=case, env_config=_env_config_app, user=user_name,
                                               red_type=is_use_red, oracle=_conn, mysql=_conn2))
