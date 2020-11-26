@@ -271,13 +271,13 @@
             <label for="test_PcPlan">追號</label>
                 <div id='FF_submit' style='display:none'>
                     <label class='PC_submit'>彩種</label>
-                        <select name='lottery_name' id='FF_detail'>
+                        <select name='lottery_selected' id='FF_detail'>
                             <option value='all'>全部</option>
-                            {% for name in test %}
-                            <option value= {{name}}>{{test[name][0]}}</option>
+                            {% for name in lottery_dict %}
+                            <option value= {{name}}>{{lottery_dict[name][0]}}</option>
                             {% endfor %}
                         </select>
-                    <labe class='PC_submit' for="FF_detail">紅包投注: </label>
+                    <label class='PC_submit' for="FF_detail">紅包投注: </label>
                     <select name='red_type' id='FF_detail'>
                         <option value="no">否</option>
                         <option value="yes">是</option>

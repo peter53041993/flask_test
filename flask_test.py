@@ -28,11 +28,10 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import re
 from utils import Config
-from utils.Connection import PostgresqlConnection, OracleConnection,RedisConnection
+from utils.Connection import PostgresqlConnection, OracleConnection, RedisConnection
 import FF_Joy188
 from urllib.parse import urlsplit
 from functools import reduce
-
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
@@ -283,76 +282,75 @@ def image_adj():
     testInfo['height'] = height
     testInfo['width'] = width
     testInfo['msg'] = image_test.image_resize(image_name, height, width)  # 將圖名, 長,寬 回傳給 image_test檔案下 image_的 func使用
-
     return json.dumps(testInfo['msg'])
 
 
-@app.route('/autoTest', methods=["GET", "POST"])  # 自動化測試 頁面
+@app.route('/autoTest', methods=["GET"])  # 自動化測試 頁面
 def auto_test():
+    lottery_dict = FF_Joy188.FF_().lottery_dict
+    return render_template('autoTest.html', lottery_dict=lottery_dict)
+
+
+@app.route('/autoTest', methods=['POST'])
+def auto_test_post():
+    lottery_selected = None
+
     try:
-        if request.method == "POST":
-            logger.info('logged by app.module')
-            current_app.logger.info('logged by current_app.logger')
-            # response_status ='start_progress'
-            # return redirect("/progress")
-            test_cases = []
-            user_name = request.form.get('user_name')
-            api_test_pc = request.form.getlist('api_test_pc')  # 回傳 測試案例data內容
-            api_test_app = request.form.getlist('api_test_app')  # 回傳 測試案例data內容
-            integration_test_pc = request.form.getlist('integration_test_pc')  # 回傳 測試案例data內容
-            env_config = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
-            try:
-                lottery_name = request.form.get('lottery_name')# 4.0選擇採種名稱
-            except:#怕影響 yft ,沒有這個參數
-                pass
-            red = request.form.get('red_type')  # 紅包選擇
-            award_mode = request.form.get('awardmode')  # 獎金組設置
-            money_unit = request.form.get('moneymode')  # 金額模式
-            ignore_name_check = request.form.get('ignore_user_check')
-            domain_url = env_config.get_post_url().split('://')[1]  # 後台全局 url 需把 http做切割
-            logger.info(f'ignore_name_check = {ignore_name_check}')
+        logger.info('logged by app.module')
+        current_app.logger.info('logged by current_app.logger')
+        # response_status ='start_progress'
+        # return redirect("/progress")
+        test_cases = []
+        user_name = request.form.get('user_name')
+        api_test_pc = request.form.getlist('api_test_pc')  # 回傳 測試案例data內容
+        api_test_app = request.form.getlist('api_test_app')  # 回傳 測試案例data內容
+        integration_test_pc = request.form.getlist('integration_test_pc')  # 回傳 測試案例data內容
+        env_config = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
+        red = request.form.get('red_type')  # 紅包選擇
+        award_mode = request.form.get('awardmode')  # 獎金組設置
+        money_unit = request.form.get('moneymode')  # 金額模式
+        ignore_name_check = request.form.get('ignore_user_check')
+        domain_url = env_config.get_post_url().split('://')[1]  # 後台全局 url 需把 http做切割
+        logger.info(f'ignore_name_check = {ignore_name_check}')
 
-            if env_config.get_env_id() in (0, 1):  # FF4.0 用戶驗證
-                conn = OracleConnection(env_config.get_env_id())
-                domain_type = env_config.get_joint_venture(domain_url)  # 查詢 後台是否有設置 該url
-                logger.debug(f"env_config.id: {env_config.get_env_id()},  red: {red}")
-                user_id = conn.select_user_id(user_name, domain_type)
-                logger.info(f'user_id : {user_id}')
-                conn.close_conn()
-            elif ignore_name_check:
-                user_id = ["ignore"]
-            else:  # yft用戶名驗證
-                conn = PostgresqlConnection()
-                user_id = conn.get_user_id_yft(user_name=user_name)
+        if env_config.get_env_id() in (0, 1):  # FF4.0 用戶驗證
+            lottery_selected = request.form.get('lottery_selected')  # 4.0選擇採種名稱
+            conn = OracleConnection(env_config.get_env_id())
+            domain_type = env_config.get_joint_venture(domain_url)  # 查詢 後台是否有設置 該url
+            logger.debug(f"env_config.id: {env_config.get_env_id()},  red: {red}")
+            user_id = conn.select_user_id(user_name, domain_type)
+            logger.info(f'user_id : {user_id}')
+            conn.close_conn()
+        elif ignore_name_check:
+            user_id = ["ignore"]
+        else:  # yft用戶名驗證
+            conn = PostgresqlConnection()
+            user_id = conn.get_user_id_yft(user_name=user_name)
 
-            test_cases.append(api_test_pc)
-            test_cases.append(api_test_app)
-            test_cases.append(integration_test_pc)
+        test_cases.append(api_test_pc)
+        test_cases.append(api_test_app)
+        test_cases.append(integration_test_pc)
 
-            logger.info(f'user_name : {user_name}')
-            logger.info(f"test_cases : {test_cases}")
-            if user_id is None:
-                return '此環境沒有該用戶'
-            elif type(user_id) == str:
-                return user_id
-            if len(user_id) > 0:  # user_id 值為空, 代表該DB環境沒有此用戶名, 就不用做接下來的事
-                logger.info(
-                    f"AutoTest.suite_test(test_cases={test_cases}, user_name={user_name}, "
-                    f"env_config.get_domain()={env_config.get_domain()}, red={red}), "
-                    f"money_unit={money_unit}, award_mode={award_mode}")
-                Config.test_cases_init(sum(len(cases) for cases in test_cases))  # 初始化測試案例數目，後續供進度條讀取百分比
-                AutoTest.suite_test(test_cases, user_name, env_config.get_domain(),
-                                    red, money_unit, award_mode,lottery_name)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
-                return redirect('report')
-            else:
-                return '此環境沒有該用戶'
+        logger.info(f'user_name : {user_name}')
+        logger.info(f"test_cases : {test_cases}")
+        if user_id is None:
+            return '此環境沒有該用戶'
+        elif type(user_id) == str:
+            return user_id
+        if len(user_id) > 0:  # user_id 值為空, 代表該DB環境沒有此用戶名, 就不用做接下來的事
+            logger.info(
+                f"AutoTest.suite_test(test_cases={test_cases}, user_name={user_name}, "
+                f"env_config.get_domain()={env_config.get_domain()}, red={red}), "
+                f"money_unit={money_unit}, award_mode={award_mode}")
+            Config.test_cases_init(sum(len(cases) for cases in test_cases))  # 初始化測試案例數目，後續供進度條讀取百分比
+            AutoTest.suite_test(test_cases, user_name, env_config.get_domain(),
+                                red, money_unit, award_mode, lottery_selected)  # 呼叫autoTest檔 的測試方法, 將頁面參數回傳到autoTest.py
+            return redirect('report')
         else:
-            lottery_dict = FF_Joy188.FF_().lottery_dict
-        # return redirect("/report")
+            return '此環境沒有該用戶'
     except Exception as e:
         from utils.TestTool import trace_log
         print(trace_log(e))
-    return render_template('autoTest.html',test=lottery_dict)
 
 
 @app.route("/report", methods=['GET'])
@@ -397,7 +395,7 @@ def benefit():
         conn = OracleConnection(env_id=env_.get_env_id())
         userid = conn.select_user_id(username)
         if len(userid) == 0:
-            return '沒有該用戶' 
+            return '沒有該用戶'
         print(testInfo)  # 方便看資料
         if env not in cookies_.keys():  # 請求裡面 沒有 這些環境cookie,就再登入各環境後台
             test_benefit.admin_Login(env)  # 登入生產環境 後台
@@ -487,25 +485,28 @@ def domain_list():
     return render_template('domain_list.html')
 
     # print(url_dict)
-def domain_get(url):# domain_list , url 訪問後  ,回傳 url_dict
-        urllib3.disable_warnings()  # 解決 會跳出 request InsecureRequestWarning問題
-        header = {
-            'User-Agent': FF_Joy188.FF_().user_agent['Pc']
-        }
-        global r, URL_DICT
-        try:
-            r = requests.get(url + '/', headers=header, verify=False, timeout=5)
-        except:
-            pass
-        URL_DICT[url] = r.status_code
+
+
+def domain_get(url):  # domain_list , url 訪問後  ,回傳 url_dict
+    urllib3.disable_warnings()  # 解決 會跳出 request InsecureRequestWarning問題
+    header = {
+        'User-Agent': FF_Joy188.FF_().user_agent['Pc']
+    }
+    global r, URL_DICT
+    try:
+        r = requests.get(url + '/', headers=header, verify=False, timeout=5)
+    except:
+        pass
+    URL_DICT[url] = r.status_code
+
 
 @app.route('/domain_status', methods=["GET"])
 def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
     global URL_DICT
     urllib3.disable_warnings()  # 解決 會跳出 request InsecureRequestWarning問題
-    print(request.url)#"http://3eeb8f01ffe7.ngrok.io/domain_status"
+    print(request.url)  # "http://3eeb8f01ffe7.ngrok.io/domain_status"
     url_split = urlsplit(request.url)
-    request_url = "%s://%s"%(url_split.scheme,url_split.netloc)# 動態切割 當前url
+    request_url = "%s://%s" % (url_split.scheme, url_split.netloc)  # 動態切割 當前url
     header = {
         'User-Agent': FF_Joy188.FF_().user_agent['Pc']
     }
@@ -523,7 +524,7 @@ def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
                     URL_DICT[a.text] = ''
         threads = []
         for url_key in URL_DICT:
-            threads.append(threading.Thread(target= domain_get, args=(url_key,)))
+            threads.append(threading.Thread(target=domain_get, args=(url_key,)))
         for i in threads:
             i.start()
         for i in threads:
@@ -727,7 +728,7 @@ def game_map(type_=''):  # 玩法 和 說明 mapping,type_ 預設  '' ,為玩法
         print(game_play_type)
         if '五星' in game_play_type:
             if any(s in game_play_type for s in ['复式', '单式']):
-            #if game_play_type in ['复式', '单式']:
+                # if game_play_type in ['复式', '单式']:
                 game_explan = '#五個號碼順續需全相同'
             elif '组选120' in game_play_type:
                 game_explan = '#五個號碼相同,順續無需相同(開獎號無重覆號碼)'
@@ -773,7 +774,7 @@ def game_map(type_=''):  # 玩法 和 說明 mapping,type_ 預設  '' ,為玩法
                 pcdd_sum['XIAODAN'] = '49'
                 pcdd_sum['XIAOSHUNG'] = '50'
             return pcdd_sum
-    elif lottery_name in ['北京快乐8','快乐8全球彩','福彩快乐8']:# 後續再增加
+    elif lottery_name in ['北京快乐8', '快乐8全球彩', '福彩快乐8']:  # 後續再增加
         game_explan = "上盘(01-40),下盘(41-80)/ #合值>810(大)"
         theory_data = data['理論獎金']
         theory_data[0] = str(theory_data[0]) + "#多獎金,理論/平台獎金 有誤"  # 只取列表第一個值 +  說明
@@ -807,7 +808,6 @@ def status_style(val):  # 判斷狀態,來顯示顏色屬性 , 給 game_order �
 @app.route('/get_cookie', methods=["GET"])
 def get_cookie():  # 存放cookie皆口
     return cookie
-
 
 
 @app.route('/game_result', methods=["GET", "POST"])  # 查詢方案紀錄定單號
@@ -894,7 +894,8 @@ def game_result():
                         # print(theory_bonus,FF_bonus)
                     else:  # 其他大眾彩種
                         theory_bonus = theory_bonus / 10000  # 理論將金
-                        point_id = bet_type_code + "_" + str(theory_bonus)  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
+                        point_id = bet_type_code + "_" + str(
+                            theory_bonus)  # 由bet_type_code + theory_bonus 串在一起(投注方式+理論獎金])
                         # for i in soup.find_all('span', id=re.compile("^(%s)" % point_id)):  # {'id':point_id}):
                         # FF_bonus = float(i.text)
                         award_group_id = game_detail[key][17]  # 用來查詢 用戶 獎金組 屬於哪種
@@ -933,7 +934,7 @@ def game_result():
                     number_record = ''
                 record_mapping = number_map(number_record)
                 number_record = record_mapping
-                #print(number_record)
+                # print(number_record)
                 data = {"遊戲訂單號": game_code_list, "訂單時間": game_time_list, "中獎狀態": game_status_list,
                         "投注彩種/投注玩法": game_play_list,
                         "獎金組": game_awardname_list, "獎金模式狀態": game_awardmode_list,
@@ -1022,7 +1023,7 @@ def user_acitve():  # 驗證第三方有校用戶
         # 查詢用戶 userid
         print(user, env)
         if len(userid) == 0:
-            return("此環境沒有該用戶")
+            return ("此環境沒有該用戶")
         else:
             active_app = conn.select_active_app(user)
             # 查詢APP有效用戶 是否有值  ,沒值 代表 沒投注
@@ -1104,7 +1105,7 @@ def user_acitve():  # 驗證第三方有校用戶
 
 
 @app.route('/app_bet', methods=["POST"])
-def app_bet():# user_active, 第三方 銷量計算 接口
+def app_bet():  # user_active, 第三方 銷量計算 接口
     user = request.form.get('user')
     env = Config.EnvConfig(request.form.get('env_type'))
     conn = OracleConnection(env_id=env.get_env_id())
@@ -1117,7 +1118,7 @@ def app_bet():# user_active, 第三方 銷量計算 接口
     third_report = []  # 第三方盈虧
     third_memo = []  # 第三方memo
     for third_ in app_bet.keys():
-        third = app_bet[third_][3]# 第三方名稱
+        third = app_bet[third_][3]  # 第三方名稱
         third_list.append(third)
         active_bet.append(app_bet[third_][0])  # 有效銷量 為列表 1
         third_prize.append(app_bet[third_][1])
@@ -1132,10 +1133,10 @@ def app_bet():# user_active, 第三方 銷量計算 接口
             third_memo.append('')
     third_memo.append("用戶盈虧: 總獎金-有效銷量")
     third_list.append('ALL')
-    active_bet.append(reduce(lambda x,y: x+y,active_bet))# reduce 方法 為 可以計算列表總合, 再加到陣列裡
-    third_prize.append(reduce(lambda x,y: x+y,third_prize))
-    third_report.append(reduce(lambda x,y: x+y,third_report))
-    
+    active_bet.append(reduce(lambda x, y: x + y, active_bet))  # reduce 方法 為 可以計算列表總合, 再加到陣列裡
+    third_prize.append(reduce(lambda x, y: x + y, third_prize))
+    third_report.append(reduce(lambda x, y: x + y, third_report))
+
     # print(user_list,active_bet,third_prize,third_report)
 
     data = {"有效銷量": active_bet, "總獎金": third_prize, "用戶盈虧": third_report,
@@ -1191,7 +1192,7 @@ def url_token():
             token_url = conn.select_url_token(token, joint_type)
             print(token_url)
             if len(token_url) == 0:
-                return(f'{env_type}沒有該註冊碼: {token}')
+                return (f'{env_type}沒有該註冊碼: {token}')
             user = []
             url_created = []
             url = []
@@ -1209,19 +1210,19 @@ def url_token():
                 elif days == 0:
                     days = '失效'
                 else:
-                    days = '有效性時間: %s天'%days
+                    days = '有效性時間: %s天' % days
                 day_list.append(days)
                 if register is None:
                     register = '無'
                 register_list.append(register)
                 len_data.append(i)
-            data = {'用戶名': user,'創立時間':url_created , '開戶連結': url,'失效性': day_list,'註冊數': register_list}
+            data = {'用戶名': user, '創立時間': url_created, '開戶連結': url, '失效性': day_list, '註冊數': register_list}
         elif id_ not in ['', None]:
             print('頁面輸入id')
             token_url = conn.select_url_token(id_, joint_type)
             print(token_url)
             if len(token_url) == 0:
-                return(f'{env_type}沒有該id: {id_}')
+                return (f'{env_type}沒有該id: {id_}')
             # id是唯一值 , key 值接待0 即可
             user = token_url[0][0]
             url_created = token_url[0][1]
@@ -1231,18 +1232,18 @@ def url_token():
             if days == '-1':
                 days = '無窮'
             else:
-                days = '失效,有效性時間: %s'%days
+                days = '失效,有效性時間: %s' % days
             if register is None:
                 register = '無'
-            data = {'用戶名': user,'創立時間':url_created , '開戶連結': url,'失效性': days,'註冊數': register}
+            data = {'用戶名': user, '創立時間': url_created, '開戶連結': url, '失效性': days, '註冊數': register}
             len_data = [0]  # 輸入ID 查 連結, ID 為唯一直
         elif user not in ['', None]:  # 頁面輸入 用戶名 查詢用戶從哪開出
             print('頁面輸入用戶名')
             user_id = conn.select_user_id(user)  # 查詢頁面上 該環境是否有這用戶
             if len(user_id) == 0:
-                return(f'{env_type}環境沒有該用戶: {user}')
-            user_url = conn.select_user_url(user, 2,joint_type)  #查詢用戶 被開出的連結 , 2 為type_  
-            if len(user_url) == 0:# user_url 為空 ,被刪除
+                return (f'{env_type}環境沒有該用戶: {user}')
+            user_url = conn.select_user_url(user, 2, joint_type)  # 查詢用戶 被開出的連結 , 2 為type_
+            if len(user_url) == 0:  # user_url 為空 ,被刪除
                 data = {'用戶名': user, '用戶從此連結開出': '被刪除'}
                 frame = pd.DataFrame(data, index=[0])
                 print(frame)
@@ -1297,7 +1298,7 @@ def url_token():
             else:  # 就走預設的設定
                 try:
                     if domain_keys[domain][1] != int(env):
-                        return("該環境沒有此domain")
+                        return ("該環境沒有此domain")
                     domain_admin = '否'
                     admin_url = '無'  # 後台沒設置
                     url = domain_keys[domain][0]  # 沒設定 ,為空, 走預設連結
@@ -1568,11 +1569,12 @@ def gameBox():
             , "api_url": ["https://api.dg99web.com", "http://tsa.l0044.xtu168.com",
                           "https://testapi.onlinegames22.com", "http://api.cqgame.games",
                           "http://gsmd.336699bet.com", "https://testapi.onlinegames22.com",
-                          "http://ab.test.gf-gaming.com","http://am.bgvip55.com/open-cloud/api/"]
-            , "supplier_type": ["dream_game", "sa_ba_sports", "ae_sexy", "cq_9", "gpi", "ya_bo_live", "pg_game","bg_game"]
+                          "http://ab.test.gf-gaming.com", "http://am.bgvip55.com/open-cloud/api/"]
+            , "supplier_type": ["dream_game", "sa_ba_sports", "ae_sexy", "cq_9", "gpi", "ya_bo_live", "pg_game",
+                                "bg_game"]
             , "supplier_user": ["DGTE01011T", "6yayl95mkn", "fhlmag", "cq9_test", "xo8v", "ZSCH5",
-                                "aba4d198602ba6f2a3a604edcebd08f1","am00"]
-            , "game_type": ["DG", "沙巴", "Sexy", "Cq9", 'GPI', "YB", "PG","BG"]
+                                "aba4d198602ba6f2a3a604edcebd08f1", "am00"]
+            , "game_type": ["DG", "沙巴", "Sexy", "Cq9", 'GPI', "YB", "PG", "BG"]
         }
         cq_9Key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiI1ZjU5OWU3NTc4MDdhYTAwMDFlYTFjMjYiLCJhY2NvdW50IjoiYW1iZXJ1YXQiLCJvd25lciI6IjVkYzExN2JjM2ViM2IzMDAwMTA4ZTQ4NyIsInBhcmVudCI6IjVkYzExN2JjM2ViM2IzMDAwMTA4ZTQ4NyIsImN1cnJlbmN5IjoiVk5EIiwianRpIjoiNzkyMjU1MDIzIiwiaWF0IjoxNTk5NzA4Nzg5LCJpc3MiOiJDeXByZXNzIiwic3ViIjoiU1NUb2tlbiJ9.cyvPJaWFGwhX4dZV7fwcwgUhGM9d5dVv8sgyctlRijc"
         url_dict = {0: ['http://43.240.38.15:21080', '測試區'], 1: ['http://54.248.18.149:8203', '灰度']}  # 測試 / 灰度
@@ -1617,7 +1619,7 @@ def fund_fee():
         # 總代: 因為parent_id  為 -1.需用 user_iD查
         conn = OracleConnection(env_id=int(env_type))
         fund_fee = conn.select_Fee(select_type, user)
-        #fund_fee = AutoTest.fund_fee
+        # fund_fee = AutoTest.fund_fee
         print(fund_fee)
         if select_type == "fund":  # 充值
             type_msg = "充值"
@@ -1667,21 +1669,21 @@ def FundCharge():  # 充值成功金額 查詢
     if request.method == "POST":
         env_type = request.form.get('env_type')
         check_type = request.form.get('check_type')  # '0'使用日期 , '1'使用月份
-        #AutoTest.get_rediskey(2)  # 連到本地 redis
-        if check_type == '0': # 單日
+        # AutoTest.get_rediskey(2)  # 連到本地 redis
+        if check_type == '0':  # 單日
             day = request.form.get('day_day')
             month = request.form.get('day_month')
             year = request.form.get('day_year')
             date = "%s/%s/%s" % (year, month, day)  # 格式化日期 傳到  select_FundCharge
             key_name = 'FundCharge: %s/%s/%s' % (check_type, env_type, date)  # 0/環境:日期
-            result = RedisConnection.get_key(2,key_name)
-            #result = AutoTest.get_key(key_name)
+            result = RedisConnection.get_key(2, key_name)
+            # result = AutoTest.get_key(key_name)
             print(result)
             if result != 'not exist':  # 代表 已經存 到redis過
                 return result
             conn = OracleConnection(env_id=int(env_type))
             data_fund = conn.select_FundCharge(date)
-            #data_fund = AutoTest.data_fund  # key 為0 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
+            # data_fund = AutoTest.data_fund  # key 為0 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
             # print(data_fund)
             if len(data_fund) == 0:
                 sum_fund = 0
@@ -1699,7 +1701,7 @@ def FundCharge():  # 充值成功金額 查詢
                 len_fund = data_fund[0][2]
                 sum_fund = fund_apply - fund_fee  # 發起充值金額 - 手續費 , 兩者相減
                 len_Allfund = conn.select_FundCharge(date, '1')[0][0]  # 總個數
-                #len_Allfund = AutoTest.data_fund[0][0]
+                # len_Allfund = AutoTest.data_fund[0][0]
                 try:
                     fund_per = int(int(len_fund) / int(len_Allfund) * 10000) / 100
                 except ZeroDivisionError:
@@ -1708,7 +1710,7 @@ def FundCharge():  # 充值成功金額 查詢
             data_ = {"date": date, "sum_fund": sum_fund, "len_fund": len_fund, "len_Allfund": len_Allfund,
                      'fund_per': fund_per}
             RedisConnection.set_key(key_name, data_)
-            #AutoTest.set_key(key_name, data_)
+            # AutoTest.set_key(key_name, data_)
         else:  # 月份
             now = datetime.datetime.now()
             now_day = now.day  # 今天日期
@@ -1721,16 +1723,16 @@ def FundCharge():  # 充值成功金額 查詢
                 key_name = 'FundCharge: %s/%s/%s-%s' % (check_type, env_type, date, now_day)  # 1/環境:日期 , 多增加今天日期為key
             else:
                 key_name = 'FundCharge: %s/%s/%s' % (check_type, env_type, date)  # 不是這個月, 不用管今天日期
-            result = RedisConnection.get_key(2,key_name)
-            #result = AutoTest.get_key(key_name)
+            result = RedisConnection.get_key(2, key_name)
+            # result = AutoTest.get_key(key_name)
             print(result)
             if result != 'not exist':  # result是 not exist, 代表 redis 沒值 ,不等於 就是 redis有值
                 return result
             # print(date)
             conn = OracleConnection(env_id=int(env_type))
-            data_fund = conn.select_FundCharge(date,'month')
-            #AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)), date, 'month')
-            #data_fund = AutoTest.data_fund  # key 為日期 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
+            data_fund = conn.select_FundCharge(date, 'month')
+            # AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)), date, 'month')
+            # data_fund = AutoTest.data_fund  # key 為日期 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
             # print(data_fund)
             date_list, sum_fund_list, len_fund_list, fund_per_list, len_Allfund_list = [], [], [], [], []
             for key, value in data_fund.items():
@@ -1773,7 +1775,7 @@ def login_cookie():
     joint = envConfig.get_joint_venture(envConfig.get_env_id())
     user = request.form.get('username')
     conn = OracleConnection(env_id=int(envConfig.get_env_id()))
-    userid = conn.select_user_id(user,joint)
+    userid = conn.select_user_id(user, joint)
     print(userid)
     if len(userid) == 0:
         return ('該環境沒有此用戶')
@@ -1781,7 +1783,7 @@ def login_cookie():
     param = FF_Joy188.FF_().param[0]
     postData = {
         "username": user,
-        "password": ApiTestPC.ApiTestPC.md(_password=password,_param=param),
+        "password": ApiTestPC.ApiTestPC.md(_password=password, _param=param),
         "param": param
     }
     header = {
