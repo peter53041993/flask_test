@@ -1201,5 +1201,25 @@ class ApiTestPC_YFT(unittest.TestCase):
         game_name = ['gd11x5', '廣東蘇11選5']
         self.bet_trace(game_name, stop_on_win)
 
+    def test_bet_hn60(self, stop_on_win=True):
+        """
+        多彩河内分分彩投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['hn60', '多彩河内分分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_xyft168(self, stop_on_win=True):
+        """
+        168幸運飛艇投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['xyft168', '168幸运飞艇']
+        self.bet_trace(game_name, stop_on_win)
+
     def tearDown(self) -> None:
         Config.test_cases_update(1)

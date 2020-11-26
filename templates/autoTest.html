@@ -203,6 +203,7 @@
                 $('#yft-PC-cases').children(':checkbox').prop('checked', this.checked);
                 $("input[id='pc_bet']").change()
             });
+
             $('#yft-APP').change(function () {//YFT-PC自動化全選
                 $('#yft-APP-cases').children(':checkbox').prop('checked', this.checked);
                 $("input[id='iapi_bet']").change()
@@ -219,6 +220,13 @@
                 }
             })
         });
+
+        function yft_select_all(isPC, isSelect) {
+            if(isPC)
+                $('#pc_bet_cases').children(':checkbox').prop('checked', isSelect);
+            else
+                $('#iapi_bet_cases').children(':checkbox').prop('checked', isSelect);
+        }
     </script>
 {% endblock %}
 
@@ -340,8 +348,7 @@
         <br>
         <input type='checkbox' id='yft-PC'><label for='yft-PC'>PC接口測試</label>
         <div id='yft-PC-cases'>
-            <input type="checkbox" id="pc_bet"><label
-                for='pc_bet'>PC Api投注測試</label>
+            <input type="checkbox" id="pc_bet"><label for='pc_bet'>PC Api投注測試</label>
             <input type="checkbox" id="pc_reg" name="api_test_pc" value="test_create_user"><label for="pc_reg">PC 註冊功能測試</label>
             <br>
             <div id='pc_bet_cases' style="display: none" class="sub_cases">
@@ -369,6 +376,8 @@
                     for='api_fhxyft'>幸運飛艇投注</label>
                 <input type="checkbox" name="api_test_pc" id="api_bjpk10" value="test_bet_bjpk10"><label
                     for='api_bjpk10'>PK10投注</label>
+                <input type="checkbox" name="api_test_pc" id="api_hn60" value="test_bet_hn60"><label
+                    for='api_hn60'>多彩河內分分彩投注</label><br>
                 <input type="checkbox" name="api_test_pc" id="api_djpk10" value="test_bet_djpk10"><label
                     for='api_djpk10'>東京PK10投注</label><br>
                 <input type="checkbox" name="api_test_pc" id="api_xyftpk10" value="test_bet_xyftpk10"><label
@@ -376,7 +385,9 @@
                 <input type="checkbox" name="api_test_pc" id="api_metftpk10" value="test_bet_metftpk10"><label
                     for='api_metftpk10'>馬爾他飛艇投注</label>
                 <input type="checkbox" name="api_test_pc" id="api_xnpk10" value="test_bet_xnpk10"><label
-                    for='api_xnpk10'>悉尼PK10投注</label><br>
+                    for='api_xnpk10'>悉尼PK10投注</label>
+                <input type="checkbox" name="api_test_pc" id="api_xyft168" value="test_bet_xyft168"><label
+                    for='api_xyft168'>168幸運飛艇投注</label><br>
                 <input type="checkbox" name="api_test_pc" id="api_ahk3" value="test_bet_ahk3"><label
                     for='api_ahk3'>安徽快三投注</label>
                 <input type="checkbox" name="api_test_pc" id="api_hbk3" value="test_bet_hbk3"><label
@@ -404,6 +415,8 @@
                     <option value='0.1'>角</option>
                     <option value='0.01'>分</option>
                 </select>
+                <input type="button" style="text-align: right" onclick="yft_select_all(true,true)" value="全選">
+                <input type="button" style="text-align: right" onclick="yft_select_all(true,false)" value="反選">
             </div>
         </div>
         <br>
@@ -432,6 +445,8 @@
                     for='iapi_tcdffc'>騰訊兩分彩投注</label>
                 <input type="checkbox" name="api_test_app" id="iapi_cqssc" value="test_bet_cqssc"><label
                     for='iapi_cqssc'>重慶時時彩投注</label><br>
+                <input type="checkbox" name="api_test_app" id="iapi_hn60" value="test_bet_hn60"><label
+                    for='iapi_hn60'>多彩河內分分彩投注</label><br>
                 <input type="checkbox" name="api_test_app" id="iapi_fhxyft" value="test_bet_fhxyft"><label
                     for="iapi_fhxyft">幸運飛艇投注</label>
                 <input type="checkbox" name="api_test_app" id="iapi_bjpk10" value="test_bet_bjpk10"><label
@@ -443,7 +458,9 @@
                 <input type="checkbox" name="api_test_app" id="iapi_metftpk10" value="test_bet_metftpk10"><label
                     for='iapi_metftpk10'>馬爾他飛艇投注</label>
                 <input type="checkbox" name="api_test_app" id="iapi_xnpk10" value="test_bet_xnpk10"><label
-                    for='iapi_xnpk10'>悉尼PK10投注</label><br>
+                    for='iapi_xnpk10'>悉尼PK10投注</label>
+                <input type="checkbox" name="api_test_app" id="iapi_xyft168" value="test_bet_xyft168"><label
+                    for='iapi_xyft168'>168幸運飛艇投注</label><br>
                 <input type="checkbox" name="api_test_app" id="iapi_ahk3" value="test_bet_ahk3"><label
                     for='iapi_ahk3'>安徽快三投注</label>
                 <input type="checkbox" name="api_test_app" id="iapi_hbk3" value="test_bet_hbk3"><label
@@ -471,6 +488,8 @@
                     <option value='0.1'>角</option>
                     <option value='0.01'>分</option>
                 </select>
+                <input type="button" style="text-align: right" onclick="yft_select_all(false,true)" value="全選">
+                <input type="button" style="text-align: right" onclick="yft_select_all(false,false)" value="反選">
             </div>
         </div>
         <br>
