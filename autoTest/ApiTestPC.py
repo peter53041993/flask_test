@@ -27,7 +27,7 @@ class ApiTestPC(unittest.TestCase):
     def setUp(self):
         logger.info(f'ApiTestPC setUp : {self._testMethodName}')
 
-    def __init__(self, case, env_config, _user, red_type, money_unit, award_mode, oracle, mysql,lottery_name):
+    def __init__(self, case, env_config, _user, red_type, money_unit, award_mode, oracle, mysql, lottery_name):
         super().__init__(case)
         global COOKIE
         self._env_config = env_config
@@ -58,7 +58,7 @@ class ApiTestPC(unittest.TestCase):
         now_time = int(time.time())
         r = self.SESSION.get(self._en_url + f'/gameBet/{lottery}/dynamicConfig?_={now_time}', headers=self._header)
         return r.json()['data']['issueCode']
-                
+
     def plan_num(self, evn, lottery, plan_len):  # 追號生成
         plan_ = []  # 存放 多少 長度追號的 list
         issue = self._conn_oracle.select_issue(LotteryData.lottery_dict[lottery][1])
@@ -186,6 +186,16 @@ class ApiTestPC(unittest.TestCase):
         return test_dicts[num][0], test_dicts[num][1], play_
 
     def req_post_submit(self, account, lottery, data_, money_unit, award_mode, play_):
+        """
+        發送投注請求並輸出結果至Report
+        :param account: 用戶帳號
+        :param lottery: 彩種名稱 (英)
+        :param data_: 投注請求內容
+        :param money_unit: 注單單位
+        :param award_mode: 獎金模式
+        :param play_: 玩法名稱
+        :return: 成功回傳 True 失敗回傳 False
+        """
         logger.info(
             f'account: {account}, lottery: {lottery}, data_: {json.dumps(data_)},'
             f' moneyunit: {money_unit}, awardmode: {award_mode}, play_ {play_}')
@@ -195,6 +205,9 @@ class ApiTestPC(unittest.TestCase):
         money_dict = {1: u"元模式", 0.1: u"分模式", 0.01: u"角模式"}
         r = self.SESSION.post(self._en_url + '/gameBet/' + lottery + '/submit',
                               data=json.dumps(data_), headers=self._header)
+        lottery_name = f'投注彩種: {LotteryData.lottery_dict[lottery][0]}'
+        print(f'{lottery_name}')  # 開始測試前先行紀錄測試彩種
+
         try:
             logger.info(f'lottery: {lottery} bet response = {r.text}')
             msg = (r.json()['msg'])
@@ -203,18 +216,20 @@ class ApiTestPC(unittest.TestCase):
             project_id = (r.json()['data']['projectId'])  # 訂單號
             submit_amount = (r.json()['data']['totalprice'])  # 投注金額
             # submit_mul = f"投注倍數: {m}"  #隨機倍數
-            lottery_name = f'投注彩種: {LotteryData.lottery_dict[lottery][0]}'
 
-            if r.json()['isSuccess'] == 0:  #
+            if r.json()['isSuccess'] == 0:  # 投注失敗的情況
                 logger.info(f'{lottery_name} \n {MUL_} "\n" {play_} "\n" {msg} "\n"')
-                if r.json()['msg'] == u'存在封锁变价':  # 有可能封鎖變價,先跳過   ()
-                    print(u'存在封锁变价')
-                elif r.json()['msg'] == u'您的投注内容 超出倍数限制，请调整！':
-                    print(u'倍數超出了唷,下次再來')
-                elif r.json()['msg'] == u'方案提交失败，请检查网络并重新提交！':
-                    print(r.json()['msg'])
-                else:  # 系統內部錯誤
-                    print(r.json()['msg'])
+                # if r.json()['msg'] == u'存在封锁变价':  # 有可能封鎖變價,先跳過   ()
+                #     print(u'存在封锁变价')
+                # elif r.json()['msg'] == u'您的投注内容 超出倍数限制，请调整！':
+                #     print(u'倍數超出了唷,下次再來')
+                # elif r.json()['msg'] == u'方案提交失败，请检查网络并重新提交！':
+                #     print(r.json()['msg'])
+                # else:  # 系統內部錯誤
+                #     print(r.json()['msg'])
+                print(f'投注失敗，{r.json()["msg"]}')
+                print(f'請求內容：{json.dumps(data_)}')
+                print(f'回傳內容: {r.json()}')
             else:  # 投注成功
                 """查詢後台生成訂單資訊，確認獎金模式正確性"""
                 if r.json()['data']['orderId']:
@@ -239,45 +254,47 @@ class ApiTestPC(unittest.TestCase):
                     if slip["TOTAL_RED_DISCOUNT_AMOUNT"] == 0:
                         logger.error(f'紅包投注但注單無紅包抵扣. order id = {slip["ORDERID"]}, issue = {project_id}')
                         return False
-                    content_ = f'{lottery_name} \n' \
-                               f' 投注單號: {project_id} \n' \
-                               f' {MUL_}\n' \
-                               f' {play_}\n' \
-                               f' 投注金額: {str(float(submit_amount * 0.0001))} \n' \
-                               f' 紅包金額: {slip["TOTAL_RED_DISCOUNT_AMOUNT"]} {mode}/{mode1} \n' \
-                               f' {msg} \n'
+                    content_ = f'投注單號: {project_id} \n' \
+                               f'{MUL_}\n' \
+                               f'{play_}\n' \
+                               f'投注金額: {str(float(submit_amount * 0.0001))} \n' \
+                               f'紅包金額: {slip["TOTAL_RED_DISCOUNT_AMOUNT"]} {mode}/{mode1} \n' \
+                               f'投注結果訊息：{msg} \n'
                 else:
                     if slip["TOTAL_RED_DISCOUNT_AMOUNT"] != 0:
                         logger.error(f'無紅包投注但注單有紅包抵扣. order id = {slip["ORDERID"]}, issue = {project_id}')
                         return False
-                    content_ = f'{lottery_name}\n' \
-                               f' 投注單號: {project_id}\n' \
-                               f' {MUL_}\n' \
-                               f' {play_}\n' \
+                    content_ = f'投注單號: {project_id}\n' \
+                               f'{MUL_}\n' \
+                               f'{play_}\n' \
                                f'投注金額: {str(float(submit_amount * 0.0001))} \n' \
-                               f' {mode}/{mode1} \n' \
-                               f' {msg}\n'
+                               f'{mode}/{mode1} \n' \
+                               f'投注結果訊息：{msg}\n'
                 print(content_)
                 return True
         except Exception as e:
-            print(f'{lottery} 投注失敗，無法預期的錯誤' + "\n")
+            # print(f'{lottery} 投注失敗，無法預期的錯誤' + "\n")
+            print(f'投注失敗，{r.json()["msg"]}')
+            print(f'請求內容：{json.dumps(data_)}')
+            print(f'回傳內容: {r.json()}')
             from utils.TestTool import trace_log
-            logger.error(trace_log(e))
+            logger.error('req_post_submit failed : ' + trace_log(e))
             return False
 
     def test_PcPlan(self):
         """追號測試"""
         awardmode = self._award_mode
         for lottery in self.lottery_name:
-            if awardmode == '0':#預設
-                if lottery in ['xyft','btcctp','btcffc','xyft168']:
-                   awardmode = 2
+            if awardmode == '0':  # 預設
+                if lottery in ['xyft', 'btcctp', 'btcffc', 'xyft168']:
+                    awardmode = 2
                 else:
-                  awardmode = 1  
-            else: 
+                    awardmode = 1
+            else:
                 awardmode = awardmode
-            FF_Joy188.FF_().Pc_Submit(lottery=lottery,envs=self._env_config.get_env_id(),account=self._user,em_url=self._env_config.get_em_url(),header=self._header,awardmode=awardmode,
-            type_=10,stop="")
+            FF_Joy188.FF_().Pc_Submit(lottery=lottery, envs=self._env_config.get_env_id(), account=self._user,
+                                      em_url=self._env_config.get_em_url(), header=self._header, awardmode=awardmode,
+                                      type_=10, stop="")
 
     def test_PCLotterySubmit(self, plan=1):  # 彩種投注
         """投注測試"""
@@ -900,7 +917,10 @@ class ApiTestPC_YFT(unittest.TestCase):
                                       headers=self._header)
         logger.info(f'response.text = {response.text}')
         if response.status_code == 200:
-            print(f'直接開戶成功\n返回數據：{response.json()["content"]}\n')
+            if response.json()["status"] == 'failed':
+                self.fail(f'開戶結果 : response = {response.json()}')
+            else:
+                print(f'直接開戶成功\n返回數據：{response.json()["content"]}\n')
 
         """新增開戶連結"""
         link = '/a/agent/createAgentLink'

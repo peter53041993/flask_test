@@ -1298,6 +1298,27 @@ class ApiTestAPP_YFT(unittest.TestCase):
         game_name = ['gd11x5', '廣東11選5']
         self.bet_trace(game_name, stop_on_win)
 
+    def test_bet_hn60(self, stop_on_win=True):
+        """
+        多彩河内分分彩投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['hn60', '多彩河内分分彩']
+        self.bet_trace(game_name, stop_on_win)
+
+    def test_bet_xyft168(self, stop_on_win=True):
+        """
+        168幸運飛艇投注
+        :param stop_on_win: 追號與否
+        :return: None
+        """
+
+        game_name = ['xyft168', '168幸运飞艇']
+        self.bet_trace(game_name, stop_on_win)
+
+
     def get_lottery_info(self, lottery_name):
         """
         取得彩種資訊（獎期等）
@@ -1314,7 +1335,7 @@ class ApiTestAPP_YFT(unittest.TestCase):
         logger.debug(f'data = {json.dumps(data)}')
         response = self._session.post(url=self._env_config.get_post_url() + self._api_url, data=json.dumps(data),
                                       headers=self._header)
-        logger.debug(f'lottery_info response = {response.content}')
+        logger.info(f'get_lottery_info : response = {response.json()}')
         return response.json()['content']
 
     def bet_yft(self, lottery_name, games, is_trace=False, stop_on_win=True):

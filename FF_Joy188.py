@@ -4,6 +4,7 @@ from fake_useragent import UserAgent
 from utils.Config import LotteryData
 from utils.Connection import OracleConnection
 
+
 class FF_:  # 4.0專案
     status = []  # 紀錄請求狀態
     content = []  # 內容
@@ -23,7 +24,7 @@ class FF_:  # 4.0專案
         }
         self.param = b'ba359dddc3c5dfd979169d056de72638',  # 固定寫死即可
         self.session = requests.Session()
-        self.lottery_dict = LotteryData.lottery_dict# 吃config ,後續只需增加一邊
+        self.lottery_dict = LotteryData.lottery_dict  # 吃config ,後續只需增加一邊
 
     def session_post(self, request_url, request_func, postData,
                      header):  # 共用 request.post方式 ,url 為動態 請求url ,source預設走PC
@@ -56,7 +57,6 @@ class FF_:  # 4.0專案
                                  oracle_['sid'][env] + service_name)
         return conn
 
-    
     def plan_return(self, type_, issuelist):  # 根據 type_ 判斷是不是追號, 生成動態的 動態order
         plan_ = []
         try:
@@ -68,17 +68,18 @@ class FF_:  # 4.0專案
             print(e)
 
     @staticmethod
-    def web_planIssue(lottery,em_url,header):  # 從頁面  dynamicConfig 皆口去獲得
+    def web_plan_issue(lottery, em_url, header):  # 從頁面  dynamicConfig 皆口去獲得
         now_time = int(time.time())
         FF_().session_get(em_url, '/gameBet/%s/dynamicConfig?_=%s' % (lottery, now_time), '',
                           header)  # dynamicConfig 有歷史獎其資訊
         issuecode = r.json()['data']['gamenumbers']
         return issuecode
 
-    ## 各採種 對應的 投注格式 , isTrace,traceWinStop ,traceStopValue  從 pc_submit  傳回來
-    def submit_json(self,em_url,account,lottery, awardmode, isTrace, traceWinStop, traceStopValue, type_, envs,header):
+    # 各採種 對應的 投注格式 , isTrace,traceWinStop ,traceStopValue  從 pc_submit  傳回來
+    def submit_json(self, em_url, account, lottery, awardmode, isTrace, traceWinStop, traceStopValue, type_, envs,
+                    header):
         # issueCode = FF_().select_issue(FF_().get_conn(envs),lottery,type_)[lottery]# 奖期api , 為一個dict ,key為採種
-        issuecode =  FF_().web_planIssue(lottery,em_url,header)  # 追號獎其
+        issuecode = FF_().web_plan_issue(lottery, em_url, header)  # 追號獎期
         print(lottery)
         if type_ != 1:  # 追號
             issue_list = issuecode[:type_]
@@ -1193,8 +1194,8 @@ class FF_:  # 4.0專案
         elif lottery == 'pcdd':
             # 需查出用戶反點, 如果是高獎金的話, odds 需用 平台獎金 * 用戶反點
             conn = OracleConnection(env_id=envs)
-            user_point = conn.select_lotteryPoint(self.lottery_dict[lottery][1],account)/ 10000
-            bonus =  conn.select_bonus(self.lottery_dict[lottery][1], '','FF_bonus')
+            user_point = conn.select_lotteryPoint(self.lottery_dict[lottery][1], account) / 10000
+            bonus = conn.select_bonus(self.lottery_dict[lottery][1], '', 'FF_bonus')
             # print(bonus)
             if awardmode == 1:  # 一般玩法, odds 就直接用 bonus 的key
                 list_keys = list(bonus.keys())
@@ -1310,7 +1311,8 @@ class FF_:  # 4.0專案
                 traceStopValue = -1
                 print('追中不停')
             isTrace = 1
-        postData = FF_().submit_json(em_url,account,lottery, awardmode, isTrace, traceWinStop, traceStopValue, type_, envs,header)
+        postData = FF_().submit_json(em_url, account, lottery, awardmode, isTrace, traceWinStop, traceStopValue, type_,
+                                     envs, header)
         # 呼叫各採種 投注data api
         FF_().session_post(em_url, '/gameBet/%s/submit' % lottery, json.dumps(postData), header)
         print('%s投注,彩種: %s' % (account, self.lottery_dict[lottery][0]))
