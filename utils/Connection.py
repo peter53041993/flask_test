@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sshtunnel import SSHTunnelForwarder
 from urllib3.exceptions import MaxRetryError
 from utils.Logger import create_logger
-import redis,json,datetime,re,time
+import redis, json, datetime, re, time
 
 logger = create_logger(log_folder='/logger', log_name='Connection')
 
@@ -76,9 +76,9 @@ class OracleConnection:
         else:  # 使用id 去找 url
             condition = f'%id={token}%'
         sql = "select uc.account, uu.GMT_CREATED,uu.url,uu.days,uu.registers " \
-                "from user_customer UC " \
-                "inner join user_url UU  on UC.id= UU.creator " \
-                f"where UU.url like  '%s' and UC.joint_venture = {joint_venture}"%condition
+              "from user_customer UC " \
+              "inner join user_url UU  on UC.id= UU.creator " \
+              f"where UU.url like  '%s' and UC.joint_venture = {joint_venture}" % condition
         print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
@@ -309,13 +309,13 @@ class OracleConnection:
                       f"and plat='{third}'"
         '''
         sql = f"SELECT SUM(cost) 用戶總有效銷量, SUM(prize), SUM(prize) - SUM(cost) 用戶總盈虧, plat " \
-            f"FROM thirdly_agent_center WHERE account = '{user}'AND create_date > trunc(SYSDATE,'mm') group by plat "
+              f"FROM thirdly_agent_center WHERE account = '{user}'AND create_date > trunc(SYSDATE,'mm') group by plat "
         print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
         print(rows)
-        for tuple_,con in enumerate(rows):
-            app_bet[tuple_] = con 
+        for tuple_, con in enumerate(rows):
+            app_bet[tuple_] = con
         print(app_bet)
         cursor.close()
         return app_bet
@@ -515,37 +515,37 @@ class OracleConnection:
                 bonus[index] = tuple_
         cursor.close()
         return bonus
-    
-    def select_FundCharge(self,date,type_=""): #查詢 動態時間  ,充值金額, 用來數據分溪用
+
+    def select_fund_charge(self, date, type_=""):  # 查詢 動態時間  ,充值金額, 用來數據分溪用
         cursor = self._get_oracle_conn().cursor()
-        if type_ == "month":# 月份
+        if type_ == "month":  # 月份
             data_fund = {}
-            year = date.split('/')[0]#年份
-            month = date.split('/')[1]#月份
-            day_31 = [1,3,5,7,8,10,12]
-            today_day = datetime.datetime.now().day# 現在日期
-            today_month = datetime.datetime.now().month# 現在月份
-            if month == str(today_month):# 頁面選的月份 是當前月份
-                day_range = today_day -1# 今天的還不用抓出來
+            year = date.split('/')[0]  # 年份
+            month = date.split('/')[1]  # 月份
+            day_31 = [1, 3, 5, 7, 8, 10, 12]
+            today_day = datetime.datetime.now().day  # 現在日期
+            today_month = datetime.datetime.now().month  # 現在月份
+            if month == str(today_month):  # 頁面選的月份 是當前月份
+                day_range = today_day - 1  # 今天的還不用抓出來
             else:
-                if month  in list(map(str,day_31)):
+                if month in list(map(str, day_31)):
                     day_range = 31
                 elif month == '2':
                     day_range = 29
                 else:
                     day_range = 30
-            for day in range(1,day_range+1):
-                date ='%s/%s/%s'%(year,month,day)
+            for day in range(1, day_range + 1):
+                date = '%s/%s/%s' % (year, month, day)
                 sql = "select sum(REAL_CHARGE_AMT),sum(charge_fee),count(REAL_CHARGE_AMT) from fund_charge where status = 2 and apply_time between to_date('%s 00:00:00','YYYY/MM/DD HH24:MI:SS') \
-                and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS')  order by apply_time desc"%(date,date)
+                and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS')  order by apply_time desc" % (date, date)
                 sql2 = "select count(id) from fund_charge where  apply_time between \
                 to_date('%s 00:00:00','YYYY/MM/DD HH24:MI:SS') \
-                and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS')  order by apply_time desc"%(date,date)
+                and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS')  order by apply_time desc" % (date, date)
                 cursor.execute(sql)
                 rows = cursor.fetchall()
                 for tuple_ in rows:
                     data_fund[date] = list(tuple_)
-                cursor.execute(sql2)#總充值個數
+                cursor.execute(sql2)  # 總充值個數
                 rows = cursor.fetchall()
                 for tuple_ in rows:
                     for key in data_fund:
@@ -553,43 +553,43 @@ class OracleConnection:
         else:
             if type_ == "":
                 sql = "select sum(REAL_CHARGE_AMT),sum(charge_fee),count(REAL_CHARGE_AMT) from fund_charge where status = 2 and apply_time between to_date('%s 00:00:00','YYYY/MM/DD HH24:MI:SS') \
-                and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS')  order by apply_time desc"%(date,date)
-            else: # 找出總出直個數 ,不代 status
-                sql ="select count(id) from fund_charge where  apply_time between \
+                and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS')  order by apply_time desc" % (date, date)
+            else:  # 找出總出直個數 ,不代 status
+                sql = "select count(id) from fund_charge where  apply_time between \
                 to_date('%s 00:00:00','YYYY/MM/DD HH24:MI:SS') \
-                and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS')  order by apply_time desc"%(date,date)
+                and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS')  order by apply_time desc" % (date, date)
             print(sql)
             cursor.execute(sql)
             rows = cursor.fetchall()
             data_fund = {}
-            for index,tuple_ in enumerate(rows):
+            for index, tuple_ in enumerate(rows):
                 data_fund[index] = tuple_
         cursor.close()
         return data_fund
 
-    def select_Fee(self,type_,user):#查詢 用戶 總代線 手續費
+    def select_fee(self, type_, user):  # 查詢 用戶 總代線 手續費
         cursor = self._get_oracle_conn().cursor()
-        if type_ == 'fund':#充值
+        if type_ == 'fund':  # 充值
             sql = "SELECT fee.bank_id, fee.fee,fee.mobile,bank.name FROM TOP_AGENT_RECHARGE_FEE fee \
             INNER JOIN user_customer user_ ON fee.user_id = user_.id inner join FUND_BANK bank  on fee.bank_id = bank.code \
-            WHERE user_.account in (select regexp_substr(user_chain,'[^/]+') from user_customer where account = '%s')"%user
-        else:#提線
+            WHERE user_.account in (select regexp_substr(user_chain,'[^/]+') from user_customer where account = '%s')" % user
+        else:  # 提線
             sql = "SELECT fee.enable,fee.bank_fee,fee.bank_limit_count,fee.usdt_fee,fee.usdt_limit_count, \
             user_.vip_lvl,user_.new_vip_flag FROM top_agent_withdraw_fee fee \
             INNER JOIN user_customer user_ ON fee.user_id = user_.id WHERE \
-            user_.account in (select regexp_substr(user_chain,'[^/]+') from user_customer where account = '%s')"%user
+            user_.account in (select regexp_substr(user_chain,'[^/]+') from user_customer where account = '%s')" % user
         print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
         fund_fee = {}
-        for num,index in enumerate(rows):
+        for num, index in enumerate(rows):
             fund_fee[num] = index
         cursor.close()
         return fund_fee
 
-    def select_userLvl(self,user):#用戶 vip 和是否為 星級
+    def select_user_lvl(self, user):  # 用戶 vip 和是否為 星級
         cursor = self._get_oracle_conn().cursor()
-        sql = "select vip_lvl,new_vip_flag from user_customer where account = '%s'"%user
+        sql = "select vip_lvl,new_vip_flag from user_customer where account = '%s'" % user
         cursor.execute(sql)
         rows = cursor.fetchall()
         user_lvl = []
@@ -597,21 +597,28 @@ class OracleConnection:
             user_lvl.append(i)
         cursor.close()
         return user_lvl
-    
-    def select_lotteryPoint(self,lotteryid,user):# 用戶彩種反點, FF_Joy188  高獎金玩法,會拿來算獎金
+
+    def select_lottery_point(self, lotteryid, user):
+        """
+        用戶彩種反點, FF_Joy188  高獎金玩法,會拿來算獎金
+        :param lotteryid:
+        :param user:
+        :return:
+        """
         cursor = self._get_oracle_conn().cursor()
         sql = "SELECT  user_.account,user_.register_date,game_award.direct_ret,game_award_group.award_name \
         FROM game_award_user_group game_award INNER JOIN user_customer user_ ON game_award.userid = user_.id \
         INNER JOIN game_award_group ON game_award.sys_award_group_id = game_award_group.id \
-        WHERE game_award.lotteryid = %s AND user_.account = '%s' and game_award.bet_type = 1"%(lotteryid,user)
+        WHERE game_award.lotteryid = %s AND user_.account = '%s' and game_award.bet_type = 1" % (lotteryid, user)
+        logger.info(f'select_lottery_point: sql={sql}')
         cursor.execute(sql)
         rows = cursor.fetchall()
         lottery_point = {}
-        for index,content in enumerate(rows):
+        for index, content in enumerate(rows):
             lottery_point[index] = content
         cursor.close()
         return lottery_point
-        
+
     def close_conn(self):
         if self._conn is not None:
             self._conn.close()
@@ -750,29 +757,35 @@ class PostgresqlConnection:
 
     def close_conn(self):
         pass
-class RedisConnection:# redis連線
+
+
+class RedisConnection:  # redis連線
     def __init__(self):
-        self.env_connect = {'ip': ['10.13.22.152', '10.6.1.82','10.13.12.47']}  # 0:dev,1:188 ,2: 本地
-    def get_rediskey(self,envs):  # env參數 決定是哪個環境
-        #redis_dict = {'ip': ['10.13.22.152', '10.6.1.82','127.0.0.1']}  # 0:dev,1:188 ,2: 本地
+        self.env_connect = {'ip': ['10.13.22.152', '10.6.1.82', '10.13.12.47']}  # 0:dev,1:188 ,2: 本地
+
+    def get_rediskey(self, envs):  # env參數 決定是哪個環境
+        # redis_dict = {'ip': ['10.13.22.152', '10.6.1.82','127.0.0.1']}  # 0:dev,1:188 ,2: 本地
         pool = redis.ConnectionPool(host=self.env_connect['ip'][envs], port=6379)
         r = redis.Redis(connection_pool=pool)
         return r
+
     @staticmethod
-    def set_key(key_name,key_value):#存key 
-        r = RedisConnection().get_rediskey(2)# 只有本基可存
-        json_str = json.dumps(key_value)# 轉成str 存入redis 
-        r.set(key_name,json_str)
+    def set_key(key_name, key_value):  # 存key
+        r = RedisConnection().get_rediskey(2)  # 只有本基可存
+        json_str = json.dumps(key_value)  # 轉成str 存入redis
+        r.set(key_name, json_str)
+
     @staticmethod
-    def get_key(envs,key_name):
+    def get_key(envs, key_name):
         r = RedisConnection().get_rediskey(envs)
         key_ = r.get(key_name)
         if key_ is None:
             return 'not exist'
         else:
-            return json.loads(key_)#取出來 byte 轉成 dict
+            return json.loads(key_)  # 取出來 byte 轉成 dict
+
     @staticmethod
-    def get_token(envs, user):#查詢用戶 APP token 時間
+    def get_token(envs, user):  # 查詢用戶 APP token 時間
         r = RedisConnection().get_rediskey(envs)
         r_keys = (r.keys('USER_TOKEN_%s*' % re.findall(r'[0-9]+|[a-z]+', user)[0]))
         for i in r_keys:
@@ -780,7 +793,7 @@ class RedisConnection:# redis連線
                 user_keys = (str(i).replace("'", '')[1:])
         print(user_keys)
         user_dict = r.get(user_keys)
-        timestap = str(user_dict).split('timeOut')[1].split('"token"')[0][2:-4]  #時間戳
-        token_time = time.localtime(int(timestap))#到期時間
+        timestap = str(user_dict).split('timeOut')[1].split('"token"')[0][2:-4]  # 時間戳
+        token_time = time.localtime(int(timestap))  # 到期時間
         print('token到期時間: %s-%s-%s %s:%s:%s' % (token_time.tm_year, token_time.tm_mon, token_time.tm_mday,
                                                 token_time.tm_hour, token_time.tm_min, token_time.tm_sec))

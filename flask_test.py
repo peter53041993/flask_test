@@ -1618,7 +1618,7 @@ def fund_fee():
         print(select_type, user)
         # 總代: 因為parent_id  為 -1.需用 user_iD查
         conn = OracleConnection(env_id=int(env_type))
-        fund_fee = conn.select_Fee(select_type, user)
+        fund_fee = conn.select_fee(select_type, user)
         # fund_fee = AutoTest.fund_fee
         print(fund_fee)
         if select_type == "fund":  # 充值
@@ -1639,7 +1639,7 @@ def fund_fee():
 
             data = {"手續費類型": type_msg, "手續費規則": rule_msg, "備註": "總代線有設定走平台/不管用戶身分"}
         else:  # 提線
-            user_lvl = conn.select_userLvl(user)
+            user_lvl = conn.select_user_lvl(user)
             type_msg = "提現"
             if len(fund_fee) == 0:  # 總代線沒設定
                 rule_msg = "總代線沒設定,走平台設定"
@@ -1682,7 +1682,7 @@ def FundCharge():  # 充值成功金額 查詢
             if result != 'not exist':  # 代表 已經存 到redis過
                 return result
             conn = OracleConnection(env_id=int(env_type))
-            data_fund = conn.select_FundCharge(date)
+            data_fund = conn.select_fund_charge(date)
             # data_fund = AutoTest.data_fund  # key 為0 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
             # print(data_fund)
             if len(data_fund) == 0:
@@ -1700,7 +1700,7 @@ def FundCharge():  # 充值成功金額 查詢
                     fund_apply = int(data_fund[0][0]) / 10000
                 len_fund = data_fund[0][2]
                 sum_fund = fund_apply - fund_fee  # 發起充值金額 - 手續費 , 兩者相減
-                len_Allfund = conn.select_FundCharge(date, '1')[0][0]  # 總個數
+                len_Allfund = conn.select_fund_charge(date, '1')[0][0]  # 總個數
                 # len_Allfund = AutoTest.data_fund[0][0]
                 try:
                     fund_per = int(int(len_fund) / int(len_Allfund) * 10000) / 100
@@ -1730,7 +1730,7 @@ def FundCharge():  # 充值成功金額 查詢
                 return result
             # print(date)
             conn = OracleConnection(env_id=int(env_type))
-            data_fund = conn.select_FundCharge(date, 'month')
+            data_fund = conn.select_fund_charge(date, 'month')
             # AutoTest.Joy188Test.select_FundCharge(AutoTest.Joy188Test.get_conn(int(env_type)), date, 'month')
             # data_fund = AutoTest.data_fund  # key 為日期 , value 0 為發起金額 總合, 1為 手續費總和 , 2 為充值個數
             # print(data_fund)

@@ -97,7 +97,7 @@ class ApiTestApp(unittest.TestCase):
                 self.fail(u"登入失敗")
             # user_list.setdefault(userid,token)
         RedisConnection().get_token(ENV_ID, self._user)
-        #self.get_token(ENV_ID, self._user)
+        # self.get_token(ENV_ID, self._user)
 
     def get_token(self, envs, user):
         redis_conn = self.get_rediskey(envs)
@@ -1002,7 +1002,7 @@ class ApiTestAPP_YFT(unittest.TestCase):
     """
     YFT APP API測試
     """
-    __slots__ = '_api_url', '_iapi_default', '_session', '_env_config', '_user', '_money_unit',\
+    __slots__ = '_api_url', '_iapi_default', '_session', '_env_config', '_user', '_money_unit', \
                 '_award_mode', '_conn_postgre', '_header'
 
     def setUp(self):
@@ -1317,7 +1317,6 @@ class ApiTestAPP_YFT(unittest.TestCase):
 
         game_name = ['xyft168', '168幸运飞艇']
         self.bet_trace(game_name, stop_on_win)
-
 
     def get_lottery_info(self, lottery_name):
         """

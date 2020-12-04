@@ -28,6 +28,18 @@ class ApiTestPC(unittest.TestCase):
         logger.info(f'ApiTestPC setUp : {self._testMethodName}')
 
     def __init__(self, case, env_config, _user, red_type, money_unit, award_mode, oracle, mysql, lottery_name):
+        """
+        PC測試初始化
+        :param case: 測試案例
+        :param env_config:
+        :param _user: 用戶名
+        :param red_type: 紅包使用與否
+        :param money_unit: 投注單位
+        :param award_mode: 獎金模式
+        :param oracle: 已創建的oracle連線
+        :param mysql: 已創建的mysql連線
+        :param lottery_name: 彩種名稱
+        """
         super().__init__(case)
         global COOKIE
         self._env_config = env_config
@@ -49,6 +61,7 @@ class ApiTestPC(unittest.TestCase):
         self._third_list = ['gns', 'shaba', 'im', 'ky', 'lc', 'city']
         self._conn_mysql = mysql
         self._conn_oracle = oracle
+        self.SESSION.proxies = {"http": "http://127.0.0.1:8888"}
         if COOKIE:  # 若已有Cookie則加入Header
             logger.info('已有Cookie')
             self._header['Cookie'] = f'ANVOID={COOKIE}'
@@ -283,18 +296,22 @@ class ApiTestPC(unittest.TestCase):
 
     def test_PcPlan(self):
         """追號測試"""
-        awardmode = self._award_mode
+        global COOKIE
+        if COOKIE:  # 若已有Cookie則加入Header
+            logger.info('已有Cookie')
+            self._header['Cookie'] = f'ANVOID={COOKIE}'
+        logger.info(f'test_PcPlan: COOKIE={COOKIE}')
+        logger.info(f'test_PcPlan: header={self._header}')
+        award_mode = self._award_mode
         for lottery in self.lottery_name:
-            if awardmode == '0':  # 預設
+            if award_mode == '0':  # 預設
                 if lottery in ['xyft', 'btcctp', 'btcffc', 'xyft168']:
-                    awardmode = 2
+                    award_mode = 2
                 else:
-                    awardmode = 1
-            else:
-                awardmode = awardmode
-            FF_Joy188.FF_().Pc_Submit(lottery=lottery, envs=self._env_config.get_env_id(), account=self._user,
-                                      em_url=self._env_config.get_em_url(), header=self._header, awardmode=awardmode,
-                                      type_=10, stop="")
+                    award_mode = 1
+            FF_Joy188.FF_().pc_submit(lottery=lottery, envs=self._env_config.get_env_id(), account=self._user,
+                                      em_url=self._env_config.get_em_url(), header=self._header, award_mode=award_mode,
+                                      trace_issue_num=10, win_stop=True)
 
     def test_PCLotterySubmit(self, plan=1):  # 彩種投注
         """投注測試"""
@@ -431,16 +448,19 @@ class ApiTestPC(unittest.TestCase):
             }
             logger.info(f'postData = {postData}')
             r = self.SESSION.post(self._post_url + '/login/login', data=postData, headers=self._header)
-            logger.info(f'response = {r.json()}')
+            if r.json()["errors"]:  # 失敗時應報錯
+                self.fail(f'登入失敗.\n接口回傳：{r.json()}')
             COOKIE = r.cookies.get_dict()['ANVOID']  # 獲得登入的cookies 字典
-            logger.debug(f'r.cookies.get_dict() = {r.cookies.get_dict()}')
+            logger.info(f'Get login cookie : {COOKIE}')
             self._header['Cookie'] = f'ANVOID={COOKIE}'
             t = time.strftime('%Y%m%d %H:%M:%S')
-            # msg = (f'登錄帳號: {i},登入身分: {account_[i]}' + u',現在時間:' + t + r.text)
             print(f'登錄帳號: {self._user}' + u',現在時間:' + t)
             self._header['Content-Type'] = 'application/json; charset=UTF-8'  # 只有Login使用form, 改回Json
-        except IOError:
-            self.fail(f'測試結果：登入失敗.\n接口回傳：{r.json()}')
+            logger.info(f'登入成功.\n _header = {self._header}')
+        except KeyError:
+            self.fail(f'測試結果：登入失敗，無法解析回傳結果.\n接口回傳: {r.json()}')
+        except Exception as e:
+            self.fail(f'無法預期的錯誤.\n{e}')
 
     @staticmethod
     def md(_password, _param):
@@ -476,11 +496,11 @@ class ApiTestPC(unittest.TestCase):
             r = self.SESSION.get(url_ + url, headers=self._header)
             html = BeautifulSoup(r.text, 'lxml')  # type為 bs4類型
             title = str(html.title)
-            statu_code = str(r.status_code)  # int 轉  str
+            status_code = str(r.status_code)  # int 轉  str
 
             print(title)  # 強制便 unicode, 不燃顯示在html報告  會有誤
             print(url)
-            print('result: ' + statu_code + "\n" + '---------------------')
+            print('result: ' + status_code + "\n" + '---------------------')
 
         except requests.exceptions.ConnectionError:
             print(u'連線有問題,請稍等')
