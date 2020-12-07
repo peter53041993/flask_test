@@ -240,9 +240,9 @@ class ApiTestPC(unittest.TestCase):
                 #     print(r.json()['msg'])
                 # else:  # 系統內部錯誤
                 #     print(r.json()['msg'])
-                print(f'投注失敗，{r.json()["msg"]}')
-                print(f'請求內容：{json.dumps(data_)}')
-                print(f'回傳內容: {r.json()}')
+                logger.error(f'投注失敗，{r.json()["msg"]}')
+                logger.error(f'請求內容：{json.dumps(data_)}')
+                logger.error(f'回傳內容: {r.json()}')
             else:  # 投注成功
                 """查詢後台生成訂單資訊，確認獎金模式正確性"""
                 if r.json()['data']['orderId']:
@@ -286,10 +286,8 @@ class ApiTestPC(unittest.TestCase):
                 print(content_)
                 return True
         except Exception as e:
-            # print(f'{lottery} 投注失敗，無法預期的錯誤' + "\n")
-            print(f'投注失敗，{r.json()["msg"]}')
-            print(f'請求內容：{json.dumps(data_)}')
-            print(f'回傳內容: {r.json()}')
+            logger.error(f'投注失敗. 請求內容：{json.dumps(data_)}\n'
+                         f'回傳內容: {r.text}')
             from utils.TestTool import trace_log
             logger.error('req_post_submit failed : ' + trace_log(e))
             return False
@@ -303,15 +301,18 @@ class ApiTestPC(unittest.TestCase):
         logger.info(f'test_PcPlan: COOKIE={COOKIE}')
         logger.info(f'test_PcPlan: header={self._header}')
         award_mode = self._award_mode
+        trace_issue_num = 10  # 預設追號期數
         for lottery in self.lottery_name:
             if award_mode == '0':  # 預設
                 if lottery in ['xyft', 'btcctp', 'btcffc', 'xyft168']:
                     award_mode = 2
                 else:
                     award_mode = 1
+            if lottery in ['slmmc', 'sl115', 'jsdice', 'jsdice2', 'lhc']:  # 針對即開取消追號
+                trace_issue_num = 0
             FF_Joy188.FF_().pc_submit(lottery=lottery, envs=self._env_config.get_env_id(), account=self._user,
                                       em_url=self._env_config.get_em_url(), header=self._header, award_mode=award_mode,
-                                      trace_issue_num=10, win_stop=True)
+                                      trace_issue_num=trace_issue_num, win_stop=True)
 
     def test_PCLotterySubmit(self, plan=1):  # 彩種投注
         """投注測試"""
@@ -489,7 +490,12 @@ class ApiTestPC(unittest.TestCase):
             # print('result: '+statu_code+"\n"+'---------------------')
 
         except requests.exceptions.ConnectionError:
+            print(f'{third} 轉帳失敗')
             print(u'連線有問題,請稍等')
+        except Exception as e:
+            print(f'{third} 轉帳失敗')
+            from utils.TestTool import trace_log
+            trace_log(e)
 
     def session_get(self, user, url_, url):  # 共用 session get方式
         try:
@@ -667,15 +673,19 @@ class ApiTestPC(unittest.TestCase):
         errors = {}
         for third in self._third_list:
             url = f'/{third}/transferToFF'
-
-            r = self.SESSION.post(self._post_url + url, data=json.dumps(post_data), headers=self._header)
-            if r.json()['status']:
-                print(f'帳號 {self._user}, {third} 轉回4.0 ,金額:1, 狀態碼:{r.json()["status"]}')
-            else:
-                logger.error(f'轉帳接口失敗 : errors[{third}] = {r.json()}')
-                errors[third] = r.json()
-                print('轉帳接口失敗')
-            status_dict[third] = r.json()['status']
+            try:
+                r = self.SESSION.post(self._post_url + url, data=json.dumps(post_data), headers=self._header)
+                if r.json()['status']:
+                    print(f'帳號 {self._user}, {third} 轉回4.0 ,金額:1, 狀態碼:{r.json()["status"]}')
+                else:
+                    logger.error(f'轉帳接口失敗 : errors[{third}] = {r.json()}')
+                    errors[third] = r.json()
+                    print(f'{third} 轉帳接口失敗')
+                status_dict[third] = r.json()['status']
+            except Exception as e:
+                print(f'{third} 轉帳接口失敗')
+                from utils.TestTool import trace_log
+                trace_log(e)
         logger.debug(f'status_dict = {status_dict.items()}')
         for third in status_dict.keys():
             if status_dict[third]:
@@ -1240,6 +1250,7 @@ class ApiTestPC_YFT(unittest.TestCase):
 
         game_name = ['gd11x5', '廣東蘇11選5']
         self.bet_trace(game_name, stop_on_win)
+
 
     def test_bet_hn60(self, stop_on_win=True):
         """
