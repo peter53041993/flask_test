@@ -12,7 +12,6 @@ from utils.Logger import create_logger
 from utils.TestTool import trace_log
 from utils.Config import LotteryData
 
-
 os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'  # 避免抓出oracle中文 為問號
 
 
@@ -25,7 +24,7 @@ def date_time():  # 給查詢 獎期to_date時間用, 今天時間
     return f'{year}-{month}-{format_day}'
 
 
-def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mode,lottery_name):
+def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mode, lottery_name):
     """
     autoTest 初始化
     :param award_mode: 獎金模式 (0:預設 / 1:高獎金 / 2:高獎金)
@@ -40,10 +39,9 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mo
     logger.info("suite_test 初始化")
     _env_config = Config.EnvConfig(test_env)
     _env_config_app = Config.EnvConfigApp(test_env)
-    _env_app_config = Config.EnvConfigApp(test_env)
     _suite_list = []
-    _test_list = ['cqssc', 'xjssc', 'hljssc', 'shssl', 'tjssc', 'txffc', 'fhjlssc', 'fhcqc', 'fhxjc', '3605fc',
-                  'btcffc', 'llssc', '360ffc', 'jlffc', 'v3d']
+    _web_test_list = ['cqssc', 'xjssc', 'hljssc', 'shssl', 'tjssc', 'txffc', 'fhjlssc', 'fhcqc', 'fhxjc', '3605fc',
+                      'btcffc', 'llssc', '360ffc', 'jlffc', 'v3d']
     logger.debug(f'autoTest test_cases : {test_cases}')
     try:
         suite = unittest.TestSuite()
@@ -52,22 +50,23 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mo
 
         logger.info(f"suite_test with test_cases : {test_cases}")
         if lottery_name == 'all':
-                lottery_name = LotteryData.lottery_dict.keys()#頁面選全部, 從config取lottery資訊
+            lottery_name = LotteryData.lottery_dict.keys()  # 頁面選全部, 從config取lottery資訊
         else:
-            lottery_name =  [lottery_name]# test_PCLotterySubmit , loop取出lottery , 所以寫在list裡
+            lottery_name = [lottery_name]  # test_PCLotterySubmit , loop取出lottery , 所以寫在list裡
         if _env_config.get_env_id() in (0, 1):
             _conn = OracleConnection(_env_config.get_env_id())
             _conn2 = MysqlConnection(_env_config.get_env_id())
-            for case in test_cases[0]:
+            for case in test_cases[0]:  # PC接口測試
                 _suite_list.append(
                     ApiTestPC(case=case, env_config=_env_config, _user=user_name, red_type=is_use_red,
-                              money_unit=money_unit, award_mode=award_mode, oracle=_conn, mysql=_conn2,lottery_name=lottery_name))
-            for case in test_cases[1]:
+                              money_unit=money_unit, award_mode=award_mode, oracle=_conn, mysql=_conn2,
+                              lottery_name=lottery_name))
+            for case in test_cases[1]:  # App接口測試
                 _suite_list.append(ApiTestApp(case_=case, env_config=_env_config_app, user=user_name,
                                               red_type=is_use_red, oracle=_conn, mysql=_conn2))
-            for case in test_cases[2]:
+            for case in test_cases[2]:  # Web交互測試
                 if case == 'test_plan':
-                    for lottery in _test_list:
+                    for lottery in _web_test_list:
                         _suite_list.append(
                             IntegrationTestWeb(case=f'test_{lottery}', env_config=_env_config, user=user_name,
                                                red_type=is_use_red))
@@ -84,7 +83,6 @@ def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mo
                                                   money_unit=money_unit, award_mode=award_mode, conn=_conn))
 
         logger.info(f"測試內容 suite_list : {_suite_list}")
-
         suite.addTests(_suite_list)
         logger.info(f"測試內容Suite suite_api_pc : {suite}")
 

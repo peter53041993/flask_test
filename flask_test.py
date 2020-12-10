@@ -314,7 +314,7 @@ def auto_test_post():
         logger.info(f'ignore_name_check = {ignore_name_check}')
 
         if env_config.get_env_id() in (0, 1):  # FF4.0 用戶驗證
-            lottery_selected = request.form.get('lottery_selected')  # 4.0選擇採種名稱
+            lottery_selected = request.form.get('lottery_selected')  # 4.0選擇彩種名稱
             conn = OracleConnection(env_config.get_env_id())
             domain_type = env_config.get_joint_venture(domain_url)  # 查詢 後台是否有設置 該url
             logger.debug(f"env_config.id: {env_config.get_env_id()},  red: {red}")
@@ -969,7 +969,7 @@ def game_result():
                 return '沒有該玩法'
             order_list = []  # 因為可能有好幾個訂單,  傳入 dataframe 需為列表 ,訂單
             order_time = []  # 時間
-            order_lottery = []  # 採種
+            order_lottery = []  # 彩種
             order_type = []  # 玩法
             order_status = []  # 狀態
             order_user = []  # 用戶名

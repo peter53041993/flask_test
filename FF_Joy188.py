@@ -96,7 +96,6 @@ class FF_:  # 4.0專案
         now_time = int(time.time())
         response = FF_().session_get(em_url, '/gameBet/%s/dynamicConfig?_=%s' % (lottery, now_time), '',
                                      header)  # dynamicConfig 有歷史獎其資訊
-        logger.info(f'web_plan_issue: response.text = {response.text}')
         try:
             return response.json()['data']['gamenumbers']
         except KeyError:
@@ -122,13 +121,32 @@ class FF_:  # 4.0專案
         """
         logger.info(f'em_url = {em_url}, account = {account}, lottery = {lottery}, award_mode = {award_mode},'
                     f' trace_issue_num = {trace_issue_num}, is_trace_win_stop = {is_trace_win_stop}, envs = {envs}, header = {header}')
-        # issueCode = FF_().select_issue(FF_().get_conn(envs),lottery,type_)[lottery]# 奖期api , 為一個dict ,key為採種
+        # issueCode = FF_().select_issue(FF_().get_conn(envs),lottery,type_)[lottery]# 奖期api , 為一個dict ,key為彩種
         issue_code = FF_().web_plan_issue(lottery, em_url, header)  # 追號獎期
         print(f'彩種: {lottery}')
         trace_stop_value = 1 if trace_issue_num > 1 and is_trace_win_stop else -1
         trace_value = 1 if trace_issue_num else 0
         is_trace_win_stop = 1 if is_trace_win_stop else 0
         data_ = None
+
+
+        """
+        自 dynamicConfig 取得當前彩種開放的玩法列表，
+        並傳遞至 requestContent_FF，組出 balls 參數，
+        投注金額也由 requestContent_FF 提供。
+        
+        若需判斷元角分模式，則在 requestContent_FF 內添加判斷調整即可。
+        """
+        from utils.requestContent_FF import get_game_dict
+        now_time = int(time.time())
+        keys = []
+        r = self.session.get(em_url + f'/gameBet/{lottery}/dynamicConfig?_={now_time}', headers=header)
+        for games in r.json()["data"]["gamelimit"]:
+            for key in games:
+                keys.append(key)
+        logger.info(f'web_plan_issue: keys = {keys}')
+        logger.info(f'submit_json: award_mode = {award_mode}')
+        game_dict = get_game_dict(keys, award_mode)
 
         if trace_issue_num > 1 and issue_code:  # 追號
             issue_list = issue_code[:trace_value]
@@ -148,246 +166,13 @@ class FF_:  # 4.0專案
                     {"id": 1, "ball": "1.01", "type": "chungtienpao.chungtienpao.chungtienpao", "moneyunit": "1",
                      "multiple": 1, "awardMode": award_mode, "num": 1}], "orders": order_plan,
                      "amount": 1.00 * len_order}
-        elif lottery in ['cqssc', 'hljssc', 'xjssc', 'tjssc', 'fhjlssc', 'fhcqc', 'fhxjc', 'hnffc', '3605fc', 'hn5fc']:
+        elif lottery in ['cqssc', 'hljssc', 'xjssc', 'tjssc', 'fhjlssc', 'fhcqc', 'fhxjc', 'hnffc', '360ffc', '3605fc', 'hn5fc']:
+            logger.info(f'game_dict = {game_dict}')
             data_ = {"gameType": lottery, "isTrace": trace_value, "traceWinStop": is_trace_win_stop,
-                     "traceStopValue": trace_stop_value, "balls": [
-                    {"id": 107, "ball": "-,-,-,-,-,-,-,-,龙,-", "type": "longhu.longhudou.fushi", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 106, "ball": "双,大", "type": "daxiaodanshuang.dxds.houer", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 105, "ball": "小", "type": "daxiaodanshuang.dxds.houyi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 104, "ball": "小,双", "type": "daxiaodanshuang.dxds.qianer", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 103, "ball": "小", "type": "daxiaodanshuang.dxds.qianyi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 102, "ball": "小", "type": "daxiaodanshuang.dxds.zonghe", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 101, "ball": "-,3,-,-,-", "type": "yixing_2000.dingweidan.fushi", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 100, "ball": "8", "type": "houer_2000.zuxuan.baodan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 9},
-                    {"id": 99, "ball": "13", "type": "houer_2000.zuxuan.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 3},
-                    {"id": 98, "ball": "25", "type": "houer_2000.zuxuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 97, "ball": "1,8", "type": "houer_2000.zuxuan.fushi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 96, "ball": "5", "type": "houer_2000.zhixuan.kuadu", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 10},
-                    {"id": 95, "ball": "14", "type": "houer_2000.zhixuan.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 5},
-                    {"id": 94, "ball": "65", "type": "houer_2000.zhixuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 93, "ball": "-,-,-,5,9", "type": "houer_2000.zhixuan.fushi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 92, "ball": "2,7", "type": "housan_2000.budingwei.ermabudingwei", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 91, "ball": "7", "type": "housan_2000.budingwei.yimabudingwei", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 90, "ball": "047", "type": "housan_2000.zuxuan.zuliudanshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 89, "ball": "336", "type": "housan_2000.zuxuan.zusandanshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 88, "ball": "6", "type": "housan_2000.zuxuan.baodan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 54},
-                    {"id": 87, "ball": "024", "type": "housan_2000.zuxuan.hunhezuxuan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 86, "ball": "2,5,9", "type": "housan_2000.zuxuan.zuliu", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 85, "ball": "5,9", "type": "housan_2000.zuxuan.zusan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 2},
-                    {"id": 84, "ball": "11", "type": "housan_2000.zuxuan.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 14},
-                    {"id": 83, "ball": "0", "type": "housan_2000.zhixuan.kuadu", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 10},
-                    {"id": 82, "ball": "1", "type": "housan_2000.zhixuan.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 3},
-                    {"id": 81, "ball": "904", "type": "housan_2000.zhixuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 80, "ball": "-,-,3,7,4", "type": "housan_2000.zhixuan.fushi", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 79, "ball": "-,0,-,-,-", "type": "yixing.dingweidan.fushi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 78, "ball": "8", "type": "houer.zuxuan.baodan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 9},
-                    {"id": 77, "ball": "12", "type": "houer.zuxuan.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 3},
-                    {"id": 76, "ball": "48", "type": "houer.zuxuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 75, "ball": "4,6", "type": "houer.zuxuan.fushi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 74, "ball": "8", "type": "houer.zhixuan.kuadu", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 4},
-                    {"id": 73, "ball": "3", "type": "houer.zhixuan.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 4},
-                    {"id": 72, "ball": "12", "type": "houer.zhixuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 71, "ball": "-,-,-,7,9", "type": "houer.zhixuan.fushi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 70, "ball": "8", "type": "qianer.zuxuan.baodan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 9},
-                    {"id": 69, "ball": "10", "type": "qianer.zuxuan.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 4},
-                    {"id": 68, "ball": "37", "type": "qianer.zuxuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 67, "ball": "6,8", "type": "qianer.zuxuan.fushi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 66, "ball": "7", "type": "qianer.zhixuan.kuadu", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 6},
-                    {"id": 65, "ball": "9", "type": "qianer.zhixuan.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 10},
-                    {"id": 64, "ball": "23", "type": "qianer.zhixuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 63, "ball": "6,7,-,-,-", "type": "qianer.zhixuan.fushi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 62, "ball": "1,2", "type": "housan.budingwei.ermabudingwei", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 61, "ball": "5", "type": "housan.budingwei.yimabudingwei", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 60, "ball": "457", "type": "housan.zuxuan.zuliudanshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 59, "ball": "113", "type": "housan.zuxuan.zusandanshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 58, "ball": "1", "type": "housan.zuxuan.baodan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 54},
-                    {"id": 57, "ball": "236", "type": "housan.zuxuan.hunhezuxuan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 56, "ball": "5,6,9", "type": "housan.zuxuan.zuliu", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 55, "ball": "6,8", "type": "housan.zuxuan.zusan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 2},
-                    {"id": 54, "ball": "16", "type": "housan.zuxuan.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 14},
-                    {"id": 53, "ball": "3", "type": "housan.zhixuan.kuadu", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 126},
-                    {"id": 52, "ball": "9", "type": "housan.zhixuan.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 55},
-                    {"id": 51, "ball": "561", "type": "housan.zhixuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 50, "ball": "-,-,3,6,4", "type": "housan.zhixuan.fushi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 49, "ball": "1,9", "type": "zhongsan.budingwei.ermabudingwei", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 48, "ball": "8", "type": "zhongsan.budingwei.yimabudingwei", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 47, "ball": "179", "type": "zhongsan.zuxuan.zuliudanshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 46, "ball": "002", "type": "zhongsan.zuxuan.zusandanshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 45, "ball": "2", "type": "zhongsan.zuxuan.baodan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 54},
-                    {"id": 44, "ball": "018", "type": "zhongsan.zuxuan.hunhezuxuan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 43, "ball": "0,4,9", "type": "zhongsan.zuxuan.zuliu", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 42, "ball": "0,9", "type": "zhongsan.zuxuan.zusan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 2},
-                    {"id": 41, "ball": "20", "type": "zhongsan.zuxuan.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 8},
-                    {"id": 40, "ball": "7", "type": "zhongsan.zhixuan.kuadu", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 126},
-                    {"id": 39, "ball": "042", "type": "zhongsan.zhixuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 38, "ball": "398", "type": "zhongsan.zhixuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 37, "ball": "-,7,8,2,-", "type": "zhongsan.zhixuan.fushi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 36, "ball": "1,2", "type": "qiansan.budingwei.ermabudingwei", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 35, "ball": "5", "type": "qiansan.budingwei.yimabudingwei", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 34, "ball": "035", "type": "qiansan.zuxuan.zuliudanshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 33, "ball": "113", "type": "qiansan.zuxuan.zusandanshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 32, "ball": "9", "type": "qiansan.zuxuan.baodan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 54},
-                    {"id": 31, "ball": "277", "type": "qiansan.zuxuan.hunhezuxuan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 30, "ball": "1,7,8", "type": "qiansan.zuxuan.zuliu", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 29, "ball": "1,8", "type": "qiansan.zuxuan.zusan", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 2},
-                    {"id": 28, "ball": "9", "type": "qiansan.zuxuan.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 11},
-                    {"id": 27, "ball": "8", "type": "qiansan.zhixuan.kuadu", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 96},
-                    {"id": 26, "ball": "0", "type": "qiansan.zhixuan.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 25, "ball": "037", "type": "qiansan.zhixuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 24, "ball": "9,6,9,-,-", "type": "qiansan.zhixuan.fushi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 23, "ball": "5,7", "type": "sixing.budingwei.ermabudingwei", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 22, "ball": "3", "type": "sixing.budingwei.yimabudingwei", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 21, "ball": "0,9", "type": "sixing.zuxuan.zuxuan4", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 20, "ball": "2,9", "type": "sixing.zuxuan.zuxuan6", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 19, "ball": "5,03", "type": "sixing.zuxuan.zuxuan12", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 18, "ball": "3,4,5,8", "type": "sixing.zuxuan.zuxuan24", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 17, "ball": "9545", "type": "sixing.zhixuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 16, "ball": "-,5,5,2,3", "type": "sixing.zhixuan.fushi", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 15, "ball": "8", "type": "wuxing.quwei.sijifacai", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 14, "ball": "8", "type": "wuxing.quwei.sanxingbaoxi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 13, "ball": "7", "type": "wuxing.quwei.haoshichengshuang", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 12, "ball": "4", "type": "wuxing.quwei.yifanfengshun", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 11, "ball": "0,5,8", "type": "wuxing.budingwei.sanmabudingwei", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 10, "ball": "2,7", "type": "wuxing.budingwei.ermabudingwei", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 9, "ball": "5", "type": "wuxing.budingwei.yimabudingwei", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 8, "ball": "9,8", "type": "wuxing.zuxuan.zuxuan5", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 7, "ball": "5,1", "type": "wuxing.zuxuan.zuxuan10", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 6, "ball": "4,01", "type": "wuxing.zuxuan.zuxuan20", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 5, "ball": "57,4", "type": "wuxing.zuxuan.zuxuan30", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 4, "ball": "6,357", "type": "wuxing.zuxuan.zuxuan60", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 3, "ball": "0,1,5,6,7", "type": "wuxing.zuxuan.zuxuan120", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 2, "ball": "32077", "type": "wuxing.zhixuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 1, "ball": "1,7,1,0,6", "type": "wuxing.zhixuan.fushi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1}], "orders": order_plan, "amount": 1680 * len_order}
+                     "traceStopValue": trace_stop_value, "balls": game_dict[0], "orders": order_plan, "amount": game_dict[1] * len_order}
         elif lottery in ['ahk3', 'jsk3']:
             data_ = {"gameType": lottery, "isTrace": trace_value, "traceWinStop": is_trace_win_stop,
-                     "traceStopValue": trace_stop_value, "balls": [
-                    {"id": 9, "ball": "6", "type": "yibutonghao.yibutonghao.yibutonghao", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 8, "ball": "2,4", "type": "erbutonghao.biaozhun.biaozhuntouzhu", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 7, "ball": "11#3", "type": "ertonghaodanxuan.ertonghaodanxuan.ertonghaodanxuan",
-                     "moneyunit": "1", "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 6, "ball": "55*", "type": "ertonghaofuxuan.ertonghaofuxuan.ertonghaofuxuan",
-                     "moneyunit": "1", "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 5, "ball": "123 234 345 456",
-                     "type": "sanlianhaotongxuan.sanlianhaotongxuan.sanlianhaotongxuan", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 4, "ball": "1,2,6", "type": "sanbutonghao.biaozhun.biaozhuntouzhu", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 3, "ball": "111", "type": "santonghaodanxuan.santonghaodanxuan.santonghaodanxuan",
-                     "moneyunit": "1", "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 2, "ball": "111 222 333 444 555 666",
-                     "type": "santonghaotongxuan.santonghaotongxuan.santonghaotongxuan", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 1, "ball": "14", "type": "hezhi.hezhi.hezhi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1}], "orders": order_plan, "amount": 18 * len_order}
+                     "traceStopValue": trace_stop_value, "balls": game_dict[0], "orders": order_plan, "amount": game_dict[1] * len_order}
         elif lottery in ['sd115', 'jx115', 'gd115', 'sl115']:
             data_ = {"gameType": lottery, "isTrace": trace_value, "traceWinStop": is_trace_win_stop,
                      "traceStopValue": trace_stop_value, "balls": [
@@ -1391,9 +1176,6 @@ class FF_:  # 4.0專案
         :param win_stop: 是否追中即停
         :return:
         """
-        if lottery in ['slmmc', 'sl115', 'jsdice', 'jsdice2', 'lhc']:  # 針對即開取消追號
-            trace_issue_num = 0
-
         logger.info(f'pc_submit: account={account}, envs={envs}, em_url={em_url}, header={header}, lottery={lottery},'
                     f' award_mode={award_mode}, trace_issue_num={trace_issue_num},win_stop={win_stop}')
         if trace_issue_num <= 1:  # 若非追號單，追中即停更改為False
@@ -1401,7 +1183,7 @@ class FF_:  # 4.0專案
         postData = FF_().submit_json(em_url=em_url, account=account, lottery=lottery, award_mode=award_mode,
                                      trace_issue_num=trace_issue_num, is_trace_win_stop=win_stop, envs=envs,
                                      header=header)
-        # 呼叫各採種 投注data api
+        # 呼叫各彩種 投注data api
         r = FF_().session_post(em_url, '/gameBet/%s/submit' % lottery, json.dumps(postData), header)
         print('%s投注,彩種: %s' % (account, self.lottery_dict[lottery][0]))
         # print(r.json())
@@ -1414,4 +1196,3 @@ class FF_:  # 4.0專案
         except Exception as e:
             from utils.TestTool import trace_log
             trace_log(e)
-

@@ -232,16 +232,15 @@ class ApiTestPC(unittest.TestCase):
 
             if r.json()['isSuccess'] == 0:  # 投注失敗的情況
                 logger.info(f'{lottery_name} \n {MUL_} "\n" {play_} "\n" {msg} "\n"')
-                # if r.json()['msg'] == u'存在封锁变价':  # 有可能封鎖變價,先跳過   ()
-                #     print(u'存在封锁变价')
-                # elif r.json()['msg'] == u'您的投注内容 超出倍数限制，请调整！':
-                #     print(u'倍數超出了唷,下次再來')
-                # elif r.json()['msg'] == u'方案提交失败，请检查网络并重新提交！':
-                #     print(r.json()['msg'])
-                # else:  # 系統內部錯誤
-                #     print(r.json()['msg'])
-                logger.error(f'投注失敗，{r.json()["msg"]}')
-                logger.error(f'請求內容：{json.dumps(data_)}')
+                if r.json()['msg'] == u'存在封锁变价':  # 有可能封鎖變價,先跳過   ()
+                    print(u'存在封锁变价')
+                elif r.json()['msg'] == u'您的投注内容 超出倍数限制，请调整！':
+                    print(u'倍數超出了唷,下次再來')
+                elif r.json()['msg'] == u'方案提交失败，请检查网络并重新提交！':
+                    print(r.json()['msg'])
+                else:  # 系統內部錯誤
+                    print(r.json()['msg'])
+                logger.error(f'{lottery} 投注失敗')
                 logger.error(f'回傳內容: {r.json()}')
             else:  # 投注成功
                 """查詢後台生成訂單資訊，確認獎金模式正確性"""
@@ -911,16 +910,16 @@ class ApiTestPC_YFT(unittest.TestCase):
         bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
                                     is_trace=False)
         if bet_response['status'] == expected:
-            print(
-                f'{game_name[1]}投注追號成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+            print(f'{game_name[1]}投注追號成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; '
+                  f'投注金額：{bet_response["content"]["_balWdl"]}')
         else:
             self.fail(f'投注失敗，接口返回：{bet_response}')
 
         bet_response = self.bet_yft(lottery_name=game_name[0], stop_on_win=stop_on_win, games=games,
                                     is_trace=True)
         if bet_response['status'] == expected:
-            print(
-                f'{game_name[1]}追號全彩種成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; 投注金額：{bet_response["content"]["_balWdl"]}')
+            print(f'{game_name[1]}追號全彩種成功。\n用戶餘額：{bet_response["content"]["_balUsable"]} ; '
+                  f'投注金額：{bet_response["content"]["_balWdl"]}')
         else:
             self.fail(f'投注失敗，接口返回：{bet_response}')
 
@@ -1250,7 +1249,6 @@ class ApiTestPC_YFT(unittest.TestCase):
 
         game_name = ['gd11x5', '廣東蘇11選5']
         self.bet_trace(game_name, stop_on_win)
-
 
     def test_bet_hn60(self, stop_on_win=True):
         """
