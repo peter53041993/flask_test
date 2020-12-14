@@ -299,19 +299,32 @@ class ApiTestPC(unittest.TestCase):
             self._header['Cookie'] = f'ANVOID={COOKIE}'
         logger.info(f'test_PcPlan: COOKIE={COOKIE}')
         logger.info(f'test_PcPlan: header={self._header}')
-        award_mode = self._award_mode
-        trace_issue_num = 10  # 預設追號期數
+        failed_test = []
         for lottery in self.lottery_name:
-            if award_mode == '0':  # 預設
-                if lottery in ['xyft', 'btcctp', 'btcffc', 'xyft168']:
-                    award_mode = 2
-                else:
-                    award_mode = 1
-            if lottery in ['slmmc', 'sl115', 'jsdice', 'jsdice2', 'lhc']:  # 針對即開取消追號
+            award_mode = None
+            trace_issue_num = 10  # 預設追號期數
+            if lottery == 'btcctp':  # 若彩種不支援追號，提前跳出
+                print(f'彩種: {LotteryData.lottery_dict[lottery][0]} 不支援追號，跳過測試')
+                continue
+            if self._award_mode == '0':  # 若使用預設獎金組
+                award_mode = 1
+            else:
+                award_mode = self._award_mode  # 若有指定則使用指定獎金組
+            if lottery in ['xyft', 'btcctp', 'btcffc', 'xyft168']:  # 最後判斷是否為強制高獎金模式
+                award_mode = 2
+            if lottery in ['slmmc', 'sl115', 'jsdice', 'jsdice2', 'lhc']:  # 針對即開彩種取消追號
                 trace_issue_num = 0
-            FF_Joy188.FF_().pc_submit(lottery=lottery, envs=self._env_config.get_env_id(), account=self._user,
-                                      em_url=self._env_config.get_em_url(), header=self._header, award_mode=award_mode,
-                                      trace_issue_num=trace_issue_num, win_stop=True)
+            error_message = FF_Joy188.FF_().pc_submit(lottery=lottery, envs=self._env_config.get_env_id(),
+                                                      account=self._user,
+                                                      em_url=self._env_config.get_em_url(), header=self._header,
+                                                      award_mode=award_mode,
+                                                      trace_issue_num=trace_issue_num, win_stop=True)
+            if error_message: failed_test.append(error_message)
+        if failed_test:
+            print('部分彩種投注失敗')
+            for error in failed_test:
+                print(error)
+            self.fail('部分彩種投注失敗')
 
     def test_PCLotterySubmit(self, plan=1):  # 彩種投注
         """投注測試"""

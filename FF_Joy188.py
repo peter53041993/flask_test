@@ -38,7 +38,8 @@ class FF_:  # 4.0專案
         :param header:
         :return:
         """
-        logger.info(f'session_post: request_url = {request_url}, request_func={request_func}, getData={postData}, header={header}')
+        logger.info(
+            f'session_post: request_url = {request_url}, request_func={request_func}, getData={postData}, header={header}')
         urllib3.disable_warnings()
         response = self.session.post(request_url + request_func, data=postData, headers=header, verify=False)
         logger.info(f'session_post : response = {response.text}')
@@ -53,7 +54,8 @@ class FF_:  # 4.0專案
         :param header:
         :return:
         """
-        logger.info(f'session_get: request_url = {request_url}, request_func={request_func}, getData={getData}, header={header}')
+        logger.info(
+            f'session_get: request_url = {request_url}, request_func={request_func}, getData={getData}, header={header}')
         urllib3.disable_warnings()
         response = self.session.get(request_url + request_func, data=getData, headers=header, verify=False)
         # logger.info(f'session_get : response = {response.text}')
@@ -73,12 +75,11 @@ class FF_:  # 4.0專案
                                  oracle_['sid'][env] + service_name)
         return conn
 
-    def plan_return(self, type_, issue_list):  # 根據 type_ 判斷是不是追號, 生成動態的 動態order
+    def plan_return(self, trace_value, issue_list):  # 根據 type_ 判斷是不是追號, 生成動態的 動態order
         plan_ = []
         try:
-            for i in range(type_):
+            for i in range(trace_value):
                 plan_.append({"number": 'test', "issueCode": issue_list[i]['issueCode'], "multiple": 1})
-            # print(plan_)
             return plan_
         except IndexError as e:
             print(e)
@@ -121,14 +122,14 @@ class FF_:  # 4.0專案
         """
         logger.info(f'em_url = {em_url}, account = {account}, lottery = {lottery}, award_mode = {award_mode},'
                     f' trace_issue_num = {trace_issue_num}, is_trace_win_stop = {is_trace_win_stop}, envs = {envs}, header = {header}')
-        # issueCode = FF_().select_issue(FF_().get_conn(envs),lottery,type_)[lottery]# 奖期api , 為一個dict ,key為彩種
-        issue_code = FF_().web_plan_issue(lottery, em_url, header)  # 追號獎期
+        if lottery in ['ahsb', 'slsb']:
+            return None
+
+        issue_list = FF_().web_plan_issue(lottery, em_url, header)  # 追號獎期
         print(f'彩種: {lottery}')
         trace_stop_value = 1 if trace_issue_num > 1 and is_trace_win_stop else -1
         trace_value = 1 if trace_issue_num else 0
         is_trace_win_stop = 1 if is_trace_win_stop else 0
-        data_ = None
-
 
         """
         自 dynamicConfig 取得當前彩種開放的玩法列表，
@@ -146,310 +147,26 @@ class FF_:  # 4.0專案
                 keys.append(key)
         logger.info(f'web_plan_issue: keys = {keys}')
         logger.info(f'submit_json: award_mode = {award_mode}')
-        game_dict = get_game_dict(keys, award_mode)
+        game_dict = get_game_dict(lottery, keys, award_mode)
 
-        if trace_issue_num > 1 and issue_code:  # 追號
-            issue_list = issue_code[:trace_value]
-            order_plan = FF_().plan_return(trace_value, issue_list)  # 生成 order 的投注奖期列表
+        if trace_issue_num > 1:  # 追號
+            order_plan = FF_().plan_return(trace_issue_num, issue_list)  # 生成 order 的投注奖期列表
+
             len_order = len(order_plan)
             print('追號期數:%s' % len_order)
         else:  # 一般投注
-            if issue_code:
-                issue_code = issue_code[0]['issueCode']
+            if issue_list:
+                order_plan = [
+                    {"number": str(issue_list), "issueCode": issue_list[0]['issueCode'], "multiple": 1}]  # 一般投注
             else:
-                issue_code = 1
-            order_plan = [{"number": 'test', "issueCode": issue_code, "multiple": 1}]  # 一般投注
+                order_plan = [{"number": str(issue_list), "issueCode": 1, "multiple": 1}]  # 一般投注
             len_order = 1
-        if lottery == 'btcctp':
-            data_ = {"gameType": lottery, "isTrace": trace_value, "traceWinStop": is_trace_win_stop,
-                     "traceStopValue": trace_stop_value, "balls": [
-                    {"id": 1, "ball": "1.01", "type": "chungtienpao.chungtienpao.chungtienpao", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1}], "orders": order_plan,
-                     "amount": 1.00 * len_order}
-        elif lottery in ['bjkl8', 'fckl8']:
-            data_ = {"gameType": lottery, "isTrace": trace_value, "traceWinStop": is_trace_win_stop,
-                     "traceStopValue": trace_stop_value, "balls": [
-                    {"id": 8, "ball": "05,25,42,43,51,67,80", "type": "renxuan.putongwanfa.renxuan7", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 7, "ball": "12,28,54,64,69,80", "type": "renxuan.putongwanfa.renxuan6", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 6, "ball": "24,29,39,50,71", "type": "renxuan.putongwanfa.renxuan5", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 5, "ball": "03,14,51,57", "type": "renxuan.putongwanfa.renxuan4", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 4, "ball": "16,52,79", "type": "renxuan.putongwanfa.renxuan3", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 3, "ball": "48,74", "type": "renxuan.putongwanfa.renxuan2", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 2, "ball": "25", "type": "renxuan.putongwanfa.renxuan1", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 1, "ball": "中", "type": "quwei.panmian.quweib", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1}], "orders": order_plan, "amount": 16 * len_order}
-        elif lottery in ['v3d', 'fc3d', 'n3d', 'np3']:
-            data_ = {"gameType": lottery, "isTrace": trace_value, "traceWinStop": is_trace_win_stop,
-                     "traceStopValue": trace_stop_value, "balls": [
-                    {"id": 30, "ball": "-,1,-", "type": "yixing.dingweidan.fushi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 29, "ball": "6", "type": "houer.zuxuan.zuxuanbaodan", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 9},
-                    {"id": 28, "ball": "12", "type": "houer.zuxuan.zuxuanhezhi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 3},
-                    {"id": 27, "ball": "28", "type": "houer.zuxuan.zuxuandanshi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 26, "ball": "6,8", "type": "houer.zuxuan.zuxuanfushi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 25, "ball": "1", "type": "houer.zhixuan.zhixuankuadu", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 18},
-                    {"id": 24, "ball": "6", "type": "houer.zhixuan.zhixuanhezhi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 7},
-                    {"id": 23, "ball": "58", "type": "houer.zhixuan.zhixuandanshi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 22, "ball": "-,4,3", "type": "houer.zhixuan.zhixuanfushi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 21, "ball": "3", "type": "qianer.zuxuan.zuxuanbaodan", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 9},
-                    {"id": 20, "ball": "11", "type": "qianer.zuxuan.zuxuanhezhi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 4},
-                    {"id": 19, "ball": "05", "type": "qianer.zuxuan.zuxuandanshi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 18, "ball": "1,7", "type": "qianer.zuxuan.zuxuanfushi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 17, "ball": "1", "type": "qianer.zhixuan.zhixuankuadu", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 18},
-                    {"id": 16, "ball": "11", "type": "qianer.zhixuan.zhixuanhezhi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 8},
-                    {"id": 15, "ball": "23", "type": "qianer.zhixuan.zhixuandanshi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 14, "ball": "1,0,-", "type": "qianer.zhixuan.zhixuanfushi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 13, "ball": "4,7", "type": "sanxing.budingwei.ermabudingwei", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 12, "ball": "3", "type": "sanxing.budingwei.yimabudingwei", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 11, "ball": "235", "type": "sanxing.zuxuan.zuliudanshi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 10, "ball": "388", "type": "sanxing.zuxuan.zusandanshi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 9, "ball": "1", "type": "sanxing.zuxuan.zuxuanbaodan", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 54},
-                    {"id": 8, "ball": "248", "type": "sanxing.zuxuan.hunhezuxuan", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 7, "ball": "3,7,8", "type": "sanxing.zuxuan.zuliu", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 6, "ball": "5,7", "type": "sanxing.zuxuan.zusan", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 2},
-                    {"id": 5, "ball": "6", "type": "sanxing.zuxuan.zuxuanhezhi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 6},
-                    {"id": 4, "ball": "6", "type": "sanxing.zhixuan.kuadu", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 144},
-                    {"id": 3, "ball": "25", "type": "sanxing.zhixuan.hezhi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 6},
-                    {"id": 2, "ball": "126", "type": "sanxing.zhixuan.danshi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 1, "ball": "4,4,3", "type": "sanxing.zhixuan.fushi", "moneyunit": "1", "multiple": 1,
-                     "awardMode": award_mode, "num": 1}], "orders": order_plan, "amount": 610 * len_order}
-        elif lottery in ['jsdice', 'jldice  1', 'jldice2']:
-            data_ = {"gameType": lottery, "isTrace": trace_value, "multiple": 1, "trace": 1, "amount": "520.00",
-                     "balls": [
-                         {"ball": "大", "id": 0, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "daxiao.daxiao"},
-                         {"ball": "单", "id": 1, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "danshuang.danshuang"},
-                         {"ball": "66*", "id": 2, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "ertonghaofuxuan.ertonghaofuxuan"},
-                         {"ball": "55*", "id": 3, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "ertonghaofuxuan.ertonghaofuxuan"},
-                         {"ball": "44*", "id": 4, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "ertonghaofuxuan.ertonghaofuxuan"},
-                         {"ball": "666", "id": 5, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "santonghaodanxuan.santonghaodanxuan"},
-                         {"ball": "555", "id": 6, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "santonghaodanxuan.santonghaodanxuan"},
-                         {"ball": "444", "id": 7, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "santonghaodanxuan.santonghaodanxuan"},
-                         {"ball": "333", "id": 8, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "santonghaodanxuan.santonghaodanxuan"},
-                         {"ball": "222", "id": 9, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "santonghaodanxuan.santonghaodanxuan"},
-                         {"ball": "111", "id": 10, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "santonghaodanxuan.santonghaodanxuan"},
-                         {"ball": "111 222 333 444 555 666", "id": 11, "moneyunit": 1, "multiple": 1, "amount": 10,
-                          "num": 5,
-                          "type": "santonghaotongxuan.santonghaotongxuan"},
-                         {"ball": "33*", "id": 12, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "ertonghaofuxuan.ertonghaofuxuan"},
-                         {"ball": "22*", "id": 13, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "ertonghaofuxuan.ertonghaofuxuan"},
-                         {"ball": "11*", "id": 14, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "ertonghaofuxuan.ertonghaofuxuan"},
-                         {"ball": "小", "id": 15, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "daxiao.daxiao"},
-                         {"ball": "双", "id": 16, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "danshuang.danshuang"},
-                         {"ball": "17", "id": 17, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "16", "id": 18, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "15", "id": 19, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "14", "id": 20, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "13", "id": 21, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "12", "id": 22, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "11", "id": 23, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "10", "id": 24, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "9", "id": 25, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "8", "id": 26, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "7", "id": 27, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "6", "id": 28, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "5", "id": 29, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "4", "id": 30, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "hezhi.hezhi"},
-                         {"ball": "5,6", "id": 31, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "4,6", "id": 32, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "4,5", "id": 33, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "3,6", "id": 34, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "3,5", "id": 35, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "3,4", "id": 36, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "2,6", "id": 37, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "2,5", "id": 38, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "2,4", "id": 39, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "2,3", "id": 40, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "1,6", "id": 41, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "1,5", "id": 42, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "1,4", "id": 43, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "1,3", "id": 44, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "1,2", "id": 45, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "erbutonghao.erbutonghao"},
-                         {"ball": "6", "id": 46, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "yibutonghao.yibutonghao"},
-                         {"ball": "5", "id": 47, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "yibutonghao.yibutonghao"},
-                         {"ball": "4", "id": 48, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "yibutonghao.yibutonghao"},
-                         {"ball": "3", "id": 49, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "yibutonghao.yibutonghao"},
-                         {"ball": "2", "id": 50, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "yibutonghao.yibutonghao"},
-                         {"ball": "1", "id": 51, "moneyunit": 1, "multiple": 1, "amount": 10, "num": 5,
-                          "type": "yibutonghao.yibutonghao"}], "orders": order_plan}
-        elif lottery == 'p5':
-            data_ = {"gameType": lottery, "isTrace": trace_value, "traceWinStop": is_trace_win_stop,
-                     "traceStopValue": trace_stop_value, "balls": [
-                    {"id": 38, "ball": "2", "type": "p3houer.zuxuan.zuxuanp3houerbaodan", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 9},
-                    {"id": 37, "ball": "6", "type": "p3houer.zuxuan.zuxuanp3houerhezhi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 3},
-                    {"id": 36, "ball": "38", "type": "p3houer.zuxuan.zuxuanp3houerdanshi", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 35, "ball": "0,7", "type": "p3houer.zuxuan.zuxuanp3houerfushi", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 34, "ball": "9", "type": "p3houer.zhixuan.zhixuanp3houerkuadu", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 2},
-                    {"id": 33, "ball": "5", "type": "p3houer.zhixuan.zhixuanp3houerhezhi", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 6},
-                    {"id": 32, "ball": "02", "type": "p3houer.zhixuan.zhixuanp3houerdanshi", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 31, "ball": "-,2,7", "type": "p3houer.zhixuan.zhixuanp3houerfushi", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 30, "ball": "2", "type": "p3qianer.zuxuan.zuxuanp3qianerbaodan", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 9},
-                    {"id": 29, "ball": "7", "type": "p3qianer.zuxuan.zuxuanp3qianerhezhi", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 4},
-                    {"id": 28, "ball": "67", "type": "p3qianer.zuxuan.zuxuanp3qianerdanshi", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 27, "ball": "2,5", "type": "p3qianer.zuxuan.zuxuanp3qianerfushi", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 26, "ball": "3", "type": "p3qianer.zhixuan.zhixuanp3qianerkuadu", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 14},
-                    {"id": 25, "ball": "18", "type": "p3qianer.zhixuan.zhixuanp3qianerhezhi", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 24, "ball": "48", "type": "p3qianer.zhixuan.zhixuanp3qianerdanshi", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 23, "ball": "7,2,-", "type": "p3qianer.zhixuan.zhixuanp3qianerfushi", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 22, "ball": "3,8", "type": "p3sanxing.budingwei.ermabudingwei", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 21, "ball": "1", "type": "p3sanxing.budingwei.yimabudingwei", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 20, "ball": "279", "type": "p3sanxing.zuxuan.p3zuliudanshi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 19, "ball": "229", "type": "p3sanxing.zuxuan.p3zusandanshi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 18, "ball": "6", "type": "p3sanxing.zuxuan.p3zuxuanbaodan", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 54},
-                    {"id": 17, "ball": "179", "type": "p3sanxing.zuxuan.p3hunhezuxuan", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 16, "ball": "1,3,9", "type": "p3sanxing.zuxuan.p3zuliu", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 15, "ball": "7,8", "type": "p3sanxing.zuxuan.p3zusan", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 2},
-                    {"id": 14, "ball": "23", "type": "p3sanxing.zuxuan.p3zuxuanhezhi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 4},
-                    {"id": 13, "ball": "0", "type": "p3sanxing.zhixuan.p3kuadu", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 10},
-                    {"id": 12, "ball": "27", "type": "p3sanxing.zhixuan.p3hezhi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 11, "ball": "249", "type": "p3sanxing.zhixuan.p3danshi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 10, "ball": "7,1,9", "type": "p3sanxing.zhixuan.p3fushi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 9, "ball": "-,-,2,-,-", "type": "p5yixing.dingweidan.fushi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 8, "ball": "7", "type": "p5houer.zuxuan.zuxuanp5houerbaodan", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 9},
-                    {"id": 7, "ball": "9", "type": "p5houer.zuxuan.zuxuanp5houerhezhi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 5},
-                    {"id": 6, "ball": "03", "type": "p5houer.zuxuan.zuxuanp5houerdanshi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 5, "ball": "3,4", "type": "p5houer.zuxuan.zuxuanp5houerfushi", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 1},
-                    {"id": 4, "ball": "4", "type": "p5houer.zhixuan.zhixuanp5houerkuadu", "moneyunit": 1, "multiple": 1,
-                     "awardMode": award_mode, "num": 12},
-                    {"id": 3, "ball": "14", "type": "p5houer.zhixuan.zhixuanp5houerhezhi", "moneyunit": 1,
-                     "multiple": 1, "awardMode": award_mode, "num": 5},
-                    {"id": 2, "ball": "64", "type": "p5houer.zhixuan.zhixuanp5houerdanshi", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 1, "ball": "-,-,-,7,4", "type": "p5houer.zhixuan.zhixuanp5houerfushi", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1}], "orders": order_plan,
-                     "amount": 342 * len_order}
-        elif lottery == 'ssq':
-            data_ = {"gameType": lottery, "isTrace": trace_value, "traceWinStop": is_trace_win_stop,
-                     "traceStopValue": trace_stop_value, "balls": [
-                    {"id": 3, "ball": "D:18_T:01,03,06,26,33+13", "type": "biaozhuntouzhu.biaozhun.dantuo",
-                     "moneyunit": 1, "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 2, "ball": "08,17,19,22,24,33+07", "type": "biaozhuntouzhu.biaozhun.danshi",
-                     "moneyunit": "1", "multiple": 1, "awardMode": award_mode, "num": 1},
-                    {"id": 1, "ball": "10,15,18,23,24,31+05", "type": "biaozhuntouzhu.biaozhun.fushi", "moneyunit": "1",
-                     "multiple": 1, "awardMode": award_mode, "num": 1}], "orders": order_plan, "amount": 6 * len_order}
-        elif lottery == 'pcdd':
+        if lottery == 'pcdd':
             # 需查出用戶反點, 如果是高獎金的話, odds 需用 平台獎金 * 用戶反點
             conn = OracleConnection(env_id=envs)
             lottery_point = conn.select_lottery_point(self.lottery_dict[lottery][1], account)
-            logger.info(lottery_point)  # {0: ('autotest101', datetime.datetime(2020, 12, 2, 17, 11, 54, 328000), 450, '奖金组1800')}
+            logger.info(
+                lottery_point)  # {0: ('autotest101', datetime.datetime(2020, 12, 2, 17, 11, 54, 328000), 450, '奖金组1800')}
             user_point = lottery_point[0][2] / 10000
             bonus = conn.select_bonus(self.lottery_dict[lottery][1], '', 'FF_bonus')
             # print(bonus)
@@ -461,7 +178,7 @@ class FF_:  # 4.0專案
                 list_keys = [int((bonus_[0] + bonus_[1] * user_point) * 100) / 100 for bonus_ in
                              bonus.items()]  # 高獎金抓出來, 需呈上自己返點
             # print(list_keys)
-            data_ = {"balls": [
+            return {"balls": [
                 {"id": 1, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
                  "ball": "0",
                  "odds": list_keys[0], "awardMode": award_mode},
@@ -552,12 +269,14 @@ class FF_:  # 4.0專案
                 "redDiscountAmount": 0, "amount": 43 * len_order, "isTrace": trace_value,
                 "traceWinStop": is_trace_win_stop,
                 "traceStopValue": trace_stop_value}
+        elif lottery in ['jsdice', 'jldice1', 'jldice2']:
+            return {"gameType": lottery, "isTrace": trace_value, "multiple": 1, "trace": 1,
+                    "amount": game_dict[1] * len_order, "balls": game_dict[0], "orders": order_plan}
         else:
-            logger.info(f'game_dict = {game_dict}')
-            data_ = {"gameType": lottery, "isTrace": trace_value, "traceWinStop": is_trace_win_stop,
-                     "traceStopValue": trace_stop_value, "balls": game_dict[0], "orders": order_plan,
-                     "amount": game_dict[1] * len_order}
-        return data_
+            # logger.info(f'game_dict = {game_dict}')
+            return {"gameType": lottery, "isTrace": trace_value, "traceWinStop": is_trace_win_stop,
+                    "traceStopValue": trace_stop_value, "balls": game_dict[0], "orders": order_plan,
+                    "amount": game_dict[1] * len_order}
 
     def pc_submit(self, account, envs: EnvConfig, em_url, header, lottery, award_mode, trace_issue_num: int,
                   win_stop: bool = True):
@@ -565,13 +284,13 @@ class FF_:  # 4.0專案
         PC投注
         :param account: 用戶帳號
         :param envs: 環境物件
-        :param em_url:
-        :param header:
-        :param lottery: 彩種
-        :param award_mode: 獎金組
+        :param em_url: 投注網域
+        :param header: header內容
+        :param lottery: 彩種名稱
+        :param award_mode: 獎金組模式
         :param trace_issue_num: 追號期數，>2則判定為追號，否則為一般投注
         :param win_stop: 是否追中即停
-        :return:
+        :return: 若投置請求成功，回傳None。若請求報錯，回傳 [彩種名稱, 錯誤訊息]
         """
         logger.info(f'pc_submit: account={account}, envs={envs}, em_url={em_url}, header={header}, lottery={lottery},'
                     f' award_mode={award_mode}, trace_issue_num={trace_issue_num},win_stop={win_stop}')
@@ -583,13 +302,18 @@ class FF_:  # 4.0專案
         # 呼叫各彩種 投注data api
         r = FF_().session_post(em_url, '/gameBet/%s/submit' % lottery, json.dumps(postData), header)
         print('%s投注,彩種: %s' % (account, self.lottery_dict[lottery][0]))
-        # print(r.json())
         try:
             print(r.json()['msg'])
-            print(r.json()['data']['projectId'] + "\n")
+            if r.json()['isSuccess'] == 0:  # 若投注結果為失敗
+                print('\n')
+                return [self.lottery_dict[lottery][0], r.json()['msg']]
+            print(f'投注方案: {r.json()["data"]["projectId"]}\n')
+            return None
         except KeyError as k:
             print(r.text)
             print(k)
+            return [self.lottery_dict[lottery][0], r.text]
         except Exception as e:
             from utils.TestTool import trace_log
             trace_log(e)
+            return [self.lottery_dict[lottery][0], r.text]

@@ -288,6 +288,12 @@ def image_adj():
 @app.route('/autoTest', methods=["GET"])  # 自動化測試 頁面
 def auto_test():
     lottery_dict = FF_Joy188.FF_().lottery_dict
+    try:
+        lottery_dict.__delitem__('ahsb')
+        lottery_dict.__delitem__('slsb')
+    except Exception as e:
+        from utils.TestTool import trace_log
+        trace_log(e)
     return render_template('autoTest.html', lottery_dict=lottery_dict)
 
 
