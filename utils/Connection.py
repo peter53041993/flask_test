@@ -489,28 +489,29 @@ class OracleConnection:
     def select_bonus(self, lottery_id, bet_type_code, detail=""):  # 用bet_type_code 找尋 平台獎金/理論獎金 ,detail 投注內容,
         cursor = self._get_oracle_conn().cursor()
         if detail == '':
-            sql = f"select actual_bonus,lhc_theory_bonus from game_award " \
-                  f"where LOTTERYID = {lottery_id} " \
-                  f"and bet_type_code like '%{bet_type_code}%'"
+            sql = f'select actual_bonus,lhc_theory_bonus from game_award ' \
+                  f'where LOTTERYID = {lottery_id} ' \
+                  f'and bet_type_code like \'%{bet_type_code}%\''
         elif detail == 'FF_bonus':  # 用平台獎金 去都出 理論獎金  , 目前 PCDD 賠率使用
-            sql = "SELECT actual_bonus,lhc_theory_bonus FROM game_award WHERE lotteryid = %s" % lottery_id
+            sql = f'SELECT lhc_code, actual_bonus, lhc_theory_bonus FROM game_award WHERE lotteryid = {lottery_id}'
         elif type(detail) == int:  # 使用 award_group_id  來看
-            sql = f"select actual_bonus from game_award " \
-                  f"where LOTTERYID={lottery_id} " \
-                  f"and bet_type_code = '{bet_type_code}' " \
-                  f"and award_group_id = {detail}"
+            sql = f'select actual_bonus from game_award ' \
+                  f'where LOTTERYID={lottery_id} ' \
+                  f'and bet_type_code = \'{bet_type_code}\' ' \
+                  f'and award_group_id = {detail}'
         else:
-            sql = f"select actual_bonus,lhc_theory_bonus from game_award " \
-                  f"where LOTTERYID = {lottery_id} " \
-                  f"and  bet_type_code = '{bet_type_code}' " \
-                  f"and  lhc_code like '%{detail}%'"
-        print(sql)
+            sql = f'select actual_bonus,lhc_theory_bonus from game_award ' \
+                  f'where LOTTERYID = {lottery_id} ' \
+                  f'and  bet_type_code = \'{bet_type_code}\' ' \
+                  f'and  lhc_code like \'%{detail}%\''
+        logger.info(f'select_bonus: sql = {sql}')
         cursor.execute(sql)
         rows = cursor.fetchall()
         bonus = {}
         for index, tuple_ in enumerate(rows):
+            # logger.info(f'index = {index}, tuple_ = {tuple_}')
             if detail == "FF_bonus":  # 抓出來需做 數值上的處理
-                bonus[float(tuple_[0] / 10000)] = tuple_[1] / 10000  # 用平台獎金當key : 理論獎金value
+                bonus[tuple_[0]] = [float(tuple_[1] / 10000), tuple_[2] / 10000]  # 用平台獎金當key : 理論獎金value
             else:
                 bonus[index] = tuple_
         cursor.close()

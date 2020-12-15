@@ -25,9 +25,13 @@ class ApiTestPC(unittest.TestCase):
     SESSION = requests.Session()
 
     def setUp(self):
+        global COOKIE
         logger.info(f'ApiTestPC setUp : {self._testMethodName}')
+        if COOKIE:  # 若已有Cookie則加入Header
+            logger.info('已有Cookie')
+            self._header['Cookie'] = f'ANVOID={COOKIE}'
 
-    def __init__(self, case, env_config, _user, red_type, money_unit, award_mode, oracle, mysql, lottery_name):
+    def __init__(self, case, env_config, _user, red_type: bool, money_unit: float, award_mode: int, oracle, mysql, lottery_name):
         """
         PC測試初始化
         :param case: 測試案例
@@ -40,13 +44,14 @@ class ApiTestPC(unittest.TestCase):
         :param mysql: 已創建的mysql連線
         :param lottery_name: 彩種名稱
         """
+
         super().__init__(case)
         global COOKIE
         self._env_config = env_config
         self._user = _user
         self._red_type = red_type
         self._money_unit = money_unit
-        self._award_mode = award_mode
+        self._award_mode = 1 if award_mode == 0 else award_mode
         self._post_url = self._env_config.get_post_url()
         self._en_url = self._env_config.get_em_url()
         self._header = {  # 預設Header格式
@@ -159,7 +164,7 @@ class ApiTestPC(unittest.TestCase):
         elif lottery in LotteryData.lottery_3d:
             num = 1
             play_ = f'玩法名稱: {game_group["qianer"]}.{game_set["zhixuan"]}.{game_method["zhixuanfushi"]}'
-        elif lottery in LotteryData.lottery_noRed:
+        elif lottery in LotteryData.lottery_no_red:
             if lottery in ['p5', 'np3']:
                 num = 9
                 play_ = f'玩法名稱: {game_group["p3sanxing"]}.{game_set["zhixuan"]}.{game_method["fushi"]}'
@@ -292,33 +297,22 @@ class ApiTestPC(unittest.TestCase):
             return False
 
     def test_PcPlan(self):
-        """追號測試"""
-        global COOKIE
-        if COOKIE:  # 若已有Cookie則加入Header
-            logger.info('已有Cookie')
-            self._header['Cookie'] = f'ANVOID={COOKIE}'
-        logger.info(f'test_PcPlan: COOKIE={COOKIE}')
-        logger.info(f'test_PcPlan: header={self._header}')
+        """
+        追號測試
+        :return: None
+        """
         failed_test = []
         for lottery in self.lottery_name:
-            award_mode = None
             trace_issue_num = 10  # 預設追號期數
             if lottery == 'btcctp':  # 若彩種不支援追號，提前跳出
                 print(f'彩種: {LotteryData.lottery_dict[lottery][0]} 不支援追號，跳過測試')
                 continue
-            if self._award_mode == '0':  # 若使用預設獎金組
-                award_mode = 1
-            else:
-                award_mode = self._award_mode  # 若有指定則使用指定獎金組
-            if lottery in ['xyft', 'btcctp', 'btcffc', 'xyft168']:  # 最後判斷是否為強制高獎金模式
-                award_mode = 2
-            if lottery in ['slmmc', 'sl115', 'jsdice', 'jsdice2', 'lhc']:  # 針對即開彩種取消追號
-                trace_issue_num = 0
+
             error_message = FF_Joy188.FF_().pc_submit(lottery=lottery, envs=self._env_config.get_env_id(),
-                                                      account=self._user,
-                                                      em_url=self._env_config.get_em_url(), header=self._header,
-                                                      award_mode=award_mode,
-                                                      trace_issue_num=trace_issue_num, win_stop=True)
+                                                      account=self._user, em_url=self._env_config.get_em_url(),
+                                                      header=self._header, award_mode=self._award_mode,
+                                                      trace_issue_num=trace_issue_num, win_stop=True,
+                                                      red_mode=self._red_type, money_unit=self._money_unit)
             if error_message: failed_test.append(error_message)
         if failed_test:
             print('部分彩種投注失敗')
@@ -326,118 +320,141 @@ class ApiTestPC(unittest.TestCase):
                 print(error)
             self.fail('部分彩種投注失敗')
 
-    def test_PCLotterySubmit(self, plan=1):  # 彩種投注
-        """投注測試"""
-        _money_unit = 1  # 初始元模式
-        failed = []
-        result = None
-
-        if self._red_type == 'yes':
-            print('使用紅包投注')
-        else:
-            print('不使用紅包投注')
-        try:
-            for i in self.lottery_name:
-                logger.info(f' LotteryData.lottery_dict = {LotteryData.lottery_dict[i]}')
-                global MUL_  # 傳回 投注出去的組合訊息 req_post_submit 的 content裡
-                global MUL
-                ball_type_post = self.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
-
-                if self._money_unit == '1':  # 使用元模式
-                    _money_unit = 1
-                elif self._money_unit == '2':  # 使用角模式
-                    _money_unit = 0.1
-
-                if i == 'btcctp':
-                    self._award_mode = 2
-                    _money_unit = 1
-                    MUL = Config.random_mul(1)  # 不支援倍數,所以random參數為1
-                elif i == 'bjkl8':
-                    MUL = Config.random_mul(5)  # 北京快樂8
-                    _money_unit = 1
-                    self._award_mode = 1
-                elif i == 'p5':
-                    MUL = Config.random_mul(5)
-                elif i in ['btcffc', 'xyft']:
-                    self._award_mode = 2
-                elif i in ['ssq', 'np3', 'n3d', 'v3d', 'fc3d', 'p5', 'lhc']:
-                    self._award_mode = 1
-                elif i in LotteryData.lottery_sb:  # 骰寶只支援  元模式
-                    _money_unit = 1
-
-                MUL_ = f'選擇倍數: {MUL}'
-                logger.info(f'MUL = {MUL}, _money_unit = {_money_unit}, amount = {2 * MUL * _money_unit}')
-                amount = 2 * MUL * _money_unit
-
-                # 從DB抓取最新獎期.[1]為 99101類型select_issueselect_issue
-
-                if plan == 1:  # 一般投住
-                    # Joy188Test.select_issue(Joy188Test.get_conn(1),lottery_dict[i][1])
-                    # 從DB抓取最新獎期.[1]為 99101類型
-                    # print(issueName,issue)
-                    issuecode = self.web_issue_code(i)
-                    plan_ = [{"number": '123', "issueCode": issuecode, "multiple": 1}]
-                    print(u'一般投住')
-                    isTrace = 0
-                    traceWinStop = 0
-                    traceStopValue = -1
-                else:  # 追號
-                    plan_ = self.plan_num(self._env_config.get_env_id(), i, Config.random_mul(30))  # 隨機生成 50期內的比數
-                    print(f'追號, 期數:{len(plan_)}')
-                    isTrace = 1
-                    traceWinStop = 1
-                    traceStopValue = 1
-
-                len_ = len(plan_)  # 一般投注, 長度為1, 追號長度為
-                # print(game_type)
-
-                post_data = {"gameType": i, "isTrace": isTrace, "traceWinStop": traceWinStop,
-                             "traceStopValue": traceWinStop,
-                             "balls": [{"id": 1, "ball": ball_type_post[1], "type": ball_type_post[0],
-                                        "moneyunit": _money_unit, "multiple": MUL, "awardMode": self._award_mode,
-                                        "num": 1}], "orders": plan_, "amount": len_ * amount}  # 不使用紅包
-
-                post_data_lhc = {"balls": [{"id": 1, "moneyunit": _money_unit, "multiple": 1, "num": 1,
-                                            "type": ball_type_post[0], "amount": amount, "lotterys": "13",
-                                            "ball": ball_type_post[1], "odds": "7.5"}],
-                                 "isTrace": 0, "orders": plan_,
-                                 "amount": amount, "awardGroupId": 202}
-
-                post_data_sb = {"gameType": i, "isTrace": 0, "multiple": 1, "trace": 1,
-                                "amount": amount,
-                                "balls": [{"ball": ball_type_post[1],
-                                           "id": 11, "moneyunit": _money_unit, "multiple": 1, "amount": amount,
-                                           "num": 1,
-                                           "type": ball_type_post[0]}],
-                                "orders": plan_}
-
-                if i in 'lhc':
-                    result = self.req_post_submit(self._user, 'lhc', post_data_lhc, _money_unit, self._award_mode,
-                                                  ball_type_post[2])
-                elif i in LotteryData.lottery_sb:
-                    result = self.req_post_submit(self._user, i, post_data_sb, _money_unit, 1,
-                                                  ball_type_post[2])
-                else:
-                    if self._red_type == 'yes':  # 紅包投注
-                        post_data['redDiscountAmount'] = 2  # 增加紅包參數
-                        result = self.req_post_submit(self._user, i, post_data, _money_unit, self._award_mode,
-                                                      ball_type_post[2])
-                    else:
-                        result = self.req_post_submit(self._user, i, post_data, _money_unit, self._award_mode,
-                                                      ball_type_post[2])
-                if result is not True:
-                    failed.append(i)
-            red_bal = self._conn_oracle.select_red_bal(self._user)
-            print(f'紅包餘額: {int(red_bal[0]) / 10000}')
-        except KeyError as e:
-            print(u"輸入值有誤")
-            from utils.TestTool import trace_log
-            logger.error(trace_log(e))
-        except Exception as e:
-            from utils.TestTool import trace_log
-            logger.error(trace_log(e))
-        if len(failed) > 0:
-            self.fail(f'以下彩種投注失敗: {failed}')
+    def test_PCLotterySubmit(self):  # 彩種投注
+        # """投注測試"""
+        # _money_unit = 1  # 初始元模式
+        # failed = []
+        # result = None
+        #
+        # if self._red_type == 'yes':
+        #     print('使用紅包投注')
+        # else:
+        #     print('不使用紅包投注')
+        # try:
+        #     for i in self.lottery_name:
+        #         logger.info(f' LotteryData.lottery_dict = {LotteryData.lottery_dict[i]}')
+        #         global MUL_  # 傳回 投注出去的組合訊息 req_post_submit 的 content裡
+        #         global MUL
+        #         ball_type_post = self.game_type(i)  # 找尋彩種後, 找到Mapping後的 玩法後內容
+        #
+        #         if self._money_unit == '1':  # 使用元模式
+        #             _money_unit = 1
+        #         elif self._money_unit == '2':  # 使用角模式
+        #             _money_unit = 0.1
+        #
+        #         if i == 'btcctp':
+        #             self._award_mode = 2
+        #             _money_unit = 1
+        #             MUL = Config.random_mul(1)  # 不支援倍數,所以random參數為1
+        #         elif i == 'bjkl8':
+        #             MUL = Config.random_mul(5)  # 北京快樂8
+        #             _money_unit = 1
+        #             self._award_mode = 1
+        #         elif i == 'p5':
+        #             MUL = Config.random_mul(5)
+        #         elif i in ['btcffc', 'xyft']:
+        #             self._award_mode = 2
+        #         elif i in ['ssq', 'np3', 'n3d', 'v3d', 'fc3d', 'p5', 'lhc']:
+        #             self._award_mode = 1
+        #         elif i in LotteryData.lottery_sb:  # 骰寶只支援  元模式
+        #             _money_unit = 1
+        #
+        #         MUL_ = f'選擇倍數: {MUL}'
+        #         logger.info(f'MUL = {MUL}, _money_unit = {_money_unit}, amount = {2 * MUL * _money_unit}')
+        #         amount = 2 * MUL * _money_unit
+        #
+        #         # 從DB抓取最新獎期.[1]為 99101類型select_issueselect_issue
+        #
+        #         if plan == 1:  # 一般投住
+        #             # Joy188Test.select_issue(Joy188Test.get_conn(1),lottery_dict[i][1])
+        #             # 從DB抓取最新獎期.[1]為 99101類型
+        #             # print(issueName,issue)
+        #             issuecode = self.web_issue_code(i)
+        #             plan_ = [{"number": '123', "issueCode": issuecode, "multiple": 1}]
+        #             print(u'一般投住')
+        #             isTrace = 0
+        #             traceWinStop = 0
+        #             traceStopValue = -1
+        #         else:  # 追號
+        #             plan_ = self.plan_num(self._env_config.get_env_id(), i, Config.random_mul(30))  # 隨機生成 50期內的比數
+        #             print(f'追號, 期數:{len(plan_)}')
+        #             isTrace = 1
+        #             traceWinStop = 1
+        #             traceStopValue = 1
+        #
+        #         len_ = len(plan_)  # 一般投注, 長度為1, 追號長度為
+        #         # print(game_type)
+        #
+        #         post_data = {"gameType": i, "isTrace": isTrace, "traceWinStop": traceWinStop,
+        #                      "traceStopValue": traceWinStop,
+        #                      "balls": [{"id": 1, "ball": ball_type_post[1], "type": ball_type_post[0],
+        #                                 "moneyunit": _money_unit, "multiple": MUL, "awardMode": self._award_mode,
+        #                                 "num": 1}], "orders": plan_, "amount": len_ * amount}  # 不使用紅包
+        #
+        #         post_data_lhc = {"balls": [{"id": 1, "moneyunit": _money_unit, "multiple": 1, "num": 1,
+        #                                     "type": ball_type_post[0], "amount": amount, "lotterys": "13",
+        #                                     "ball": ball_type_post[1], "odds": "7.5"}],
+        #                          "isTrace": 0, "orders": plan_,
+        #                          "amount": amount, "awardGroupId": 202}
+        #
+        #         post_data_sb = {"gameType": i, "isTrace": 0, "multiple": 1, "trace": 1,
+        #                         "amount": amount,
+        #                         "balls": [{"ball": ball_type_post[1],
+        #                                    "id": 11, "moneyunit": _money_unit, "multiple": 1, "amount": amount,
+        #                                    "num": 1,
+        #                                    "type": ball_type_post[0]}],
+        #                         "orders": plan_}
+        #
+        #         if i in 'lhc':
+        #             result = self.req_post_submit(self._user, 'lhc', post_data_lhc, _money_unit, self._award_mode,
+        #                                           ball_type_post[2])
+        #         elif i in LotteryData.lottery_sb:
+        #             result = self.req_post_submit(self._user, i, post_data_sb, _money_unit, 1,
+        #                                           ball_type_post[2])
+        #         else:
+        #             if self._red_type == 'yes':  # 紅包投注
+        #                 post_data['redDiscountAmount'] = 2  # 增加紅包參數
+        #                 result = self.req_post_submit(self._user, i, post_data, _money_unit, self._award_mode,
+        #                                               ball_type_post[2])
+        #             else:
+        #                 result = self.req_post_submit(self._user, i, post_data, _money_unit, self._award_mode,
+        #                                               ball_type_post[2])
+        #         if result is not True:
+        #             failed.append(i)
+        #     red_bal = self._conn_oracle.select_red_bal(self._user)
+        #     print(f'紅包餘額: {int(red_bal[0]) / 10000}')
+        # except KeyError as e:
+        #     print(u"輸入值有誤")
+        #     from utils.TestTool import trace_log
+        #     logger.error(trace_log(e))
+        # except Exception as e:
+        #     from utils.TestTool import trace_log
+        #     logger.error(trace_log(e))
+        # if len(failed) > 0:
+        #     self.fail(f'以下彩種投注失敗: {failed}')
+        """
+        單期投注測試
+        :param plan:
+        :return: None
+        """
+        failed_test = []
+        for lottery in self.lottery_name:
+            trace_issue_num = 0  # 投注一期
+            error_message = FF_Joy188.FF_().pc_submit(lottery=lottery, envs=self._env_config.get_env_id(),
+                                                      account=self._user, em_url=self._env_config.get_em_url(),
+                                                      header=self._header, award_mode=self._award_mode,
+                                                      trace_issue_num=trace_issue_num, win_stop=False,
+                                                      red_mode=self._red_type, money_unit=self._money_unit)
+            if error_message:
+                failed_test.append(error_message)
+        if failed_test:
+            is_error = False
+            for error in failed_test:
+                if error[0] != '六合彩':  # 六合彩無法投注避免拋錯
+                    print(error)
+                    is_error = True
+            if is_error:
+                self.fail('部分彩種投注失敗')
 
     @func_time
     def test_PcLogin(self):

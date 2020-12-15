@@ -313,8 +313,8 @@ def auto_test_post():
         integration_test_pc = request.form.getlist('integration_test_pc')  # 回傳 測試案例data內容
         env_config = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
         red = request.form.get('red_type')  # 紅包選擇
-        award_mode = request.form.get('awardmode')  # 獎金組設置
-        money_unit = request.form.get('moneymode')  # 金額模式
+        award_mode = int(request.form.get('awardmode'))  # 獎金組設置
+        money_unit = float(request.form.get('moneymode'))  # 金額模式
         ignore_name_check = request.form.get('ignore_user_check')
         domain_url = env_config.get_post_url().split('://')[1]  # 後台全局 url 需把 http做切割
         logger.info(f'ignore_name_check = {ignore_name_check}')

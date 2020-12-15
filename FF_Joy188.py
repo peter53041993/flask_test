@@ -75,15 +75,6 @@ class FF_:  # 4.0專案
                                  oracle_['sid'][env] + service_name)
         return conn
 
-    def plan_return(self, trace_value, issue_list):  # 根據 type_ 判斷是不是追號, 生成動態的 動態order
-        plan_ = []
-        try:
-            for i in range(trace_value):
-                plan_.append({"number": 'test', "issueCode": issue_list[i]['issueCode'], "multiple": 1})
-            return plan_
-        except IndexError as e:
-            print(e)
-
     @staticmethod
     def web_plan_issue(lottery, em_url, header):  # 從頁面  dynamicConfig 皆口去獲得
         """
@@ -106,27 +97,29 @@ class FF_:  # 4.0專案
             print(e)
             return None
 
-    def submit_json(self, em_url, account, lottery, award_mode, trace_issue_num: int, is_trace_win_stop: bool, envs,
-                    header):
+    def submit_json(self, em_url: str, account: str, lottery: str, award_mode: int, trace_issue_num: int,
+                    is_trace_win_stop: bool, envs: int, header: dict, money_unit: float = 1.0):
         """
         各彩種對應的投注格式, 受pc_submit呼叫
+        :param money_unit: 單位模式
         :param em_url: 投注接口
         :param account: 用戶帳號
         :param lottery: 投注彩種
         :param award_mode: 獎金模式
         :param trace_issue_num: 追號與否
         :param is_trace_win_stop: 追中即停與否
-        :param envs: 環境
+        :param envs: 環境代號 (0, 1, 2)
         :param header: 封包header
         :return: None
         """
         logger.info(f'em_url = {em_url}, account = {account}, lottery = {lottery}, award_mode = {award_mode},'
                     f' trace_issue_num = {trace_issue_num}, is_trace_win_stop = {is_trace_win_stop}, envs = {envs}, header = {header}')
         if lottery in ['ahsb', 'slsb']:
+            print("App專屬彩種跳過測試")
             return None
 
-        issue_list = FF_().web_plan_issue(lottery, em_url, header)  # 追號獎期
         print(f'彩種: {lottery}')
+
         trace_stop_value = 1 if trace_issue_num > 1 and is_trace_win_stop else -1
         trace_value = 1 if trace_issue_num else 0
         is_trace_win_stop = 1 if is_trace_win_stop else 0
@@ -138,150 +131,66 @@ class FF_:  # 4.0專案
         
         若需判斷元角分模式，則在 requestContent_FF 內添加判斷調整即可。
         """
-        from utils.requestContent_FF import get_game_dict
+        from utils.requestContent_FF import get_game_dict, get_game_dict_ptcc
         now_time = int(time.time())
         keys = []
         r = self.session.get(em_url + f'/gameBet/{lottery}/dynamicConfig?_={now_time}', headers=header)
+        logger.info(f'submit_json<<<<<<<<<<')
+        logger.info(f'r = {r.text}')
+        issue_list = r.json()['data']['gamenumbers']  # 取代web_plan_issue()呼叫
         for games in r.json()["data"]["gamelimit"]:
             for key in games:
                 keys.append(key)
         logger.info(f'web_plan_issue: keys = {keys}')
         logger.info(f'submit_json: award_mode = {award_mode}')
-        game_dict = get_game_dict(lottery, keys, award_mode)
+        game_dict = get_game_dict(lottery, keys, award_mode, money_unit)
 
         if trace_issue_num > 1:  # 追號
-            order_plan = FF_().plan_return(trace_issue_num, issue_list)  # 生成 order 的投注奖期列表
+            order_plan = []
+            logger.info(f'開始追號投注: trace_issue_num={trace_issue_num}')
+            for i in range(trace_value):  # 生成 order 的投注奖期列表
+                order_plan.append({"number": issue_list[i]['number'], "issueCode": issue_list[i]['issueCode'], "multiple": 1})
 
             len_order = len(order_plan)
             print('追號期數:%s' % len_order)
         else:  # 一般投注
-            if issue_list:
-                order_plan = [
-                    {"number": str(issue_list), "issueCode": issue_list[0]['issueCode'], "multiple": 1}]  # 一般投注
+            if len(issue_list) > 0:
+                order_plan = [{"number": str(issue_list[0]['number']), "issueCode": issue_list[0]['issueCode'], "multiple": 1}]  # 一般投注
             else:
-                order_plan = [{"number": str(issue_list), "issueCode": 1, "multiple": 1}]  # 一般投注
+                order_plan = [{"number": r.json()['data']['number'], "issueCode": r.json()['data']['issueCode'], "multiple": 1}]  # 一般投注
             len_order = 1
-        if lottery == 'pcdd':
+
+        if lottery == 'pcdd':  # PC蛋蛋Ball格式不同另外處理
             # 需查出用戶反點, 如果是高獎金的話, odds 需用 平台獎金 * 用戶反點
             conn = OracleConnection(env_id=envs)
             lottery_point = conn.select_lottery_point(self.lottery_dict[lottery][1], account)
-            logger.info(
-                lottery_point)  # {0: ('autotest101', datetime.datetime(2020, 12, 2, 17, 11, 54, 328000), 450, '奖金组1800')}
+            logger.info(lottery_point)  # {0: ('autotest101', datetime.datetime(2020, 12, 2, 17, 11, 54, 328000), 450, '奖金组1800')}
             user_point = lottery_point[0][2] / 10000
-            bonus = conn.select_bonus(self.lottery_dict[lottery][1], '', 'FF_bonus')
-            # print(bonus)
+            bonus = conn.select_bonus(self.lottery_dict[lottery][1], '', 'FF_bonus')  # 取得 pcdd 玩法代號與對應獎金和理論獎金
+
             assert award_mode in [1, 2]  # 確保award_mode正確性
-
-            if award_mode == 1:  # 一般玩法, odds 就直接用 bonus 的key
-                list_keys = list(bonus.keys())
-            else:
-                list_keys = [int((bonus_[0] + bonus_[1] * user_point) * 100) / 100 for bonus_ in
-                             bonus.items()]  # 高獎金抓出來, 需呈上自己返點
-            # print(list_keys)
-            return {"balls": [
-                {"id": 1, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "0",
-                 "odds": list_keys[0], "awardMode": award_mode},
-                {"id": 2, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "1", "odds": list_keys[1], "awardMode": award_mode},
-                {"id": 3, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "2", "odds": list_keys[2], "awardMode": award_mode},
-                {"id": 4, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "3", "odds": list_keys[3], "awardMode": award_mode},
-                {"id": 5, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "5", "odds": list_keys[5], "awardMode": award_mode},
-                {"id": 6, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "4", "odds": list_keys[4], "awardMode": award_mode},
-                {"id": 7, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "6", "odds": list_keys[6], "awardMode": award_mode},
-                {"id": 8, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "13", "odds": list_keys[13], "awardMode": award_mode},
-                {"id": 9, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "12", "odds": list_keys[12], "awardMode": award_mode},
-                {"id": 10, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "11", "odds": list_keys[11], "awardMode": award_mode},
-                {"id": 11, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "10", "odds": list_keys[10], "awardMode": award_mode},
-                {"id": 12, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "9", "odds": list_keys[9], "awardMode": award_mode},
-                {"id": 13, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "8", "odds": list_keys[8], "awardMode": award_mode},
-                {"id": 14, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "7", "odds": list_keys[7], "awardMode": award_mode},
-                {"id": 15, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "14", "odds": list_keys[13], "awardMode": award_mode},
-                {"id": 16, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "15", "odds": list_keys[12], "awardMode": award_mode},
-                {"id": 17, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "16", "odds": list_keys[11], "awardMode": award_mode},
-                {"id": 18, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "17", "odds": list_keys[10], "awardMode": award_mode},
-                {"id": 19, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "18", "odds": list_keys[9], "awardMode": award_mode},
-                {"id": 20, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "19", "odds": list_keys[8], "awardMode": award_mode},
-                {"id": 21, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "20", "odds": list_keys[7], "awardMode": award_mode},
-                {"id": 22, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "27", "odds": list_keys[0], "awardMode": award_mode},
-                {"id": 23, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "26", "odds": list_keys[1], "awardMode": award_mode},
-                {"id": 24, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "25", "odds": list_keys[2], "awardMode": award_mode},
-                {"id": 25, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "24", "odds": list_keys[3], "awardMode": award_mode},
-                {"id": 26, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "23", "odds": list_keys[4], "awardMode": award_mode},
-                {"id": 27, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "22", "odds": list_keys[5], "awardMode": award_mode},
-                {"id": 28, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.hezhi.hezhi", "amount": 1,
-                 "ball": "21", "odds": list_keys[6], "awardMode": award_mode},
-                {"id": 29, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.quwei.baosan", "amount": 1,
-                 "ball": "0,1,2", "odds": list_keys[20], "awardMode": award_mode},
-                {"id": 30, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.quwei.saibo", "amount": 1,
-                 "ball": "红", "odds": list_keys[18], "awardMode": award_mode},
-                {"id": 31, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.quwei.saibo", "amount": 1,
-                 "ball": "绿", "odds": list_keys[19], "awardMode": award_mode},
-                {"id": 32, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.quwei.baozi", "amount": 1,
-                 "ball": "豹子", "odds": list_keys[3], "awardMode": award_mode},
-                {"id": 33, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.quwei.saibo", "amount": 1,
-                 "ball": "蓝", "odds": list_keys[19], "awardMode": award_mode},
-                {"id": 34, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.shuangmian.jizhi", "amount": 1,
-                 "ball": "极小", "odds": list_keys[17], "awardMode": award_mode},
-                {"id": 35, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.shuangmian.zuhedaxiaodanshuang",
-                 "amount": 1, "ball": "大单", "odds": list_keys[16], "awardMode": award_mode},
-                {"id": 36, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.shuangmian.zuhedaxiaodanshuang",
-                 "amount": 1, "ball": "大双", "odds": list_keys[15], "awardMode": award_mode},
-                {"id": 37, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.shuangmian.jizhi", "amount": 1,
-                 "ball": "极大", "odds": list_keys[17], "awardMode": award_mode},
-                {"id": 38, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.shuangmian.zuhedaxiaodanshuang",
-                 "amount": 1, "ball": "小单", "odds": list_keys[15], "awardMode": award_mode},
-                {"id": 39, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.shuangmian.zuhedaxiaodanshuang",
-                 "amount": 1, "ball": "小双", "odds": list_keys[16], "awardMode": award_mode},
-                {"id": 40, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.shuangmian.daxiaodanshuang",
-                 "amount": 1, "ball": "双", "odds": list_keys[14], "awardMode": award_mode},
-                {"id": 41, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.shuangmian.daxiaodanshuang",
-                 "amount": 1, "ball": "单", "odds": list_keys[14], "awardMode": award_mode},
-                {"id": 42, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.shuangmian.daxiaodanshuang",
-                 "amount": 1, "ball": "小", "odds": list_keys[14], "awardMode": award_mode},
-                {"id": 43, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.shuangmian.daxiaodanshuang",
-                 "amount": 1, "ball": "大", "odds": list_keys[14], "awardMode": award_mode}], "orders": order_plan,
-                "redDiscountAmount": 0, "amount": 43 * len_order, "isTrace": trace_value,
-                "traceWinStop": is_trace_win_stop,
-                "traceStopValue": trace_stop_value}
-        elif lottery in ['jsdice', 'jldice1', 'jldice2']:
-            return {"gameType": lottery, "isTrace": trace_value, "multiple": 1, "trace": 1,
-                    "amount": game_dict[1] * len_order, "balls": game_dict[0], "orders": order_plan}
-        else:
+            game_dict = get_game_dict_ptcc(_award_mode=award_mode, bonus_list=bonus, user_point=user_point)
+            return {'balls': game_dict[0], 'orders': order_plan,
+                    'redDiscountAmount': 0, 'amount': game_dict[1] * len_order, 'isTrace': trace_value,
+                    'traceWinStop': is_trace_win_stop, 'traceStopValue': trace_stop_value}
+        elif lottery in LotteryData.lottery_sb:  # 骰寶類型投注格式不同另外處理
+            return {'gameType': lottery, 'isTrace': trace_value, 'multiple': 1, 'trace': 1,
+                    'amount': game_dict[1] * len_order, 'balls': game_dict[0], 'orders': order_plan}
+        else:  # 其他所有彩種通用
             # logger.info(f'game_dict = {game_dict}')
-            return {"gameType": lottery, "isTrace": trace_value, "traceWinStop": is_trace_win_stop,
-                    "traceStopValue": trace_stop_value, "balls": game_dict[0], "orders": order_plan,
-                    "amount": game_dict[1] * len_order}
+            return {'gameType': lottery, 'isTrace': trace_value, 'traceWinStop': is_trace_win_stop,
+                    'traceStopValue': trace_stop_value, 'balls': game_dict[0], 'orders': order_plan,
+                    'amount': game_dict[1] * len_order}
 
-    def pc_submit(self, account, envs: EnvConfig, em_url, header, lottery, award_mode, trace_issue_num: int,
-                  win_stop: bool = True):
+    def pc_submit(self, account: str, envs: int, em_url: str, header: dict, lottery: str, award_mode: int,
+                  trace_issue_num: int, win_stop: bool = True, red_mode: bool = False, money_unit: float = 1.0):
         """
-        PC投注
+        PC投注/追號共用功能.
+        首先判斷當前彩種是否有紅包模式、獎金模式、元角模式限制並調整。
+        後續透過 FF_().submit_json 取得投注注單內容。
+        於發送投注後回傳投注結果。
+        :param red_mode: 紅包模式，預設為關
+        :param money_unit: 單位模式，預設為元
         :param account: 用戶帳號
         :param envs: 環境物件
         :param em_url: 投注網域
@@ -292,16 +201,32 @@ class FF_:  # 4.0專案
         :param win_stop: 是否追中即停
         :return: 若投置請求成功，回傳None。若請求報錯，回傳 [彩種名稱, 錯誤訊息]
         """
-        logger.info(f'pc_submit: account={account}, envs={envs}, em_url={em_url}, header={header}, lottery={lottery},'
-                    f' award_mode={award_mode}, trace_issue_num={trace_issue_num},win_stop={win_stop}')
+        if lottery in LotteryData.lottery_force_bonus:  # 強制高獎金
+            award_mode = 2
+        elif lottery in LotteryData.lottery_no_bonus:  # 無高獎金
+            award_mode = 1
+        if lottery in LotteryData.lottery_no_trace:  # 不支援追號彩種
+            trace_issue_num = 0
+        if lottery in LotteryData.lottery_no_red:  # 不支援紅包彩種
+            red_mode = False
+        if lottery in LotteryData.lottery_dollar:  # 強制元模式
+            money_unit = 1
+        elif money_unit == 0.01 and lottery in LotteryData.lottery_dime:
+            money_unit = 0.1
         if trace_issue_num <= 1:  # 若非追號單，追中即停更改為False
             win_stop = False
+
+        logger.info(f'pc_submit: account={account}, envs={envs}, em_url={em_url}, header={header}, lottery={lottery},'
+                    f'award_mode={award_mode}, trace_issue_num={trace_issue_num}, win_stop={win_stop}')
+
         postData = FF_().submit_json(em_url=em_url, account=account, lottery=lottery, award_mode=award_mode,
                                      trace_issue_num=trace_issue_num, is_trace_win_stop=win_stop, envs=envs,
-                                     header=header)
+                                     header=header, money_unit=money_unit)
+        if red_mode:  # 取得投注內容後，若為紅包投注則添加紅包參數
+            postData['redDiscountAmount'] = postData['amount']
         # 呼叫各彩種 投注data api
-        r = FF_().session_post(em_url, '/gameBet/%s/submit' % lottery, json.dumps(postData), header)
-        print('%s投注,彩種: %s' % (account, self.lottery_dict[lottery][0]))
+        r = FF_().session_post(em_url, f'/gameBet/{lottery}/submit', json.dumps(postData), header)
+        print(f'{account}投注, 彩種: {self.lottery_dict[lottery][0]}')
         try:
             print(r.json()['msg'])
             if r.json()['isSuccess'] == 0:  # 若投注結果為失敗

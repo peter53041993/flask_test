@@ -60,7 +60,13 @@ class LotteryData:
     lottery_k3 = ['ahk3', 'jsk3', 'jsdice', 'jldice1', 'jldice2', 'ahsb', 'slsb']
     lottery_sb = ['jsdice', "jldice1", 'jldice2']
     lottery_fun = ['pk10', 'xyft', 'bjkl8', 'pcdd', 'xyft168', 'btcctp', 'fhkl8']
-    lottery_noRed = ['fc3d', 'n3d', 'np3', 'p5']  # 沒有紅包
+    lottery_no_red = ['fc3d', 'n3d', 'np3', 'p5', 'ssq']  # 沒有紅包
+    lottery_no_trace = ['slmmc', 'sl115', 'lhc', 'btcctp']  # 即開型
+    lottery_no_bonus = ['ssq', 'np3', 'n3d', 'v3d', 'fc3d', 'p5', 'lhc']  # 無高獎金
+    lottery_force_bonus = ['xyft', 'btcctp', 'btcffc', 'xyft168']  # 強制高獎金
+    lottery_dollar = ['ssq', 'lhc', 'btcctp', 'pcdd', 'jsdice', "jldice1", 'jldice2']  # 最低僅元模式彩種
+    lottery_dime = ['jlffc', 'txffc', '360ffc', 'v3d', 'slmmc', 'btcffc', 'ptxffc', 'jsk3', 'ahk3', 'hnffc', 'np3',
+                    'n3d', 'hn60', 'fc3d', 'p5', 'fckl8', 'pk10', 'xyft', 'xyft168', 'fhkl8', 'bjkl8']  # 最低僅角模式彩種
 
 
 class UserAgent(Enum):

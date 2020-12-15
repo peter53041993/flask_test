@@ -273,7 +273,7 @@ class ApiTestApp(unittest.TestCase):
         elif lottery in LotteryData.lottery_3d:
             num = 1
             play_ = f'玩法名稱: {game_group["qianer"]}.{game_set["zhixuan"]}.{game_method["zhixuanfushi"]}'
-        elif lottery in LotteryData.lottery_noRed:
+        elif lottery in LotteryData.lottery_no_red:
             if lottery in ['p5', 'np3']:
                 num = 9
                 play_ = f'玩法名稱: {game_group["p3sanxing"]}.{game_set["zhixuan"]}.{game_method["fushi"]}'

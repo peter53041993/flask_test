@@ -24,9 +24,10 @@ def date_time():  # 給查詢 獎期to_date時間用, 今天時間
     return f'{year}-{month}-{format_day}'
 
 
-def suite_test(test_cases, user_name, test_env, is_use_red, money_unit, award_mode, lottery_name):
+def suite_test(test_cases, user_name, test_env, is_use_red: bool, money_unit: float, award_mode: int, lottery_name):
     """
     autoTest 初始化
+    :param lottery_name: 彩種列表
     :param award_mode: 獎金模式 (0:預設 / 1:高獎金 / 2:高獎金)
     :param money_unit: 元角分模式 (1 / 0.1 / 0.01)
     :param test_cases: Array[][]; 測試項目，為二維矩陣。第一維區分測試類型（PC_API、APP_API、PC整合），二維紀錄測試method名稱
