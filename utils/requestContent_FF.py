@@ -43,10 +43,7 @@ def get_game_dict_ptcc(_award_mode: int, bonus_list: dict, user_point):
     """
     import copy
     ball_data = copy.deepcopy(game_dict_pcdd)
-    logger.info(f'get_game_dict_ptcc: id = {id(ball_data)} ball_data = {ball_data}')
     amount = 0
-    # logger.info(f'get_game_dict_ptcc<<<<<<<<<<')
-    # logger.info(f'bonus_list = {bonus_list}')
     for game in ball_data:
         game["awardMode"] = _award_mode
         amount += game["amount"]
