@@ -312,7 +312,7 @@ def auto_test_post():
         api_test_app = request.form.getlist('api_test_app')  # 回傳 測試案例data內容
         integration_test_pc = request.form.getlist('integration_test_pc')  # 回傳 測試案例data內容
         env_config = Config.EnvConfig(request.form.get('env_type'))  # 環境選擇
-        red = request.form.get('red_type')  # 紅包選擇
+        red = True if int(request.form.get('red_type')) == 1 else False  # 紅包選擇
         award_mode = int(request.form.get('awardmode'))  # 獎金組設置
         money_unit = float(request.form.get('moneymode'))  # 金額模式
         ignore_name_check = request.form.get('ignore_user_check')

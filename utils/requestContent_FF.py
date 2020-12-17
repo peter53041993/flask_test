@@ -42,12 +42,12 @@ def get_game_dict_ptcc(_award_mode: int, bonus_list: dict, user_point):
     :return:
     """
     import copy
-    ball_data = copy.copy(game_dict_pcdd)
+    ball_data = copy.deepcopy(game_dict_pcdd)
+    logger.info(f'get_game_dict_ptcc: id = {id(ball_data)} ball_data = {ball_data}')
     amount = 0
     # logger.info(f'get_game_dict_ptcc<<<<<<<<<<')
     # logger.info(f'bonus_list = {bonus_list}')
     for game in ball_data:
-        # logger.info(f'game = {game}')
         game["awardMode"] = _award_mode
         amount += game["amount"]
         bonus = bonus_list[game["odds"]]
