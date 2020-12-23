@@ -1,0 +1,204 @@
+
+{% extends "base.html" %}
+{% block title %}新代理數據查詢{% endblock %}
+{%block head %}
+{{ super() }}
+<style type="text/css">
+#token,#id,#user,#domain{border-radius: 22px;}
+p{margin-top: 1%;}
+#form1 > table > tbody{
+    text-align: center;
+    }
+</style>
+{% endblock %}  
+{% block script %}
+<script>
+    $(document).ready(function(){
+        var last_month = new Date().getMonth()//上個月 分紅用
+            var today_month =  new Date().getMonth()+1//當前月份
+            var today_day =  new Date().getDate()// -1 用意 ,統計日期 最新 為昨日
+            var cur_year = new Date().getFullYear()//今年
+            //var ben_today = document.getElementById('day_day').getElementsByTagName('option')[today_day].selected= true//日工資 日期預設
+            for (i=today_month; i>=today_month-1;i--){//設置月份
+                addOption(day_month,i,i)
+                //addOption(month_month,i,i)
+            }
+            for (i=1;i<=today_day;i++){// 日期可查 今天
+                addOption(day_day,i,i)//設置日期
+            } 
+            addOption(day_year,cur_year,cur_year)//設置年分
+            //addOption(month_year,cur_year,cur_year)//設置年分
+            $('#day_month option[value='+today_month+']').attr('selected','selected')
+            //$('#month_month option[value='+today_month+']').attr('selected','selected')
+            $('#day_day option[value='+today_day+']').attr('selected','selected')
+            $('#day_year option[value='+cur_year+']').attr('selected','selected')
+            //$('#month_year option[value='+cur_year+']').attr('selected','selected')
+
+            $('#day_month').change(function(){
+                if ($('#day_month').val()==today_month){//
+                    $('#day_day').empty()
+                    for (i=1;i<=today_day;i++){
+                        addOption(day_day,i,i)//設置日期
+                    } 
+                }
+                else{
+                    $('#day_day').empty()
+                    for (i=1;i<=31;i++){
+                        addOption(day_day,i,i)//設置日期
+                    } 
+                } 
+            })
+    })
+</script>
+<script type="text/javascript">
+    function check(check_type){
+        $('#user_detail').empty();//總計算 清空
+        var title = check_type.value
+        if ($('.dataframe').length>0){
+                $('.dataTables_wrapper.no-footer').remove();//已經有了先清空
+        }
+        if($("#user").val() ==""){//判斷用戶名為空
+            alert("請輸入用戶名");
+            //location.reload()
+        }
+        else {
+            button_disabled('.submit')
+        $.ajax({
+            url:"/newAgent",
+            type:"POST",
+            //dataType: "json",
+            headers:{
+                    Accept:"application/json; charset=utf-8"
+                },
+            data: form_trim("#form1")+'&check_type='+check_type.id,
+            success:function(data){
+                console.log(data)
+                game_detail = data;
+                console.log(typeof(data))
+                if (data=='沒有該用戶'){
+                    alert(data);
+                    $('.submit').removeAttr('disabled');  
+                    //location.reload()  
+                }
+                else if (data=='無資料'){
+                    $('#user_detail').append('數據: 0' )
+                    $('.submit').removeAttr('disabled');  
+                    
+                }
+                else if (data=='無該用戶'){
+                    alert('無該用戶')
+                    $('.submit').removeAttr('disabled');  
+                    
+                }
+                else{
+                    $('#user_detail').append("項目: "+title)
+                    var type_data = []
+                    var len_data = data['用戶名'].length
+                    var tabel_text = "<table border='1' class='dataframe'><thead><tr style='text-align: right;'>"
+                    for (i=0;i<len_data;i++){
+                        a = []
+                        var key_name = Object.keys(data)
+                        /*a.push(data[key_name[0]][i],toCurrency(data[key_name[4]][i]),toCurrency(data[key_name[3]][i]),
+                        toCurrency(data[key_name[2]][i]),data[key_name[1]][i]);*/
+                        
+                        $.each( key_name, function( key, value ) {
+                            if (i==0){ 
+                                var newTh = "<th>"+ value +"</th>";
+                                //newTh.innerHTML = value
+                                tabel_text = tabel_text + newTh
+                                //$('.dataframe').append(newTh)
+                            }   
+                            a.push(data[key_name[key]][i])
+                        });
+                        type_data.push(a)
+                    }
+                    if (check_type.id=='ThirdBet'){
+                        var sum_effect_cost = data['有效銷量'].reduce((a,b)=>a+b)//總有效銷量
+                        var sum_winlose =  data['輸贏'].reduce((a,b)=>a+b)//總輸贏
+                        var sum_prize = sum_effect_cost+sum_winlose// 三方中獎: 銷量+輸贏
+                            $('#user_detail').append(', 總有效銷量: '+sum_effect_cost )
+                            $('#user_detail').append(' 總輸贏: '+sum_winlose )
+                            $('#user_detail').append(' 總中獎: '+sum_prize )
+                    }
+                    else{
+                        var sum_reason1 = data['帳變金額'].reduce((a,b)=>a+b)//其他項總和
+                        var sum_reason2 = data['帳變凍結金額'].reduce((a,b)=>a+b)//充值投注紅包抵扣  總和
+                        if (check_type.id=='Red'){
+                            var sum = String(parseFloat(sum_reason1) - parseFloat(sum_reason2))
+                            $('#user_detail').append(', 總和: '+sum )
+                        }
+                        else if (check_type.id=='Turnover'){//4.0計算 包含 銷量,中獎
+                            var sum_winlose =  String(parseFloat(sum_reason1) - parseFloat(sum_reason2))
+                            $('#user_detail').append(', 總銷量: '+sum_reason2 )
+                            $('#user_detail').append(' 總輸贏: '+sum_winlose )
+                            $('#user_detail').append(' 總中獎: '+sum_reason1 )
+                        }
+                        else{
+                            sum = sum_reason1
+                            $('#user_detail').append(', 總和: '+sum )
+                        }
+                            
+                    }
+                    
+
+                    
+                    tabel_text = tabel_text + "</tr></thead><tbody><tr><th></th></tr></tbody></table>"
+                    $('#user_detail').after(tabel_text)
+                    console.log(type_data);
+                   // type_data.push({ "title": "My column title" })
+                    $('.dataframe').DataTable( {
+                    data:  type_data ,
+                    });
+                    $('.submit').removeAttr('disabled');  
+                }  
+                
+            },
+            error:function(e){
+                $('.submit').removeAttr('disabled');  
+            }
+        })
+        } 
+        }
+</script>
+
+
+
+{% endblock %}
+{% block header %}新代理數據查詢{% endblock %}
+{% block main %}
+
+<form id='form1' method='POST'>
+    <label>環境: </label>
+    <select name='env_type' id='env_type'>
+        <option value="0">dev02</option>
+        <option value="1">joy188</option>
+        <!--option value="2">ph158</option-->
+        
+    </select>
+    <label>版本</label>
+    <select name='joint_type'>
+        <option value="0">一般版</option>
+        <option value="1">合營版</option>
+    </select>
+    <li id='day'>
+        <label for="check_day">時間</label>
+        <label>年</label>
+        <select name='day_year' id='day_year'>
+        </select>
+        <label>月</label>
+        <select name='day_month' id='day_month'>
+        </select>
+        <label>日</label>
+        <select name='day_day' id='day_day'>
+        </select>
+    </li>
+    請輸入用戶名<input type="text" id="user" name="user"
+    size="16"  maxlength="16">
+        <p> <input type="button" onclick="check(this)" class="submit" id="ThirdBet" value="三方計算">
+        {% for reson in items %}
+        <input type="button" onclick="check(this)" class="submit" id={{reson}} value={{items[reson][1]}}>
+        {% endfor %}
+<form>
+<div id='user_detail'></div>
+
+{% endblock %}
