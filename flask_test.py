@@ -320,7 +320,7 @@ def auto_test_post():
         logger.info(f'ignore_name_check = {ignore_name_check}')
 
         if env_config.get_env_id() in (0, 1):  # FF4.0 用戶驗證
-            lottery_selected = request.form.get('lottery_selected')  # 4.0選擇彩種名稱
+            lottery_selected = request.form.get('lottery_selected')  # 4.0選擇採種名稱
             conn = OracleConnection(env_config.get_env_id())
             domain_type = env_config.get_joint_venture(domain_url)  # 查詢 後台是否有設置 該url
             logger.debug(f"env_config.id: {env_config.get_env_id()},  red: {red}")
@@ -975,7 +975,7 @@ def game_result():
                 return '沒有該玩法'
             order_list = []  # 因為可能有好幾個訂單,  傳入 dataframe 需為列表 ,訂單
             order_time = []  # 時間
-            order_lottery = []  # 彩種
+            order_lottery = []  # 採種
             order_type = []  # 玩法
             order_status = []  # 狀態
             order_user = []  # 用戶名
@@ -1771,7 +1771,69 @@ def FundCharge():  # 充值成功金額 查詢
         # frame = pd.DataFrame(data,index=date_list)
         # return frame.to_html()
     return render_template('FundCharge.html')
+@app.route('/newAgent',methods=["POST","GET"])
+def new_Agent():#新代理中心
+    reson_dict = {
+                'Turnover': [('GM,DVCB,null,2','GM,DVCN,null,2','GM,PDXX,null,3','GM,BDRX,null,1','OT,RBAP,null,3','OT,BDBA,null,3'),
+                "4.0計算"],
+                "Activities": [('PM,PGXX,null,3','PM,IPXX,null,3','PM,PMXX,null,3','GM,FBRX,null,1','OT,ADBA,null,3','PM,PGXX,null,4','PM,PGXX,null,5','PM,PGPT,null,1','PM,PGAP,null,1','PM,PGFX,null,1','PM,EGPR,null,1','PM,PGSP,null,1','PM,PGNS,null,1','PM,PGNP,null,1','PM,PGLC,null,1','PM,PLCP,null,1','PM,PGSB,null,1','PM,PSBP,null,1','PM,PGAG,null,1','PM,PAGP,null,1','PM,PGKY,null,1','PM,PKYP,null,1','PM,PGIM,null,1','PM,PIMP,null,1','PM,PBCP,null,1','PM,PGCT,null,1','PM,PGBB,null,1','PM,PBBP,null,1',
+                'PM,PGBG,null,1','PM,PGPG,null,1','PM,PGPL,null,1','PM,TAAM,null,3'),"活動獎金總計"],
+                "Rebates": [('OT,RDBA,null,3','GM,RHAX,null,2','GM,RSXX,null,1','GM,RRSX,null,1','GM,RRHA,null,2'),"彩票反點"],
+                "NewVipReward": [('PM,SVUR,null,1','PM,RHYB,null,6','PM,RHYB,null,3','PM,RHYB,null,4','PM,RHYB,null,5','PM,RHYB,null,7','OT,SVWD,null,3','OT,SVWF,null,3'),"星級獎勵"],
+                'Red': [('HB,DHBS,null,2','HB,AHBC,null,1'),'紅包'],
+                'Depoist': [('FD,ADAL,null,3','OT,AAXX,null,3','FD,ADML,null,8','FD,MDAX,null,5'),'充直'],
+                'Withdraw':  [('FD,CWTS,null,5','FD,CWTS,null,6','FD,CWCS,null,4','FD,CWCS,null,6'),'提現'],
+                'DailyWage': [('TF,DLSY,null,1','PM,AADS,null,3','OT,WDBA,null,3'),'日工資'],
+                'MonthWage': [('TF,MLDD,null,1','PM,AAMD,null,3','GM,DDAX,null,1','OT,DDBA,null,3'),'月分紅'],
+                'ThirdRebates': [('GM,SFFS,null,1','OT,TDBA,null,3'),'反水'],
+                'ThirdShares': [('GM,SFYJ,null,1','OT,TDDA,null,3'),'佣金'],
 
+
+            }
+    if request.method == "POST":
+        env_type = request.form.get('env_type')
+        joint_type = request.form.get('joint_type')
+        user = request.form.get('user')
+        day = request.form.get('day_day')
+        month = request.form.get('day_month')
+        year = request.form.get('day_year')
+        date = "%s/%s/%s" % (year, month, day) 
+        check_type = request.form.get('check_type')#判斷頁面是點了哪個查詢
+        
+        print(check_type,date)
+        conn = OracleConnection(env_id=int(env_type))
+        user_id = conn.select_user_id(user, joint_type)
+        print(user_id)
+        if len(user_id) == 0:
+            return '無該用戶'
+        now_hour = datetime.datetime.now().hour # 當下 小時
+        now_day = datetime.datetime.now().day #當下 日期
+        if str(now_day) in date:# 查詢時間 是今天的話, 需要待now_hour 進去key , 因為當天的 每個小時牌成 都有可能變動
+            print('查詢今天日期')
+            key_name = 'NewAgent: %s/%s/%s:%s' % (check_type,user,date,now_hour)
+        else:
+            key_name = 'NewAgent: %s/%s/%s' % (check_type,user,date)  # 0/環境:日期
+        result = RedisConnection.get_key(2, key_name)
+        if result != 'not exist':  # result是 not exist, 代表 redis 沒值 ,不等於 就是 redis有值
+            return result
+        if check_type == "ThirdBet":# 第三方 抓 COLLECT_THIRDLY_BET_RECORD 表
+            data = conn.select_NewAgent_ThirdBet(user,joint_type,date)
+        else: #其他 fund_change_log ,需帶不同reson
+            data = conn.select_NewAgent(user,joint_type,date,reson_dict[check_type][0],check_type)
+        print(data)
+        if len(data) == 0:
+            return "無資料"
+        RedisConnection.set_key(key_name, data)
+        if check_type =='Turnover':# 需做處理,不然items都叫 銷量/中獎
+            items = []
+            for i in range(len(data['用戶名'])):# key一定會有account. 並知道有多少長度
+                if data['帳變摘要'][i] in  ['GM,DVCB,null,2','GM,DVCN,null,2']:#銷量項目
+                    items.append('投注銷量')
+                else:
+                    items.append('中獎金額')
+            data["備註"] = items
+        return data
+    return render_template('newAgent.html',items=reson_dict)
 
 @app.route('/login_cookie', methods=["POST"])  # 傳回登入cookie, 在api_test頁面.  取得登入cookie的方式
 def login_cookie():
