@@ -9,6 +9,7 @@ from sshtunnel import SSHTunnelForwarder
 from urllib3.exceptions import MaxRetryError
 from utils.Logger import create_logger
 import redis, json, datetime, re, time
+from collections import defaultdict
 
 logger = create_logger(log_folder='/logger', log_name='Connection')
 
@@ -619,6 +620,78 @@ class OracleConnection:
             lottery_point[index] = content
         cursor.close()
         return lottery_point
+    
+    def select_NewAgent_ThirdBet(self,user,joint_type,date):# 新代理三方銷量表
+        cursor = self._get_oracle_conn().cursor()
+        if joint_type == '0':#一般  ,找整條
+            query = f"(select * from user_customer where user_chain like '%/{user}/%') user_agent " \
+                    f"where (user_.id = user_agent.id )"
+        else:#合營
+            query = f"(select * from user_customer where account = '{user}') user_agent "\
+                f"where (user_.id = user_agent.id or user_.parent_id = user_agent.id)"
+            
+        sql = f"select   user_.account,third.THIRDLY_ACCOUNT,third.thirdly_create_date,third.THIRDLY_SN,third.THIRDLY_PLAT_NAME, "\
+            f"third.thirdly_cost,third.THIRDLY_EFFCT_COST ,third.THIRDLY_PRIZE,third.THIRDLY_GAME_NAME " \
+            f"from COLLECT_THIRDLY_BET_RECORD third inner join user_customer user_ on third.USER_ID = user_.id, "\
+            f"{query}" \
+            f"and  third.thirdly_create_date between  to_date('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
+            f"and to_date('{date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
+            f"order by third.thirdly_create_date desc "
+        print(sql)
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        NewAgent_ThirdBet = defaultdict(list)
+        for i in rows:
+            NewAgent_ThirdBet['用戶名'].append(i[0])
+            NewAgent_ThirdBet['三方用戶名'].append(i[1])
+            NewAgent_ThirdBet['投注時間'].append(datetime.datetime.strftime(i[2],'%Y-%m-%d %H:%M:%S'))
+            NewAgent_ThirdBet['投注單號'].append(i[3])
+            NewAgent_ThirdBet['三方名稱'].append(i[4])
+            NewAgent_ThirdBet['總投注'].append(i[5])
+            NewAgent_ThirdBet['有效銷量'].append(i[6])
+            NewAgent_ThirdBet['輸贏'].append(i[7])
+            NewAgent_ThirdBet['遊戲名稱'].append(i[8])
+        cursor.close()
+        return NewAgent_ThirdBet
+    
+    def select_NewAgent(self,user,joint_type,date,reason,check_type):#新代理中心 查reason 表
+        cursor = self._get_oracle_conn().cursor()
+        if joint_type == '0':#一般  ,找整條
+            query = f"(select * from user_customer where user_chain like '%/{user}/%') user_agent " \
+                    f"where (user_.id = user_agent.id )"
+        else:#合營
+            query = f"(select * from user_customer where account = '{user}') user_agent "\
+                f"where (user_.id = user_agent.id or user_.parent_id = user_agent.id)"
+        query_col = "select user_.account, fund_.user_id,fund_.reason, fund_.sn, fund_.gmt_created, " \
+                    "(ct_bal - befor_bal)/10000  ,(before_damt - ct_damt)/10000"\
+        
+        # 4.0銷量和 彩票反點 ,多把 ex_code抓出來
+        if check_type in ['Rebates','Turnover']: 
+            query_col = query_col + ",fund_.ex_code "
+        sql = f"{query_col}" \
+            f" from fund_change_log fund_ inner join user_customer user_ on fund_.USER_ID = user_.id, "\
+            f"{query}" \
+            f"and  fund_.GMT_CREATED between  to_date('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
+            f"and to_date('{date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
+            f"and fund_.reason in {reason} " \
+            f"order by fund_.GMT_CREATED desc "
+        print(sql)
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        NewAgent = defaultdict(list)
+        for i in rows:
+            NewAgent["用戶名"].append(i[0])
+            NewAgent["用戶ID"].append(i[1])
+            NewAgent["帳變摘要"].append(i[2])
+            NewAgent["帳變sn"].append(i[3])
+            NewAgent["帳變時間"].append(datetime.datetime.strftime(i[4],'%Y-%m-%d %H:%M:%S'))
+            NewAgent["帳變金額"].append(i[5])
+            NewAgent["帳變凍結金額"].append(i[6])
+            if check_type in ['Rebates','Turnover']:# 4.0銷量和 彩票反點 ,多把 ex_code抓出來
+                NewAgent["遊戲單號"].append(i[7])
+        cursor.close()
+        return NewAgent
+
 
     def close_conn(self):
         if self._conn is not None:
