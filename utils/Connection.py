@@ -10,10 +10,16 @@ from urllib3.exceptions import MaxRetryError
 from utils.Logger import create_logger
 import redis, json, datetime, re, time
 from collections import defaultdict
+from functools import reduce
 
 logger = create_logger(log_folder='/logger', log_name='Connection')
 
-
+def map_list(x):# sql抓出來 null的直,在python 為None 處理成0 EX:  [None, None]
+    if x != None:
+        return x
+    return 0 
+def list_cal(list_): #列表直數直計算 ,新代理有用到, 後續其他sql可使用
+    return reduce(lambda x,y: x-y, list_)
 class OracleConnection:
     __slots__ = '_env_id', '_conn'
 
@@ -621,7 +627,7 @@ class OracleConnection:
         cursor.close()
         return lottery_point
     
-    def select_NewAgent_ThirdBet(self,user,joint_type,date):# 新代理三方銷量表
+    def select_NewAgent_ThirdBet(self,user,joint_type,date,type_=""):# 新代理三方銷量表 ,type =""抓全部, 帶sum 抓總和
         cursor = self._get_oracle_conn().cursor()
         if joint_type == '0':#一般  ,找整條
             query = f"(select * from user_customer where user_chain like '%/{user}/%') user_agent " \
@@ -629,28 +635,37 @@ class OracleConnection:
         else:#合營
             query = f"(select * from user_customer where account = '{user}') user_agent "\
                 f"where (user_.id = user_agent.id or user_.parent_id = user_agent.id)"
+        if type_ == "": #預設用法
+            query_col = "select user_.account,user_.id,agent_.create_date,agent_.thirdly_sn,agent_.plat,agent_.cost,agent_.prize \
+            ,agent_.thirdly_game_name "
+        else:
+            query_col = "select sum(agent_.prize) - sum(agent_.cost) "
             
-        sql = f"select   user_.account,third.THIRDLY_ACCOUNT,third.thirdly_create_date,third.THIRDLY_SN,third.THIRDLY_PLAT_NAME, "\
-            f"third.thirdly_cost,third.THIRDLY_EFFCT_COST ,third.THIRDLY_PRIZE,third.THIRDLY_GAME_NAME " \
-            f"from COLLECT_THIRDLY_BET_RECORD third inner join user_customer user_ on third.USER_ID = user_.id, "\
+        sql = f"{query_col}" \
+            f"from THIRDLY_AGENT_CENTER agent_ inner join user_customer user_ on agent_.USER_ID = user_.id, "\
             f"{query}" \
-            f"and  third.thirdly_create_date between  to_date('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
+            f"and  agent_.create_date between  to_date('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
             f"and to_date('{date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
-            f"order by third.thirdly_create_date desc "
+            f"order by agent_.create_date desc "
         print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
         NewAgent_ThirdBet = defaultdict(list)
         for i in rows:
-            NewAgent_ThirdBet['用戶名'].append(i[0])
-            NewAgent_ThirdBet['三方用戶名'].append(i[1])
-            NewAgent_ThirdBet['投注時間'].append(datetime.datetime.strftime(i[2],'%Y-%m-%d %H:%M:%S'))
-            NewAgent_ThirdBet['投注單號'].append(i[3])
-            NewAgent_ThirdBet['三方名稱'].append(i[4])
-            NewAgent_ThirdBet['總投注'].append(i[5])
-            NewAgent_ThirdBet['有效銷量'].append(i[6])
-            NewAgent_ThirdBet['輸贏'].append(i[7])
-            NewAgent_ThirdBet['遊戲名稱'].append(i[8])
+            if type_ != "sum":# 不是 sum
+                NewAgent_ThirdBet['用戶名'].append(i[0])
+                NewAgent_ThirdBet['用戶ID'].append(i[1])
+                NewAgent_ThirdBet['投注時間'].append(datetime.datetime.strftime(i[2],'%Y-%m-%d %H:%M:%S'))
+                NewAgent_ThirdBet['投注單號'].append(i[3])
+                NewAgent_ThirdBet['三方名稱'].append(i[4])
+                NewAgent_ThirdBet['有效銷量'].append(i[5])
+                NewAgent_ThirdBet['獎金'].append(i[6])
+                NewAgent_ThirdBet['遊戲名稱'].append(i[7])
+            else:
+                NewAgent_ThirdBet['三方輸贏'].append(i[0])
+                #NewAgent_ThirdBet['三方總獎金'].append(i[1])
+                for key in NewAgent_ThirdBet.keys():
+                    NewAgent_ThirdBet[key] = list(map(map_list,NewAgent_ThirdBet[key]))
         cursor.close()
         return NewAgent_ThirdBet
     
@@ -662,33 +677,53 @@ class OracleConnection:
         else:#合營
             query = f"(select * from user_customer where account = '{user}') user_agent "\
                 f"where (user_.id = user_agent.id or user_.parent_id = user_agent.id)"
-        query_col = "select user_.account, fund_.user_id,fund_.reason, fund_.sn, fund_.gmt_created, " \
-                    "(ct_bal - befor_bal)/10000  ,(before_damt - ct_damt)/10000"\
-        
-        # 4.0銷量和 彩票反點 ,多把 ex_code抓出來
-        if check_type in ['Rebates','Turnover']: 
-            query_col = query_col + ",fund_.ex_code "
-        sql = f"{query_col}" \
+        NewAgent = defaultdict(list)
+        if check_type != 'GP':
+            query_col = "select user_.account, fund_.user_id,fund_.reason, fund_.sn, fund_.gmt_created, " \
+            "(ct_bal - befor_bal)/10000  ,(before_damt - ct_damt)/10000"\
+    
+            # 4.0銷量和 彩票反點 ,多把 ex_code抓出來
+            if check_type in ['Rebates','Turnover']: 
+                query_col = query_col + ",fund_.ex_code "
+            sql = f"{query_col}" \
             f" from fund_change_log fund_ inner join user_customer user_ on fund_.USER_ID = user_.id, "\
             f"{query}" \
             f"and  fund_.GMT_CREATED between  to_date('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
             f"and to_date('{date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
             f"and fund_.reason in {reason} " \
             f"order by fund_.GMT_CREATED desc "
-        print(sql)
-        cursor.execute(sql)
-        rows = cursor.fetchall()
-        NewAgent = defaultdict(list)
-        for i in rows:
-            NewAgent["用戶名"].append(i[0])
-            NewAgent["用戶ID"].append(i[1])
-            NewAgent["帳變摘要"].append(i[2])
-            NewAgent["帳變sn"].append(i[3])
-            NewAgent["帳變時間"].append(datetime.datetime.strftime(i[4],'%Y-%m-%d %H:%M:%S'))
-            NewAgent["帳變金額"].append(i[5])
-            NewAgent["帳變凍結金額"].append(i[6])
-            if check_type in ['Rebates','Turnover']:# 4.0銷量和 彩票反點 ,多把 ex_code抓出來
-                NewAgent["遊戲單號"].append(i[7])
+            print(sql)
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            for i in rows:
+                NewAgent["用戶名"].append(i[0])
+                NewAgent["用戶ID"].append(i[1])
+                NewAgent["帳變摘要"].append(i[2])
+                NewAgent["帳變sn"].append(i[3])
+                NewAgent["帳變時間"].append(datetime.datetime.strftime(i[4],'%Y-%m-%d %H:%M:%S'))
+                NewAgent["帳變金額"].append(i[5])
+                NewAgent["帳變凍結金額"].append(i[6])
+                if check_type in ['Rebates','Turnover']:# 4.0銷量和 彩票反點 ,多把 ex_code抓出來
+                    NewAgent["遊戲單號"].append(i[7])
+        else:# GP  需用Loop  每個大項把所有reason 取出和執行
+            query_col = "select  sum(ct_bal - befor_bal)/10000   , sum(before_damt - ct_damt)/10000 "
+            for key in reason:# reason =   reson_dict
+                sql = f"{query_col}" \
+                f" from fund_change_log fund_ inner join user_customer user_ on fund_.USER_ID = user_.id, "\
+                f"{query}" \
+                f"and  fund_.GMT_CREATED between  to_date('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
+                f"and to_date('{date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
+                f"and fund_.reason in {reason[key][0]} " \
+                f"order by fund_.GMT_CREATED desc "
+                print(sql)
+                cursor.execute(sql)
+                rows = cursor.fetchall()
+                for i in rows:
+                    NewAgent[reason[key][1]].append(i[0])
+                    NewAgent[reason[key][1]].append(i[1])
+            for key in NewAgent.keys():
+                NewAgent[key] =  [list_cal(list(map(map_list,NewAgent[key])))]#將陣列理的元素,有none直調整為0 ,list_cal 在將列表直做計算
+                
         cursor.close()
         return NewAgent
 
