@@ -91,51 +91,68 @@ p{margin-top: 1%;}
                     
                 }
                 else{
-                    $('#user_detail').append("項目: "+title)
+                    $('#user_detail').append("項目: "+title+", ")
                     var type_data = []
-                    var len_data = data['用戶名'].length
+                    var key_name = Object.keys(data)
+                    var len_data = data[key_name[0]].length//動態取得 data 第一個key 名稱的長度
                     var tabel_text = "<table border='1' class='dataframe'><thead><tr style='text-align: right;'>"
-                    for (i=0;i<len_data;i++){
-                        a = []
-                        var key_name = Object.keys(data)
-                        /*a.push(data[key_name[0]][i],toCurrency(data[key_name[4]][i]),toCurrency(data[key_name[3]][i]),
-                        toCurrency(data[key_name[2]][i]),data[key_name[1]][i]);*/
-                        
-                        $.each( key_name, function( key, value ) {
+                    for (i=0;i<len_data;i++){// 動態把 key取出後, loop增加 th 方式
+                        a = [],b ={}// a存放key 名稱, b存放 有直的key,後面check_type.id=='GP' 使用  
+                        $.each( key_name, function( key, value ) { // jey 為索引, value 為 data的key名稱
                             if (i==0){ 
                                 var newTh = "<th>"+ value +"</th>";
                                 //newTh.innerHTML = value
                                 tabel_text = tabel_text + newTh
                                 //$('.dataframe').append(newTh)
-                            }   
-                            a.push(data[key_name[key]][i])
+                            }
+                            data_ = (value.indexOf('輸贏')> 0 ) ?  parseFloat(data[value][i]).toFixed(2) : data_ = data[value][i]// 不需要每個欄位都做  parseFloat ,否則會有 NAN發生
+                            a.push(data_) 
+                            if (data[value][0]!=0){//把有數直的放進b, 到時可以直接顯示 出來, 0的過濾掉
+                                b[value] = parseFloat(data[value][0]).toFixed(2)
+                            }
                         });
                         type_data.push(a)
                     }
+                    //console.log(b)
                     if (check_type.id=='ThirdBet'){
                         var sum_effect_cost = data['有效銷量'].reduce((a,b)=>a+b)//總有效銷量
-                        var sum_winlose =  data['輸贏'].reduce((a,b)=>a+b)//總輸贏
-                        var sum_prize = sum_effect_cost+sum_winlose// 三方中獎: 銷量+輸贏
-                            $('#user_detail').append(', 總有效銷量: '+sum_effect_cost )
-                            $('#user_detail').append(' 總輸贏: '+sum_winlose )
+                        var sum_prize =  data['獎金'].reduce((a,b)=>a+b)//總輸贏
+                        var sum_winlose = parseFloat(sum_prize-sum_effect_cost).toFixed(2)// 三方中獎: 銷量+輸贏
+                            $('#user_detail').append(' 總有效銷量: '+sum_effect_cost )
                             $('#user_detail').append(' 總中獎: '+sum_prize )
+                            $('#user_detail').append(' 總輸贏: '+sum_winlose )
+                    }
+                    else if (check_type.id=='GP'){//淨輸贏 需把所有項目 列出來總和
+                        var GP_sum = 0
+                        console.log(len_data)
+                        $.each( b, function( key, value ) 
+                        {
+                            $('#user_detail').append(key+": "+value+" ")
+                            GP_sum = GP_sum + parseFloat(value)
+                        })
+                        var red_test = ("紅包抵扣" in b) ? ", 總和又扣掉一次紅包抵扣, 是bug" : "" 
+                        $('#user_detail').append("<p>"+"<span style='color:red;'>"+"分紅/佣金 不計算"+red_test)
+                        $('#user_detail').append("<p>"+"總和: "+GP_sum)
                     }
                     else{
                         var sum_reason1 = data['帳變金額'].reduce((a,b)=>a+b)//其他項總和
                         var sum_reason2 = data['帳變凍結金額'].reduce((a,b)=>a+b)//充值投注紅包抵扣  總和
                         if (check_type.id=='Red'){
                             var sum = String(parseFloat(sum_reason1) - parseFloat(sum_reason2))
-                            $('#user_detail').append(', 總和: '+sum )
+                            $('#user_detail').append(' 紅包收入: '+sum_reason1 )
+                            $('#user_detail').append(' 紅包抵扣: '+-sum_reason2 )//紅包抵扣 顯示 負數
+                            $('#user_detail').append("<p>"+' 總和: '+sum )
                         }
                         else if (check_type.id=='Turnover'){//4.0計算 包含 銷量,中獎
-                            var sum_winlose =  String(parseFloat(sum_reason1) - parseFloat(sum_reason2))
-                            $('#user_detail').append(', 總銷量: '+sum_reason2 )
-                            $('#user_detail').append(' 總輸贏: '+sum_winlose )
+                            var sum_winlose =  (parseFloat(sum_reason1) - parseFloat(sum_reason2)).toFixed(2)
+                            $('#user_detail').append(' 總銷量: '+sum_reason2 )
                             $('#user_detail').append(' 總中獎: '+sum_reason1 )
+                            $('#user_detail').append(' 總輸贏: '+sum_winlose )
+                            
                         }
                         else{
                             sum = sum_reason1
-                            $('#user_detail').append(', 總和: '+sum )
+                            $('#user_detail').append(' 總和: '+sum )
                         }
                             
                     }
@@ -194,10 +211,12 @@ p{margin-top: 1%;}
     </li>
     請輸入用戶名<input type="text" id="user" name="user"
     size="16"  maxlength="16">
-        <p> <input type="button" onclick="check(this)" class="submit" id="ThirdBet" value="三方計算">
+        <p> <input type="button" onclick="check(this)" class="submit" id="ThirdBet" value="三方輸贏">
         {% for reson in items %}
         <input type="button" onclick="check(this)" class="submit" id={{reson}} value={{items[reson][1]}}>
         {% endfor %}
+        <p>
+        <input type="button" onclick="check(this)" class="submit" id="GP" value="淨輸贏">
 <form>
 <div id='user_detail'></div>
 
