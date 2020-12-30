@@ -1775,7 +1775,7 @@ def FundCharge():  # 充值成功金額 查詢
 def new_Agent():#新代理中心
     reson_dict = {
                 'Turnover': [('GM,DVCB,null,2','GM,DVCN,null,2','GM,PDXX,null,3','GM,BDRX,null,1','OT,RBAP,null,3','OT,BDBA,null,3'),
-                "4.0計算"],
+                "4.0輸贏"],
                 "Activities": [('PM,PGXX,null,3','PM,IPXX,null,3','PM,PMXX,null,3','GM,FBRX,null,1','OT,ADBA,null,3','PM,PGXX,null,4','PM,PGXX,null,5','PM,PGPT,null,1','PM,PGAP,null,1','PM,PGFX,null,1','PM,EGPR,null,1','PM,PGSP,null,1','PM,PGNS,null,1','PM,PGNP,null,1','PM,PGLC,null,1','PM,PLCP,null,1','PM,PGSB,null,1','PM,PSBP,null,1','PM,PGAG,null,1','PM,PAGP,null,1','PM,PGKY,null,1','PM,PKYP,null,1','PM,PGIM,null,1','PM,PIMP,null,1','PM,PBCP,null,1','PM,PGCT,null,1','PM,PGBB,null,1','PM,PBBP,null,1',
                 'PM,PGBG,null,1','PM,PGPG,null,1','PM,PGPL,null,1','PM,TAAM,null,3'),"活動獎金總計"],
                 "Rebates": [('OT,RDBA,null,3','GM,RHAX,null,2','GM,RSXX,null,1','GM,RRSX,null,1','GM,RRHA,null,2'),"彩票反點"],
@@ -1787,8 +1787,8 @@ def new_Agent():#新代理中心
                 'MonthWage': [('TF,MLDD,null,1','PM,AAMD,null,3','GM,DDAX,null,1','OT,DDBA,null,3'),'月分紅'],
                 'ThirdRebates': [('GM,SFFS,null,1','OT,TDBA,null,3'),'反水'],
                 'ThirdShares': [('GM,SFYJ,null,1','OT,TDDA,null,3'),'佣金'],
-
-
+                "Compensation": [('OT,CEXX,null,3','OT,PCXX,null,3'),'理賠'],
+                'RedDeduction':[('HB,DHBS,null,2',''),'紅包抵扣']#紅包抵扣 跟頁面算出 會有此落差
             }
     if request.method == "POST":
         env_type = request.form.get('env_type')
@@ -1818,6 +1818,17 @@ def new_Agent():#新代理中心
             return result
         if check_type == "ThirdBet":# 第三方 抓 COLLECT_THIRDLY_BET_RECORD 表
             data = conn.select_NewAgent_ThirdBet(user,joint_type,date)
+        elif check_type == 'GP':# 淨輸贏 需把所有reason 做出來,  但只抓sum  和 三方 
+            data_third = conn.select_NewAgent_ThirdBet(user,joint_type,date,'sum')
+            #移除淨輸贏 沒計算 的項目
+            del reson_dict['Depoist']
+            del reson_dict['Withdraw']
+            del reson_dict['MonthWage']
+            del reson_dict['ThirdShares']
+            data_fund = conn.select_NewAgent(user,joint_type,date,reson_dict,check_type)
+            #print(data_third,data_fund)
+            data = data_third.copy()
+            data.update(data_fund)
         else: #其他 fund_change_log ,需帶不同reson
             data = conn.select_NewAgent(user,joint_type,date,reson_dict[check_type][0],check_type)
         print(data)
@@ -1829,8 +1840,10 @@ def new_Agent():#新代理中心
             for i in range(len(data['用戶名'])):# key一定會有account. 並知道有多少長度
                 if data['帳變摘要'][i] in  ['GM,DVCB,null,2','GM,DVCN,null,2']:#銷量項目
                     items.append('投注銷量')
-                else:
+                elif data['帳變摘要'][i] in  ['GM,PDXX,null,3','GM,BDRX,null,1']:#中獎/撤銷派獎
                     items.append('中獎金額')
+                else:
+                    items.append('')
             data["備註"] = items
         return data
     return render_template('newAgent.html',items=reson_dict)
