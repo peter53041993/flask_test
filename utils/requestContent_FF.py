@@ -1,29 +1,34 @@
 from utils import Logger
 from utils.Config import LotteryData
 
-logger = Logger.create_logger(r"\utils", 'game_dict')
+logger = Logger.create_logger(log_folder='/logger', log_name='requestContent_FF')
 
-award_mode = None
+award_mode = 1
 
 
-def get_game_dict(lottery, game_list, _award_mode: int, money_unit: float):
+def get_game_dict(lottery, game_methods, _award_mode: int, money_unit: float):
     """
     依照提供的玩法搜尋頭住內容，並替換t_a_w組成 balls 參數，同時統計總投注金額供 amount 使用.
+    :param money_unit: 注單元角分模式單位。Ex: 1, 0.1, 0.01
     :param lottery: 彩種ID，用以處理部分彩種同玩法不同內容的例外
-    :param game_list: array, 取自 m/gameBet/***/dynamicConfig 回傳的 [data]['gamelimit'] 的 key
+    :param game_methods: array, 取自 m/gameBet/***/dynamicConfig 回傳的 [data]['gamelimit'] 的 key
     :param _award_mode: award_mode
     :return: Array[Data, amount]`
     """
+    logger.debug(f'Func: requestContent_FF > get_game_dict, lottery={lottery},'
+                 f'game_methods={game_methods}, _award_mode={_award_mode}, money_unit={money_unit}')
     data = []
     amount = 0
-    for game_name in game_list:
+    for game_name in game_methods:
         if game_name in game_dict:
             import copy
-            temp_data = copy.copy(game_dict[game_name])  # 複製一份game_dict, 避免修改異動到game_dict原始內容
+            temp_data = copy.deepcopy(game_dict[game_name])  # 複製一份game_dict, 避免修改異動到game_dict原始內容
             if lottery not in LotteryData.lottery_sb:  # 骰寶系列投注內容無award_mode
-                temp_data["awardMode"] = _award_mode
+                if '2000' not in temp_data['type'] and 'longhudou' not in temp_data['type']:  # 超級2000與趣味龍虎不支持高獎金
+                    temp_data['awardMode'] = _award_mode
                 if money_unit != 1:  # 若非元模式
                     temp_data['moneyunit'] = money_unit
+
             temp_data['ball'] = ball_fix(lottery, temp_data['ball'])
 
             data.append(temp_data)
@@ -32,30 +37,57 @@ def get_game_dict(lottery, game_list, _award_mode: int, money_unit: float):
     return [data, amount]
 
 
-def get_game_dict_ptcc(_award_mode: int, bonus_list: dict, user_point):
+def get_game_dict_smp(lottery: str, _award_mode: int, bonus_list: dict, user_point):
     """
     取得投注內容功能，因含 odds 參數需塞入高獎金數據。
     當前僅提供PC蛋蛋，後續整合雙面盤。
+    :param lottery: 彩種名稱
     :param _award_mode: 獎金模式開關 (1: 一般獎金 / 2: 高獎金)
     :param bonus_list: 理論獎金清單 dict。格式：{'玩法名稱': ['平台獎金', '理論獎金'],...,'玩法名稱2': ['平台獎金2', '理論獎金2']}
     :param user_point: 使用者返點。Ex. 0.015 = 1.5%
-    :return:
+    :return:　
     """
-    import copy
-    ball_data = copy.deepcopy(game_dict_pcdd)
-    amount = 0
-    for game in ball_data:
-        game["awardMode"] = _award_mode
-        amount += game["amount"]
-        bonus = bonus_list[game["odds"]]
-        if _award_mode == 1:  # 一般玩法, odds 就直接用 bonus 的key
-            game["odds"] = bonus[0]
-        else:
-            _bonus = bonus[0] + bonus[1] * user_point
-            import math
-            game["odds"] = math.ceil(_bonus * 100) / 100  # 高獎金抓出來, 需呈上自己返點
-    return [ball_data, amount]
+    # logger.info(f'Func: requestContent_FF > get_game_dict_ptcc, is_pcdd={is_pcdd},'
+    #              f'_award_mode={_award_mode}, bonus_list={bonus_list}, user_point={user_point}')
 
+    import copy
+    amount = 0
+    _ball_data = []
+
+    if lottery == 'pcdd':
+        _game_dict = copy.deepcopy(game_dict_pcdd)  # 複製一份玩法內容避免影響後續測試
+        for game in _game_dict:
+            if game['odds'] in bonus_list:  # 若當前玩法匹配到對應返點資料
+                game["awardMode"] = _award_mode
+                amount += game["amount"]
+                method_data = bonus_list[game['odds']]
+                if _award_mode == 1:  # 一般玩法, odds 就直接用平台獎金
+                    game["odds"] = method_data['ACTUAL_BONUS']
+                else:
+                    _bonus = method_data['ACTUAL_BONUS'] + method_data['LHC_THEORY_BONUS'] * user_point
+                    import math
+                    game["odds"] = math.floor(_bonus * 100) / 100  # 高獎金抓出來, 需乘上自己返點
+                _ball_data.append(game)
+
+    else:
+        _game_dict = copy.deepcopy(game_dict_smp)  # 複製一份玩法內容避免影響後續測試
+        for game in _game_dict:  # 逐一尋找目標玩法內容
+            if game['type'] in bonus_list:  # 若目標玩法存在於雙面盤彩種列表中
+                if lottery == 'shssl' and ('第四' in game['ball'] or '第五' in game['ball']):  # 上海時時彩排除選號中第四第五列
+                    continue
+                game["awardMode"] = _award_mode
+                amount += game["amount"]
+                if _award_mode == 1:
+                    game['odds'] = bonus_list[game['type']]['ACTUAL_BONUS']
+                    game['type'] = 'shuangmienpan.zonghe.longhuhe' if 'longhuhe' in game['type'] else game['type']
+                else:
+                    _bonus = bonus_list[game['type']]['ACTUAL_BONUS'] + bonus_list[game['type']]['THEORY_BONUS'] * user_point
+                    import math
+                    game['odds'] = math.floor(_bonus * 100) / 100
+                    game['type'] = 'shuangmienpan.zonghe.longhuhe' if 'longhuhe' in game['type'] else game['type']
+                _ball_data.append(game)
+
+    return [_ball_data, amount]
 
 
 def ball_fix(lottery, ball_data):
@@ -154,27 +186,6 @@ game_dict = {
     'qiansan.zuxuan.zuliudanshi': {"id": 34, "ball": "147", "type": "qiansan.zuxuan.zuliudanshi", "moneyunit": 1, "multiple": 1, "awardMode": award_mode, "num": 1},
     'qiansan.zuxuan.zusan': {"id": 29, "ball": "2,3", "type": "qiansan.zuxuan.zusan", "moneyunit": 1, "multiple": 1, "awardMode": award_mode, "num": 2},
     'qiansan.zuxuan.zusandanshi': {"id": 33, "ball": "599", "type": "qiansan.zuxuan.zusandanshi", "moneyunit": 1, "multiple": 1, "awardMode": award_mode, "num": 1},
-    # # 'shuangmienpan.housan.banshun': ['],
-    # # 'shuangmienpan.housan.baozi': ['],
-    # # 'shuangmienpan.housan.duizi': ['],
-    # # 'shuangmienpan.housan.shunzi': ['],
-    # # 'shuangmienpan.housan.zaliu': ['],
-    # # 'shuangmienpan.qiansan.banshun': ['],
-    # # 'shuangmienpan.qiansan.baozi': ['],
-    # # 'shuangmienpan.qiansan.duizi': ['],
-    # # 'shuangmienpan.qiansan.shunzi': ['],
-    # # 'shuangmienpan.qiansan.zaliu': ['],
-    # # 'shuangmienpan.shiuanma.chiuhao': ['],
-    # # 'shuangmienpan.shiuanma.danshuang': ['],
-    # # 'shuangmienpan.shiuanma.daxiao': ['],
-    # # 'shuangmienpan.zhongsan.banshun': ['],
-    # # 'shuangmienpan.zhongsan.baozi': ['],
-    # # 'shuangmienpan.zhongsan.duizi': ['],
-    # # 'shuangmienpan.zhongsan.shunzi': ['],
-    # # 'shuangmienpan.zhongsan.zaliu': ['],
-    # # 'shuangmienpan.zonghe.danshuang': ['],
-    # # 'shuangmienpan.zonghe.daxiao': ['],
-    # # 'shuangmienpan.zonghe.longhuhe': ['],
     'sixing.budingwei.ermabudingwei': {"id": 23, "ball": "1,9", "type": "sixing.budingwei.ermabudingwei", "moneyunit": 1, "multiple": 1, "awardMode": award_mode, "num": 1},
     'sixing.budingwei.yimabudingwei': {"id": 22, "ball": "8", "type": "sixing.budingwei.yimabudingwei", "moneyunit": 1, "multiple": 1, "awardMode": award_mode, "num": 1},
     'sixing.zhixuan.danshi': {"id": 17, "ball": "6266", "type": "sixing.zhixuan.danshi", "moneyunit": 1, "multiple": 1, "awardMode": award_mode, "num": 1},
@@ -428,6 +439,101 @@ game_dict_pcdd = [
     {"id": 41, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.shuangmian.daxiaodanshuang", "amount": 1, "ball": "单", "odds": 'DAN', "awardMode": award_mode},
     {"id": 42, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.shuangmian.daxiaodanshuang", "amount": 1, "ball": "小", "odds": 'XIAO', "awardMode": award_mode},
     {"id": 43, "moneyunit": 1, "multiple": 1, "num": 1, "type": "zhenghe.shuangmian.daxiaodanshuang", "amount": 1, "ball": "大", "odds": 'DA', "awardMode": award_mode}
+]
+
+game_dict_smp = [
+    {"id": 1, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.zonghe.daxiao", "amount": 3, "ball": "大", "odds": 1.98, "awardMode": 2},
+    {"id": 2, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第一球7", "odds": 9.9, "awardMode": 2},
+    {"id": 3, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.danshuang", "amount": 3, "ball": "第一球双", "odds": 1.98, "awardMode": 2},
+    {"id": 4, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.danshuang", "amount": 3, "ball": "第三球单", "odds": 1.98, "awardMode": 2},
+    {"id": 5, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.daxiao", "amount": 3, "ball": "第四球小", "odds": 1.98, "awardMode": 2},
+    {"id": 6, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第四球7", "odds": 9.9, "awardMode": 2},
+    {"id": 7, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第五球8", "odds": 9.9, "awardMode": 2},
+    {"id": 8, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第一球8", "odds": 9.9, "awardMode": 2},
+    {"id": 9, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第一球4", "odds": 9.9, "awardMode": 2},
+    {"id": 10, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第一球1", "odds": 9.9, "awardMode": 2},
+    {"id": 11, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.daxiao", "amount": 3, "ball": "第一球大", "odds": 1.98, "awardMode": 2},
+    {"id": 12, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.zonghe.danshuang", "amount": 3, "ball": "单", "odds": 1.98, "awardMode": 2},
+    {"id": 13, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第五球9", "odds": 9.9, "awardMode": 2},
+    {"id": 14, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第一球0", "odds": 9.9, "awardMode": 2},
+    {"id": 15, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第二球3", "odds": 9.9, "awardMode": 2},
+    {"id": 16, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第一球2", "odds": 9.9, "awardMode": 2},
+    {"id": 17, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.danshuang", "amount": 3, "ball": "第三球双", "odds": 1.98, "awardMode": 2},
+    {"id": 18, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第四球0", "odds": 9.9, "awardMode": 2},
+    {"id": 19, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第二球4", "odds": 9.9, "awardMode": 2},
+    {"id": 20, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第三球1", "odds": 9.9, "awardMode": 2},
+    {"id": 21, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.zonghe.danshuang", "amount": 3, "ball": "双", "odds": 1.98, "awardMode": 2},
+    {"id": 22, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.danshuang", "amount": 3, "ball": "第二球双", "odds": 1.98, "awardMode": 2},
+    {"id": 23, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.qiansan.banshun", "amount": 3, "ball": "半顺", "odds": 2.27, "awardMode": 2},
+    {"id": 24, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第二球5", "odds": 9.9, "awardMode": 2},
+    {"id": 25, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第三球9", "odds": 9.9, "awardMode": 2},
+    {"id": 26, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第一球3", "odds": 9.9, "awardMode": 2},
+    {"id": 27, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.zhongsan.shunzi", "amount": 3, "ball": "顺子", "odds": 15.84, "awardMode": 2},
+    {"id": 28, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.zonghe.daxiao", "amount": 3, "ball": "小", "odds": 1.98, "awardMode": 2},
+    {"id": 29, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第四球3", "odds": 9.9, "awardMode": 2},
+    {"id": 30, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第五球3", "odds": 9.9, "awardMode": 2},
+    {"id": 31, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.housan.duizi", "amount": 3, "ball": "对子", "odds": 3.46, "awardMode": 2},
+    {"id": 32, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.zhongsan.duizi", "amount": 3, "ball": "对子", "odds": 3.46, "awardMode": 2},
+    {"id": 33, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.zonghe.longhuhe_70", "amount": 3, "ball": "龙", "odds": 2.19, "awardMode": 2},
+    {"id": 34, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.zonghe.longhuhe_71", "amount": 3, "ball": "和", "odds": 9.9, "awardMode": 2},
+    {"id": 35, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第二球9", "odds": 9.9, "awardMode": 2},
+    {"id": 36, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第五球0", "odds": 9.9, "awardMode": 2},
+    {"id": 37, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.daxiao", "amount": 3, "ball": "第五球大", "odds": 1.98, "awardMode": 2},
+    {"id": 38, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第四球9", "odds": 9.9, "awardMode": 2},
+    {"id": 39, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第五球1", "odds": 9.9, "awardMode": 2},
+    {"id": 40, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第一球6", "odds": 9.9, "awardMode": 2},
+    {"id": 41, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.danshuang", "amount": 3, "ball": "第五球单", "odds": 1.98, "awardMode": 2},
+    {"id": 42, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.daxiao", "amount": 3, "ball": "第五球小", "odds": 1.98, "awardMode": 2},
+    {"id": 43, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第三球2", "odds": 9.9, "awardMode": 2},
+    {"id": 44, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.housan.baozi", "amount": 3, "ball": "豹子", "odds": 94.05, "awardMode": 2},
+    {"id": 45, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第四球6", "odds": 9.9, "awardMode": 2},
+    {"id": 46, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第一球5", "odds": 9.9, "awardMode": 2},
+    {"id": 47, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第二球0", "odds": 9.9, "awardMode": 2},
+    {"id": 48, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第五球6", "odds": 9.9, "awardMode": 2},
+    {"id": 49, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第三球8", "odds": 9.9, "awardMode": 2},
+    {"id": 50, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第四球5", "odds": 9.9, "awardMode": 2},
+    {"id": 51, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.zonghe.longhuhe_70", "amount": 3, "ball": "虎", "odds": 2.19, "awardMode": 2},
+    {"id": 52, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.daxiao", "amount": 3, "ball": "第四球大", "odds": 1.98, "awardMode": 2},
+    {"id": 53, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第三球0", "odds": 9.9, "awardMode": 2},
+    {"id": 54, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.housan.shunzi", "amount": 3, "ball": "顺子", "odds": 15.84, "awardMode": 2},
+    {"id": 55, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第五球7", "odds": 9.9, "awardMode": 2},
+    {"id": 56, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.zhongsan.zaliu", "amount": 3, "ball": "杂六", "odds": 2.37, "awardMode": 2},
+    {"id": 57, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第二球2", "odds": 9.9, "awardMode": 2},
+    {"id": 58, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第三球7", "odds": 9.9, "awardMode": 2},
+    {"id": 59, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.zhongsan.baozi", "amount": 3, "ball": "豹子", "odds": 94.05, "awardMode": 2},
+    {"id": 60, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.qiansan.shunzi", "amount": 3, "ball": "顺子", "odds": 15.84, "awardMode": 2},
+    {"id": 61, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.housan.banshun", "amount": 3, "ball": "半顺", "odds": 2.27, "awardMode": 2},
+    {"id": 62, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.daxiao", "amount": 3, "ball": "第二球小", "odds": 1.98, "awardMode": 2},
+    {"id": 63, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.daxiao", "amount": 3, "ball": "第一球小", "odds": 1.98, "awardMode": 2},
+    {"id": 64, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第四球4", "odds": 9.9, "awardMode": 2},
+    {"id": 65, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第三球6", "odds": 9.9, "awardMode": 2},
+    {"id": 66, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.zhongsan.banshun", "amount": 3, "ball": "半顺", "odds": 2.27, "awardMode": 2},
+    {"id": 67, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第二球6", "odds": 9.9, "awardMode": 2},
+    {"id": 68, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.daxiao", "amount": 3, "ball": "第三球大", "odds": 1.98, "awardMode": 2},
+    {"id": 69, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.danshuang", "amount": 3, "ball": "第一球单", "odds": 1.98, "awardMode": 2},
+    {"id": 70, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.housan.zaliu", "amount": 3, "ball": "杂六", "odds": 2.37, "awardMode": 2},
+    {"id": 71, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第五球2", "odds": 9.9, "awardMode": 2},
+    {"id": 72, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.danshuang", "amount": 3, "ball": "第四球双", "odds": 1.98, "awardMode": 2},
+    {"id": 73, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第五球4", "odds": 9.9, "awardMode": 2},
+    {"id": 74, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第四球2", "odds": 9.9, "awardMode": 2},
+    {"id": 75, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.danshuang", "amount": 3, "ball": "第五球双", "odds": 1.98, "awardMode": 2},
+    {"id": 76, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第三球3", "odds": 9.9, "awardMode": 2},
+    {"id": 77, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第二球1", "odds": 9.9, "awardMode": 2},
+    {"id": 78, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.qiansan.zaliu", "amount": 3, "ball": "杂六", "odds": 2.37, "awardMode": 2},
+    {"id": 79, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第四球8", "odds": 9.9, "awardMode": 2},
+    {"id": 80, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第三球4", "odds": 9.9, "awardMode": 2},
+    {"id": 81, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.danshuang", "amount": 3, "ball": "第四球单", "odds": 1.98, "awardMode": 2},
+    {"id": 82, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第二球7", "odds": 9.9, "awardMode": 2},
+    {"id": 83, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第四球1", "odds": 9.9, "awardMode": 2},
+    {"id": 84, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.qiansan.baozi", "amount": 3, "ball": "豹子", "odds": 94.05, "awardMode": 2},
+    {"id": 85, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.danshuang", "amount": 3, "ball": "第二球单", "odds": 1.98, "awardMode": 2},
+    {"id": 86, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.qiansan.duizi", "amount": 3, "ball": "对子", "odds": 3.46, "awardMode": 2},
+    {"id": 87, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.daxiao", "amount": 3, "ball": "第三球小", "odds": 1.98, "awardMode": 2},
+    {"id": 88, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第一球9", "odds": 9.9, "awardMode": 2},
+    {"id": 89, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.daxiao", "amount": 3, "ball": "第二球大", "odds": 1.98, "awardMode": 2},
+    {"id": 90, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第五球5", "odds": 9.9, "awardMode": 2},
+    {"id": 91, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第三球5", "odds": 9.9, "awardMode": 2},
+    {"id": 92, "moneyunit": 1, "multiple": 1, "num": 1, "type": "shuangmienpan.shiuanma.chiuhao", "amount": 3, "ball": "第二球8", "odds": 9.9, "awardMode": 2}
 ]
 
 game_dollar_only = ['danshuang', 'daxiao', 'erbutonghao', 'ertonghaofuxuan', 'hezhi', 'santonghaodanxuan',

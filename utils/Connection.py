@@ -493,14 +493,25 @@ class OracleConnection:
         cursor.close()
         return number_record
 
-    def select_bonus(self, lottery_id, bet_type_code, detail=""):  # 用bet_type_code 找尋 平台獎金/理論獎金 ,detail 投注內容,
+    def select_bonus(self, lottery_id, bet_type_code, detail=None):  # 用bet_type_code 找尋 平台獎金/理論獎金 ,detail 投注內容,
         cursor = self._get_oracle_conn().cursor()
-        if detail == '':
+        if detail is None:
             sql = f'select actual_bonus,lhc_theory_bonus from game_award ' \
                   f'where LOTTERYID = {lottery_id} ' \
                   f'and bet_type_code like \'%{bet_type_code}%\''
-        elif detail == 'FF_bonus':  # 用平台獎金 去都出 理論獎金  , 目前 PCDD 賠率使用
-            sql = f'SELECT lhc_code, actual_bonus, lhc_theory_bonus FROM game_award WHERE lotteryid = {lottery_id}'
+        elif type(detail) == str:  # 用平台獎金 去都出 理論獎金, 傳遞用戶名稱
+            sql = f'SELECT GBS.GROUP_CODE_NAME, GBS.SET_CODE_NAME, GBS.METHOD_CODE_NAME, ' \
+                  f'GA.ACTUAL_BONUS , GA.LHC_THEORY_BONUS, GBS.THEORY_BONUS, GA.LHC_CODE, GA.BET_TYPE_CODE ' \
+                  f'FROM GAME_AWARD GA ' \
+                  f'RIGHT JOIN GAME_BETTYPE_STATUS GBS ON GA.BET_TYPE_CODE LIKE CONCAT(GBS.BET_TYPE_CODE, \'%\') ' \
+                  f'AND GA.LOTTERYID  = GBS.LOTTERYID  ' \
+                  f'WHERE GBS.LOTTERYID = {lottery_id} ' \
+                  f'AND GBS.GROUP_CODE_TITLE  in (\'双面盘\', \'整合\')  ' \
+                  f'AND GA.AWARD_GROUP_ID in  ' \
+                  f'(SELECT SYS_AWARD_GROUP_ID FROM GAME_AWARD_USER_GROUP GAUG  ' \
+                  f'WHERE GAUG.BET_TYPE = 1   ' \
+                  f'AND GAUG.LOTTERYID = {lottery_id}  ' \
+                  f'AND USERID = (SELECT id FROM USER_CUSTOMER uc WHERE ACCOUNT = \'{detail}\'))ORDER BY GBS.BET_TYPE_CODE'
         elif type(detail) == int:  # 使用 award_group_id  來看
             sql = f'select actual_bonus from game_award ' \
                   f'where LOTTERYID={lottery_id} ' \
@@ -511,14 +522,26 @@ class OracleConnection:
                   f'where LOTTERYID = {lottery_id} ' \
                   f'and  bet_type_code = \'{bet_type_code}\' ' \
                   f'and  lhc_code like \'%{detail}%\''
-        logger.info(f'select_bonus: sql = {sql}')
+        logger.debug(f'select_bonus: sql = {sql}')
         cursor.execute(sql)
         rows = cursor.fetchall()
         bonus = {}
         for index, tuple_ in enumerate(rows):
             # logger.info(f'index = {index}, tuple_ = {tuple_}')
-            if detail == "FF_bonus":  # 抓出來需做 數值上的處理
-                bonus[tuple_[0]] = [float(tuple_[1] / 10000), tuple_[2] / 10000]  # 用平台獎金當key : 理論獎金value
+            if type(detail) == str:  # 當判斷為蛋蛋與雙面盤，抓出來需做 數值上的處理
+                logger.debug(f'tuple_ = {tuple_}')
+                # 玩法為Key，內容為平台獎金/理論獎金/蛋蛋理論獎金/蛋蛋玩法名稱
+                if int(lottery_id) == 99204:
+                    bonus[tuple_[6]] = {'ACTUAL_BONUS': tuple_[3] / 10000, 'THEORY_BONUS': tuple_[5] / 10000, 'LHC_THEORY_BONUS': tuple_[4] / 10000}
+                else:
+                    if '67_75_111_70' == tuple_[7]:
+                        bonus[f'{tuple_[0]}.{tuple_[1]}.{tuple_[2]}_70'] = {
+                            'ACTUAL_BONUS': tuple_[3] / 10000, 'THEORY_BONUS': 2.22,
+                            'LHC_THEORY_BONUS': tuple_[4] / 10000}
+                    elif '67_75_111_71' == tuple_[7]:  # 龍虎和玩法群相同，因此判斷後在後方加上BET_TYPE_CODE進行區分
+                        bonus[f'{tuple_[0]}.{tuple_[1]}.{tuple_[2]}_71'] = {'ACTUAL_BONUS': tuple_[3] / 10000, 'THEORY_BONUS': tuple_[5] / 10000, 'LHC_THEORY_BONUS': tuple_[4] / 10000}
+                    else:
+                        bonus[f'{tuple_[0]}.{tuple_[1]}.{tuple_[2]}'] = {'ACTUAL_BONUS': tuple_[3] / 10000, 'THEORY_BONUS': tuple_[5] / 10000, 'LHC_THEORY_BONUS': tuple_[4] / 10000}
             else:
                 bonus[index] = tuple_
         cursor.close()
@@ -606,19 +629,18 @@ class OracleConnection:
         cursor.close()
         return user_lvl
 
-    def select_lottery_point(self, lotteryid, user):
+    def select_lottery_point(self, lottery_id, user):
         """
         用戶彩種反點, FF_Joy188  高獎金玩法,會拿來算獎金
-        :param lotteryid:
+        :param lottery_id:
         :param user:
         :return:
         """
         cursor = self._get_oracle_conn().cursor()
-        sql = "SELECT  user_.account,user_.register_date,game_award.direct_ret,game_award_group.award_name \
-        FROM game_award_user_group game_award INNER JOIN user_customer user_ ON game_award.userid = user_.id \
-        INNER JOIN game_award_group ON game_award.sys_award_group_id = game_award_group.id \
-        WHERE game_award.lotteryid = %s AND user_.account = '%s' and game_award.bet_type = 1" % (lotteryid, user)
-        logger.info(f'select_lottery_point: sql={sql}')
+        sql = f"SELECT  uc.account, uc.register_date, gaug.direct_ret, gag.award_name, gag.id \
+                FROM GAME_AWARD_USER_GROUP gaug INNER JOIN USER_CUSTOMER uc ON gaug.userid = uc.id \
+                INNER JOIN GAME_AWARD_GROUP gag ON gaug.sys_award_group_id = gag.id \
+                WHERE gaug.lotteryid = {lottery_id} AND uc.account = '{user}' and gaug.bet_type = 1"
         cursor.execute(sql)
         rows = cursor.fetchall()
         lottery_point = {}

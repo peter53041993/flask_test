@@ -98,7 +98,7 @@ class FF_:  # 4.0專案
             return None
 
     def submit_json(self, em_url: str, account: str, lottery: str, award_mode: int, trace_issue_num: int,
-                    is_trace_win_stop: bool, envs: int, header: dict, money_unit: float = 1.0):
+                    is_trace_win_stop: bool, envs: int, header: dict, money_unit: float = 1.0) -> list:
         """
         各彩種對應的投注格式, 受pc_submit呼叫
         :param money_unit: 單位模式
@@ -112,13 +112,14 @@ class FF_:  # 4.0專案
         :param header: 封包header
         :return: None
         """
+
         logger.info(f'em_url = {em_url}, account = {account}, lottery = {lottery}, award_mode = {award_mode},'
                     f' trace_issue_num = {trace_issue_num}, is_trace_win_stop = {is_trace_win_stop}, envs = {envs}, header = {header}')
         if lottery in ['ahsb', 'slsb']:
             print("App專屬彩種跳過測試")
-            return None
+            return []
 
-        print(f'彩種: {lottery}')
+        print(f'開始投注彩種: {lottery}')
 
         trace_stop_value = 1 if trace_issue_num > 1 and is_trace_win_stop else -1
         trace_value = 1 if trace_issue_num else 0
@@ -131,56 +132,76 @@ class FF_:  # 4.0專案
         
         若需判斷元角分模式，則在 requestContent_FF 內添加判斷調整即可。
         """
-        from utils.requestContent_FF import get_game_dict, get_game_dict_ptcc
-        now_time = int(time.time())
-        keys = []
-        r = self.session.get(em_url + f'/gameBet/{lottery}/dynamicConfig?_={now_time}', headers=header)
+        from utils.requestContent_FF import get_game_dict, get_game_dict_smp
+        game_methods = []
+        r = self.session.get(em_url + f'/gameBet/{lottery}/dynamicConfig?_={int(time.time())}', headers=header)
         logger.info(f'submit_json<<<<<<<<<<')
         logger.info(f'r = {r.text}')
+
+        while lottery == 'btcctp' and not self.is_btcctp_betable(lottery, r, em_url, header):  # 若當期沖天炮已過可投注時間則重新獲取
+            time.sleep(2)
+
         issue_list = r.json()['data']['gamenumbers']  # 取代web_plan_issue()呼叫
         for games in r.json()["data"]["gamelimit"]:
             for key in games:
-                keys.append(key)
-        logger.info(f'web_plan_issue: keys = {keys}')
-        logger.info(f'submit_json: award_mode = {award_mode}')
-        game_dict = get_game_dict(lottery, keys, award_mode, money_unit)
-
+                game_methods.append(key)
+        logger.debug(f'web_plan_issue: keys = {game_methods}')
+        logger.debug(f'submit_json: award_mode = {award_mode}')
+        game_dict = get_game_dict(lottery, game_methods, award_mode, money_unit)  # 取得一般投注內容
+        conn = OracleConnection(env_id=envs)
+        bonus_methods = conn.select_bonus(self.lottery_dict[lottery][1], '', account)  # 取得雙面盤 / 蛋蛋玩法代號與對應獎金和理論獎金
+        lottery_point = conn.select_lottery_point(self.lottery_dict[lottery][1], account)
+        # logger.info(f'lottery_point = {lottery_point}')
+        user_point = lottery_point[0][2] / 10000  # 取得用戶返點，供蛋蛋與雙面盤玩法計算高獎金模式
+        game_dict_extra = get_game_dict_smp(lottery=lottery, _award_mode=award_mode, bonus_list=bonus_methods,
+                                            user_point=user_point)  # 取得當前彩種的雙面盤/整合(蛋蛋)玩法
+        logger.info(f'game_dict_extra = {game_dict_extra}')
         if trace_issue_num > 1:  # 追號
             order_plan = []
             logger.info(f'開始追號投注: trace_issue_num={trace_issue_num}')
             for i in range(trace_value):  # 生成 order 的投注奖期列表
-                order_plan.append({"number": issue_list[i]['number'], "issueCode": issue_list[i]['issueCode'], "multiple": 1})
+                order_plan.append(
+                    {"number": issue_list[i]['number'], "issueCode": issue_list[i]['issueCode'], "multiple": 1})
 
             len_order = len(order_plan)
             print('追號期數:%s' % len_order)
         else:  # 一般投注
             if len(issue_list) > 0:
-                order_plan = [{"number": str(issue_list[0]['number']), "issueCode": issue_list[0]['issueCode'], "multiple": 1}]  # 一般投注
+                order_plan = [{"number": str(issue_list[0]['number']), "issueCode": issue_list[0]['issueCode'],
+                               "multiple": 1}]  # 一般投注
             else:
-                order_plan = [{"number": r.json()['data']['number'], "issueCode": r.json()['data']['issueCode'], "multiple": 1}]  # 一般投注
+                order_plan = [{"number": r.json()['data']['number'], "issueCode": r.json()['data']['issueCode'],
+                               "multiple": 1}]  # 一般投注
             len_order = 1
 
-        if lottery == 'pcdd':  # PC蛋蛋Ball格式不同另外處理
+        if lottery == 'pcdd':  # PC蛋蛋Ball格式不同另外處理，只處理整合玩法部分
             # 需查出用戶反點, 如果是高獎金的話, odds 需用 平台獎金 * 用戶反點
-            conn = OracleConnection(env_id=envs)
-            lottery_point = conn.select_lottery_point(self.lottery_dict[lottery][1], account)
-            logger.info(lottery_point)  # {0: ('autotest101', datetime.datetime(2020, 12, 2, 17, 11, 54, 328000), 450, '奖金组1800')}
-            user_point = lottery_point[0][2] / 10000
-            bonus = conn.select_bonus(self.lottery_dict[lottery][1], '', 'FF_bonus')  # 取得 pcdd 玩法代號與對應獎金和理論獎金
-
             assert award_mode in [1, 2]  # 確保award_mode正確性
-            game_dict = get_game_dict_ptcc(_award_mode=award_mode, bonus_list=bonus, user_point=user_point)
-            return {'balls': game_dict[0], 'orders': order_plan,
-                    'redDiscountAmount': 0, 'amount': game_dict[1] * len_order, 'isTrace': trace_value,
-                    'traceWinStop': is_trace_win_stop, 'traceStopValue': trace_stop_value}
+            return [{'balls': game_dict_extra[0], 'orders': order_plan,
+                     'redDiscountAmount': 0, 'amount': game_dict_extra[1] * len_order, 'isTrace': trace_value,
+                     'traceWinStop': is_trace_win_stop, 'traceStopValue': trace_stop_value}]
         elif lottery in LotteryData.lottery_sb:  # 骰寶類型投注格式不同另外處理
-            return {'gameType': lottery, 'isTrace': trace_value, 'multiple': 1, 'trace': 1,
-                    'amount': game_dict[1] * len_order, 'balls': game_dict[0], 'orders': order_plan}
-        else:  # 其他所有彩種通用
-            # logger.info(f'game_dict = {game_dict}')
-            return {'gameType': lottery, 'isTrace': trace_value, 'traceWinStop': is_trace_win_stop,
-                    'traceStopValue': trace_stop_value, 'balls': game_dict[0], 'orders': order_plan,
-                    'amount': game_dict[1] * len_order}
+            return [{'gameType': lottery, 'isTrace': trace_value, 'multiple': 1, 'trace': 1,
+                     'amount': game_dict[1] * len_order, 'balls': game_dict[0], 'orders': order_plan}]
+        else:  # 其他所有彩種通用，部分彩種有標準玩法與雙面盤之分
+            if len(game_dict_extra[0]) > 0:  # 若有雙面盤玩法，同時回傳標準內容與雙面盤內容
+                return [{'gameType': lottery, 'isTrace': trace_value, 'traceWinStop': is_trace_win_stop,
+                         'traceStopValue': trace_stop_value, 'balls': game_dict[0], 'orders': order_plan,
+                         'amount': game_dict[1] * len_order},
+                        {'gameType': lottery, 'isTrace': trace_value, 'traceWinStop': is_trace_win_stop,
+                         'traceStopValue': trace_stop_value, 'balls': game_dict_extra[0], 'orders': order_plan,
+                         'awardGroupId': lottery_point[0][4], 'amount': game_dict_extra[1] * len_order}]
+            return [{'gameType': lottery, 'isTrace': trace_value, 'traceWinStop': is_trace_win_stop,
+                     'traceStopValue': trace_stop_value, 'balls': game_dict[0], 'orders': order_plan,
+                     'amount': game_dict[1] * len_order}]
+
+    def is_btcctp_betable(self, lottery, r, em_url, header):
+        import datetime
+        r = self.session.get(em_url + f'/gameBet/{lottery}/dynamicConfig?_={int(time.time())}', headers=header)
+        btcctp_time = time.mktime(
+            datetime.datetime.strptime(r.json()['data']['nowstoptime'], '%Y/%m/%d %H:%M:%S').timetuple())
+        logger.debug(f'當前時間: {time.time()}, 沖天炮截止投注時間: {btcctp_time}')
+        return btcctp_time > time.time()  # 判斷當前是否可投注
 
     def pc_submit(self, account: str, envs: int, em_url: str, header: dict, lottery: str, award_mode: int,
                   trace_issue_num: int, win_stop: bool = True, red_mode: bool = False, money_unit: float = 1.0):
@@ -222,23 +243,26 @@ class FF_:  # 4.0專案
         postData = FF_().submit_json(em_url=em_url, account=account, lottery=lottery, award_mode=award_mode,
                                      trace_issue_num=trace_issue_num, is_trace_win_stop=win_stop, envs=envs,
                                      header=header, money_unit=money_unit)
-        if red_mode:  # 取得投注內容後，若為紅包投注則添加紅包參數
-            postData['redDiscountAmount'] = postData['amount']
-        # 呼叫各彩種 投注data api
-        r = FF_().session_post(em_url, f'/gameBet/{lottery}/submit', json.dumps(postData), header)
-        print(f'{account}投注, 彩種: {self.lottery_dict[lottery][0]}')
-        try:
-            print(r.json()['msg'])
-            if r.json()['isSuccess'] == 0:  # 若投注結果為失敗
-                print('\n')
-                return [self.lottery_dict[lottery][0], r.json()['msg']]
-            print(f'投注方案: {r.json()["data"]["projectId"]}\n')
-            return None
-        except KeyError as k:
-            print(r.text)
-            print(k)
-            return [self.lottery_dict[lottery][0], r.text]
-        except Exception as e:
-            from utils.TestTool import trace_log
-            trace_log(e)
-            return [self.lottery_dict[lottery][0], r.text]
+        assert len(postData) > 0  # 確保彩種有成功取得投注內容
+        logger.info(f'postData = {postData}')
+
+        for data in postData:
+            if red_mode:  # 取得投注內容後，若為紅包投注則添加紅包參數
+                data['redDiscountAmount'] = data['amount']
+            # 呼叫各彩種 投注data api
+            r = FF_().session_post(em_url, f'/gameBet/{lottery}/submit', json.dumps(data), header)
+            print(f'{account}投注, 彩種: {self.lottery_dict[lottery][0]}\n')
+            try:
+                print(r.json()['msg'] + '\n')
+                if r.json()['isSuccess'] == 0:  # 若投注結果為失敗
+                    return [self.lottery_dict[lottery][0], r.json()['msg']]
+                print(f'投注方案: {r.json()["data"]["projectId"]}\n')
+            except KeyError as k:
+                print(r.text)
+                print(k)
+                return [self.lottery_dict[lottery][0], r.text]
+            except Exception as e:
+                from utils.TestTool import trace_log
+                trace_log(e)
+                return [self.lottery_dict[lottery][0], r.text]
+        return None
