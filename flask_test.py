@@ -1847,6 +1847,49 @@ def new_Agent():#新代理中心
             data["備註"] = items
         return data
     return render_template('newAgent.html',items=reson_dict)
+@app.route('/Single',methods=["GET","POST"])
+def Single():#單挑
+    if request.method == "POST":
+        env_type = request.form.get('env_type')
+        user = request.form.get('user')
+        day = request.form.get('day_day')
+        month = request.form.get('day_month')
+        year = request.form.get('day_year')
+        date = "%s/%s/%s" % (year, month, day)
+        lotteryid = request.form.get('lottery')
+        check_type = request.form.get('check_type')#判斷頁面是點了哪個查詢 
+        conn = OracleConnection(env_id=int(env_type))
+        user_id = conn.select_user_id(user)
+        print(user_id)
+        if len(user_id) == 0:
+            return '無該用戶'
+        if check_type == "Single_order": #查詢訂單
+            data = conn.select_Single(user,date,lotteryid)# 查詢目前用戶投注的 訂單狀況
+            #lottery_game = conn.select_Single(user,date,lotteryid,"")# 查詢總注數,check_type 亂戴, 查出  有投注的 bet_type_code
+            #SingleSum = conn.select_SingleSum(user,lottery_game["bet_type_code"],lotteryid,date)# 各玩法目前  注數和
+            #print(SingleSum,lottery_game)
+            if len(data) == 0:
+                return '無資料'
+            Single_list = []#存放是否單挑
+            for i in range(len(data["單號"])):
+                data['單挑設置'].append(i)# 新隨機給 單挑直
+                if data["注數"][i] <= data["單挑設置"][i]:
+                    Single_list.append('是')
+                else:
+                    Single_list.append('否')
+            data['是否進入單挑'] = Single_list
+        elif check_type == 'Single_game':#查詢 彩種 玩法的 注數狀況
+            lottery_game = conn.select_Single(user,date,lotteryid,check_type)# 多增加 check_type ,查詢 目前 帶開獎的 所有玩法
+            if len(lottery_game) == 0:
+                return '無資料'
+            print(lottery_game)
+            SingleSum = conn.select_SingleSum(user,lottery_game["bet_type_code"],lotteryid,date)# 各玩法目前  注數和
+            print(SingleSum,lottery_game["玩法"])
+            lottery_game['注數總和'] = SingleSum["注數總和"]
+            data = lottery_game
+        return data
+    lottery_dict = FF_Joy188.FF_().lottery_dict
+    return render_template('Single.html',lottery_dict=lottery_dict)
 
 @app.route('/login_cookie', methods=["POST"])  # 傳回登入cookie, 在api_test頁面.  取得登入cookie的方式
 def login_cookie():
