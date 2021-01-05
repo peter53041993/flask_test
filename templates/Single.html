@@ -1,0 +1,185 @@
+
+{% extends "base.html" %}
+{% block title %}單挑查詢{% endblock %}
+{%block head %}
+{{ super() }}
+<style type="text/css">
+#token,#id,#user,#domain{border-radius: 22px;}
+p{margin-top: 1%;}
+#form1 > table > tbody{
+    text-align: center;
+    }
+</style>
+{% endblock %}  
+{% block script %}
+<script>
+    $(document).ready(function(){
+        var last_month = new Date().getMonth()//上個月 分紅用
+            var today_month =  new Date().getMonth()+1//當前月份
+            var today_day =  new Date().getDate()// -1 用意 ,統計日期 最新 為昨日
+            var cur_year = new Date().getFullYear()//今年
+            //var ben_today = document.getElementById('day_day').getElementsByTagName('option')[today_day].selected= true//日工資 日期預設
+            for (i=today_month; i>=today_month-1;i--){//設置月份
+                addOption(day_month,i,i)
+                //addOption(month_month,i,i)
+            }
+            for (i=1;i<=today_day;i++){// 日期可查 今天
+                addOption(day_day,i,i)//設置日期
+            } 
+            addOption(day_year,cur_year,cur_year)//設置年分
+            //addOption(month_year,cur_year,cur_year)//設置年分
+            $('#day_month option[value='+today_month+']').attr('selected','selected')
+            //$('#month_month option[value='+today_month+']').attr('selected','selected')
+            $('#day_day option[value='+today_day+']').attr('selected','selected')
+            $('#day_year option[value='+cur_year+']').attr('selected','selected')
+            //$('#month_year option[value='+cur_year+']').attr('selected','selected')
+
+            $('#day_month').change(function(){
+                if ($('#day_month').val()==today_month){//
+                    $('#day_day').empty()
+                    for (i=1;i<=today_day;i++){
+                        addOption(day_day,i,i)//設置日期
+                    } 
+                }
+                else{
+                    $('#day_day').empty()
+                    for (i=1;i<=31;i++){
+                        addOption(day_day,i,i)//設置日期
+                    } 
+                } 
+            })
+    })
+</script>
+<script type="text/javascript">
+    function check(check_type){
+        $('#user_detail').empty();//總計算 清空
+        if ($('.dataframe').length>0){
+                $('.dataTables_wrapper.no-footer').remove();//已經有了先清空
+        }
+        if($("#user").val() ==""){//判斷用戶名為空
+            alert("請輸入用戶名");
+            //location.reload()
+        }
+        else {
+            button_disabled('.submit')
+        $.ajax({
+            url:"/Single",
+            type:"POST",
+            //dataType: "json",
+            headers:{
+                    Accept:"application/json; charset=utf-8"
+                },
+            data: form_trim("#form1")+'&check_type='+check_type.id,
+            success:function(data){
+                console.log(data)
+                game_detail = data;
+                console.log(typeof(data))
+                if (data=='沒有該用戶'){
+                    alert(data);
+                    $('.submit').removeAttr('disabled');  
+                    //location.reload()  
+                }
+                else if (data=='無資料'){
+                    $('#user_detail').append("<span style ='color: #9C27B0 '>"+'沒有投注資料' )
+                    $('.submit').removeAttr('disabled');  
+                    
+                }
+                else if (data=='無該用戶'){
+                    alert('無該用戶')
+                    $('.submit').removeAttr('disabled');  
+                    
+                }
+                else{
+                    var type_data = []
+                    var key_name = Object.keys(data)
+                    var len_data = data[key_name[0]].length//動態取得 data 第一個key 名稱的長度
+                    var tabel_text = "<table border='1' class='dataframe'><thead><tr style='text-align: right;'>"
+                    //console.log(b
+                    c = []
+                    for (i=0;i<len_data;i++){// 動態把 key取出後, loop增加 th 方式
+                        a = [],b ={}// a存放key 名稱, b存放 有直的key,後面check_type.id=='GP' 使用
+                        $.each( key_name, function( key, value ) { // jey 為索引, value 為 data的key名稱
+                            if (i==0){ 
+                                var newTh = "<th>"+ value +"</th>";
+                                //newTh.innerHTML = value
+                                tabel_text = tabel_text + newTh
+                                //$('.dataframe').append(newTh)
+                            }
+                            data_ = (value.indexOf('輸贏')> 0 ) ?  parseFloat(data[value][i]).toFixed(2) : data_ = data[value][i]// 不需要每個欄位都做  parseFloat ,否則會有 NAN發生
+                            a.push(data_)
+                        });
+                        type_data.push(a)// 陣列包陣列 ex: [[123],[456]]
+                        
+                        //if (data["注數"][i]<=data["單挑設置"][i]){//把有數直的放進b, 到時可以直接顯示 出來, 0的過濾掉
+                            //c.push(data["玩法"][i])}
+                    }
+                    console.log(b)
+                    
+                    /*b["進入單挑"] = c
+                    $('#user_detail').append("<span style='color: red'>"+"進入單挑 玩法: ")
+                    $.each( b, function( key, value ) 
+                        {
+                            $('#user_detail').append(" "+value+" ")
+                        })*/
+                    
+                    tabel_text = tabel_text + "</tr></thead><tbody><tr><th></th></tr></tbody></table>"
+                    $('#user_detail').after(tabel_text)
+                    console.log(type_data);
+                   // type_data.push({ "title": "My column title" })
+                    $('.dataframe').DataTable( {
+                    data:  type_data ,
+                    });
+                    $('.submit').removeAttr('disabled');  
+                }  
+                
+            },
+            error:function(e){
+                $('.submit').removeAttr('disabled');  
+            }
+        })
+        } 
+        }
+</script>
+
+
+
+{% endblock %}
+{% block header %}單挑查詢{% endblock %}
+{% block main %}
+
+<form id='form1' method='POST'>
+    <label>環境: </label>
+    <select name='env_type' id='env_type'>
+        <option value="0">dev02</option>
+        <option value="1">joy188</option>
+        <!--option value="2">ph158</option-->
+        
+    </select>
+    <li id='day'>
+        <label for="check_day">時間</label>
+        <label>年</label>
+        <select name='day_year' id='day_year'>
+        </select>
+        <label>月</label>
+        <select name='day_month' id='day_month'>
+        </select>
+        <label>日</label>
+        <select name='day_day' id='day_day'>
+        </select>
+    </li>
+    <label>彩種</label>
+    <select name='lottery'>
+        {% for lottery in lottery_dict %}
+        <option value={{lottery_dict[lottery][1]}}>{{lottery_dict[lottery][0]}}</option>
+        {% endfor %}
+    </select>
+    <li>
+    <label>請輸入用戶名</label>
+    <input type="text" id="user" name="user"
+    size="16"  maxlength="16"></li>
+        <p><input type="button" onclick="check(this)" id="Single_order" class="submit" value="訂單查詢">
+            <input type="button" onclick="check(this)" id="Single_game" class="submit" value="玩法查詢">
+<form>
+<div id='user_detail'></div>
+
+{% endblock %}
