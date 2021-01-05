@@ -128,7 +128,7 @@ p{margin-top: 1%;}
                         $.each( b, function( key, value ) 
                         {
                             $('#user_detail').append(key+": "+value+" ")
-                            GP_sum = GP_sum + parseFloat(value)
+                            GP_sum =  parseFloat(Number(GP_sum) + Number(value)).toFixed(2)
                         })
                         var red_test = ("紅包抵扣" in b) ? ", 總和又扣掉一次紅包抵扣, 是bug" : "" 
                         $('#user_detail').append("<p>"+"<span style='color:red;'>"+"分紅/佣金 不計算"+red_test)
