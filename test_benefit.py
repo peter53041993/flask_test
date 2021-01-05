@@ -239,40 +239,38 @@ def game_report_day(user,month,day,cookies,env):#盈虧報表數據,   日工資
         header['Content-Type'] = 'application/json; charset=UTF-8'# 為了真人 加header
         #fhll 需加 content_type這段內容, 但4.0的盈虧不需要 (所以先做4.0,再做真人)
 
-        fhll_r = session.post(admin_url+fhll_url,data=json.dumps(data_fhll),headers=header)
+        #fhll_r = session.post(admin_url+fhll_url,data=json.dumps(data_fhll),headers=header)
         #print(fhll_r.json())
 
-        trueBet = round(fhll_r.json()['profitStruc'][0]['bet']*0.0001,10)#真人實際投注.抓出來除1萬
-        fh_ret =  round(fhll_r.json()['profitStruc'][0]['ret']*0.0001,10)#真人反點
-        fh_win = round(fhll_r.json()['profitStruc'][0]['win']*0.0001,10)#真人中獎
-        fh_activityGifts = 0#真人活動禮金   都是0
+        #trueBet = round(fhll_r.json()['profitStruc'][0]['bet']*0.0001,10)#真人實際投注.抓出來除1萬
+        #fh_ret =  round(fhll_r.json()['profitStruc'][0]['ret']*0.0001,10)#真人反點
+        #fh_win = round(fhll_r.json()['profitStruc'][0]['win']*0.0001,10)#真人中獎
+        #fh_activityGifts = 0#真人活動禮金   都是0
 
         #日工資 有效消量: 需計算 20% 大小單雙   ,然後再加上 真人實際投注額 
-        effectiveBet_day = effectiveBet_ + trueBet
+        effectiveBet_day = effectiveBet_ 
         #日工資總銷量 : 4.0總銷量 + 真人銷量 
-        Allbet_day = All_bet + trueBet 
+        Allbet_day = All_bet 
 
         #print(r.json())
 
         #日工資  盈虧報表欄位
-        user_award = round(fh_win+fh_ret+fh_activityGifts+win+ret+activityGifts,10)#4.0和真人  獲得獎獎金 
+        user_award = round(win+ret+activityGifts,10)#4.0和真人  獲得獎獎金 
 
         # 輸額: 有效投注-(总返点+总中奖金+活动礼金)
         winLost_day = round(Allbet_day-(user_award),5)#日工資輸額: 總帶夠費 - 總獎金
         #winLost_month = effectiveBet_month-(ret+win+activityGifts)#分紅 輸額: 不是派發條件,是獎金依據
-        print('4.0總投注額: %f /有效投注額: %f ,真人總/有效投注額: %f'%(All_bet,effectiveBet,trueBet))
-        print('4.0: 中獎金額: %f, 反點: %f, 活動禮金: %f \n真人: 中獎金額: %f, 反點: %f, 活動禮金: %f' 
-        %(win,ret,activityGifts,fh_win,fh_ret,fh_activityGifts))
+        print('4.0總投注額: %f /有效投注額: %f '%(All_bet,effectiveBet))
+        print('4.0: 中獎金額: %f, 反點: %f, 活動禮金: %f \n' 
+        %(win,ret,activityGifts))
 
         result_data['All_bet']=All_bet
         result_data['effectiveBet']=effectiveBet
-        result_data['trueBet']=trueBet
+        #result_data['trueBet']=trueBet
         result_data['win']=win
         result_data['ret']=ret
         result_data['activityGifts']=activityGifts
-        result_data['fh_win']=fh_win
-        result_data['fh_ret']=fh_ret
-        result_data['fh_activityGifts']=fh_activityGifts
+        
         result_data['totalRedDiscount']=totalRedDiscount
         result_data['red_xybtc'] = red_xybtc*0.2
         result_data['red_2000'] = red_2000*0.8
@@ -435,11 +433,7 @@ def game_report_day(user,month,day,cookies,env):#盈虧報表數據,   日工資
     except requests.exceptions.ConnectionError:
         print('連線有問題,請稍等')
 
-    except  ValueError as e:
-        print(e)
-        msg = '你輸入的日期或姓名不符,請再確認'
-        result_data['msg'] = msg
-        print('你輸入的日期或姓名不符,請再確認')
+
         #game_report_day(user=username,month=int(month),day=int(day),cookies=cookies,env=env)
         
     except IndexError as e:
@@ -552,6 +546,7 @@ def game_report_month(user,month,day,cookies,env): #分紅
             totalRedDiscount = 0
         else:#後台有抓到
             #分紅 有效銷量 : 盈虧報表的  bet欄位
+            print(r.text)
             bet = float(r.json()['text'][0]['bet'].replace(',',''))#4.0總投注額
             super2kBet = float(r.json()['text'][0]['super2kBet'].replace(',',''))#超級2000金額 ,型態為str,是拿來判斷依據
             totalRedDiscount = float(r.json()['text'][0]['totalRedDiscount'].replace(',',''))#總紅包
@@ -581,38 +576,39 @@ def game_report_month(user,month,day,cookies,env): #分紅
         header['Content-Type'] = 'application/json; charset=UTF-8'# 為了真人 加header
         #fhll 需加 content_type這段內容, 但4.0的盈虧不需要 (所以先做4.0,再做真人)
 
-        fhll_r = session.post(admin_url+fhll_url,data=json.dumps(data_fhll),headers=header)
+        #fhll_r = session.post(admin_url+fhll_url,data=json.dumps(data_fhll),headers=header)
         #print(fhll_r.json())
+        '''
         trueBet = round(fhll_r.json()['profitStruc'][0]['bet']*0.0001,5)#真人實際投注.抓出來除1萬
         fh_ret =  round(fhll_r.json()['profitStruc'][0]['ret']*0.0001,5)#真人反點
         fh_win = round(fhll_r.json()['profitStruc'][0]['win']*0.0001,5)#真人中獎
         fh_activityGifts = 0#真人活動禮金   都是0
+        '''
 
-
-        Allbet_month = bet +trueBet#4.0 + 真人
-        effectiveBet_month = effectiveBet+ trueBet# 總有效銷量:  真人加上4.0  ,
+        Allbet_month = bet #4.0 
+        effectiveBet_month = effectiveBet# 總有效銷量:  真人加上4.0  ,
         averge =  round(effectiveBet_month/day_range,5)#四捨五入 第二位 ,總日均有效銷量
 
-        user_award = round(fh_win+fh_ret+fh_activityGifts+win+ret+activityGifts,4)#使用者全部中獎金額, 總獎金
+        user_award = round(win+ret+activityGifts,4)#使用者全部中獎金額, 總獎金
         winLost_month = round(Allbet_month- user_award,5)#分紅 輸額: 不是派發條件,是獎金依據
 
-        print('4.0總投注額: %f/總有效銷量: %f ,真人總投注額/總有效銷量: %f '
-        %(bet,effectiveBet,trueBet))
-        print('4.0: 中獎金額: %f, 反點: %f, 活動禮金: %f, 紅包: %f \n真人: 中獎金額: %f, 反點: %f, 活動禮金: %f'
-        %(win,ret,activityGifts,totalRedDiscount,fh_win,fh_ret,fh_activityGifts))
+        print('4.0總投注額: %f/總有效銷量: %f  '
+        %(bet,effectiveBet))
+        print('4.0: 中獎金額: %f, 反點: %f, 活動禮金: %f, 紅包: %f \n'
+        %(win,ret,activityGifts,totalRedDiscount))
         print('總投注: %f /總有效投: %f /總獎金: %f'%(Allbet_month,effectiveBet_month,user_award))
         print('分紅日均銷量: %f ,總輸額: %f'%(averge,winLost_month))
         print('------------------------------')
 
         result_data['bet'] = bet
         result_data['effectiveBet'] = effectiveBet
-        result_data['trueBet'] = trueBet
+        #result_data['trueBet'] = trueBet
         result_data['win'] = win
         result_data['ret'] = ret
         result_data['activityGifts'] = activityGifts
-        result_data['fh_win'] = fh_win
-        result_data['fh_ret'] = fh_ret
-        result_data['fh_activityGifts'] = fh_activityGifts
+        #result_data['fh_win'] = fh_win
+        #result_data['fh_ret'] = fh_ret
+        #result_data['fh_activityGifts'] = fh_activityGifts
         result_data['Allbet_month'] = Allbet_month
         result_data['effectiveBet_month'] = effectiveBet_month
         result_data['user_award'] = user_award
@@ -714,9 +710,6 @@ def game_report_month(user,month,day,cookies,env): #分紅
     except requests.exceptions.ConnectionError:
         print('連線有問題,請稍等')
 
-    except ValueError as e:
-        print(e)
-        print('你輸入的日期或姓名不符,請再確認')
     except IndexError as e:
         #print(e)
         print('用戶名無此名單')
