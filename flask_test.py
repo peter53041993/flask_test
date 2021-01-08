@@ -1774,21 +1774,21 @@ def FundCharge():  # 充值成功金額 查詢
 @app.route('/newAgent',methods=["POST","GET"])
 def new_Agent():#新代理中心
     reson_dict = {
-                'Turnover': [('GM,DVCB,null,2','GM,DVCN,null,2','GM,PDXX,null,3','GM,BDRX,null,1','OT,RBAP,null,3','OT,BDBA,null,3'),
+                'Turnover': [('GM,DVCB,null,2','GM,DVCN,null,2','GM,PDXX,null,3','GM,BDRX,null,1','OT,RBAP,null,3','OT,BDBA,null,3',
+                'HB,DHBS,null,2'),
                 "4.0輸贏"],
                 "Activities": [('PM,PGXX,null,3','PM,IPXX,null,3','PM,PMXX,null,3','GM,FBRX,null,1','OT,ADBA,null,3','PM,PGXX,null,4','PM,PGXX,null,5','PM,PGPT,null,1','PM,PGAP,null,1','PM,PGFX,null,1','PM,EGPR,null,1','PM,PGSP,null,1','PM,PGNS,null,1','PM,PGNP,null,1','PM,PGLC,null,1','PM,PLCP,null,1','PM,PGSB,null,1','PM,PSBP,null,1','PM,PGAG,null,1','PM,PAGP,null,1','PM,PGKY,null,1','PM,PKYP,null,1','PM,PGIM,null,1','PM,PIMP,null,1','PM,PBCP,null,1','PM,PGCT,null,1','PM,PGBB,null,1','PM,PBBP,null,1',
                 'PM,PGBG,null,1','PM,PGPG,null,1','PM,PGPL,null,1','PM,TAAM,null,3'),"活動獎金總計"],
                 "Rebates": [('OT,RDBA,null,3','GM,RHAX,null,2','GM,RSXX,null,1','GM,RRSX,null,1','GM,RRHA,null,2'),"彩票反點"],
                 "NewVipReward": [('PM,SVUR,null,1','PM,RHYB,null,6','PM,RHYB,null,3','PM,RHYB,null,4','PM,RHYB,null,5','PM,RHYB,null,7','OT,SVWD,null,3','OT,SVWF,null,3'),"星級獎勵"],
-                'Red': [('HB,DHBS,null,2','HB,AHBC,null,1'),'紅包'],
+                'Red': [('HB,AHBC,null,1',''),'紅包'],
                 'Depoist': [('FD,ADAL,null,3','OT,AAXX,null,3','FD,ADML,null,8','FD,MDAX,null,5'),'充直'],
                 'Withdraw':  [('FD,CWTS,null,5','FD,CWTS,null,6','FD,CWCS,null,4','FD,CWCS,null,6'),'提現'],
                 'DailyWage': [('TF,DLSY,null,1','PM,AADS,null,3','OT,WDBA,null,3'),'日工資'],
                 'MonthWage': [('TF,MLDD,null,1','PM,AAMD,null,3','GM,DDAX,null,1','OT,DDBA,null,3'),'月分紅'],
                 'ThirdRebates': [('GM,SFFS,null,1','OT,TDBA,null,3'),'反水'],
                 'ThirdShares': [('GM,SFYJ,null,1','OT,TDDA,null,3'),'佣金'],
-                "Compensation": [('OT,CEXX,null,3','OT,PCXX,null,3'),'理賠'],
-                'RedDeduction':[('HB,DHBS,null,2',''),'紅包抵扣']#紅包抵扣 跟頁面算出 會有此落差
+                "Compensation": [('OT,CEXX,null,3','OT,PCXX,null,3'),'理賠']         
             }
     if request.method == "POST":
         env_type = request.form.get('env_type')
@@ -1842,6 +1842,8 @@ def new_Agent():#新代理中心
                     items.append('投注銷量')
                 elif data['帳變摘要'][i] in  ['GM,PDXX,null,3','GM,BDRX,null,1']:#中獎/撤銷派獎
                     items.append('中獎金額')
+                elif data['帳變摘要'][i] in ['HB,DHBS,null,2']:# 紅包抵扣
+                    items.append('紅包抵扣')
                 else:
                     items.append('')
             data["備註"] = items
@@ -1863,30 +1865,61 @@ def Single():#單挑
         print(user_id)
         if len(user_id) == 0:
             return '無該用戶'
-        if check_type == "Single_order": #查詢訂單
-            data = conn.select_Single(user,date,lotteryid)# 查詢目前用戶投注的 訂單狀況
-            #lottery_game = conn.select_Single(user,date,lotteryid,"")# 查詢總注數,check_type 亂戴, 查出  有投注的 bet_type_code
-            #SingleSum = conn.select_SingleSum(user,lottery_game["bet_type_code"],lotteryid,date)# 各玩法目前  注數和
-            #print(SingleSum,lottery_game)
-            if len(data) == 0:
-                return '無資料'
-            Single_list = []#存放是否單挑
-            for i in range(len(data["單號"])):
-                data['單挑設置'].append(i)# 新隨機給 單挑直
-                if data["注數"][i] <= data["單挑設置"][i]:
+        
+        data = conn.select_Single(user,date,lotteryid)# 查詢目前用戶投注的 訂單狀況
+        if len(data) == 0:
+            return '無資料'
+        Single_list = []#存放各玩法是否進入單挑
+        Single_open , Single_num,Single_all = [],[],[]# 後台單挑 設定和開關 , 注數總和
+        lottery_game = conn.select_Single(user,date,lotteryid,'')#查出 全部的單一 bet_type_code ,丟進 SingleSum 查注數總和
+        if len(lottery_game['bet_type_code']) == 1:#長度為1 轉tuple 到陣列 會變成 ('ex',)  ,到sql會有問題
+            tuple_bet = "('%s')"%lottery_game['bet_type_code'][0]
+        else:
+            tuple_bet = tuple(lottery_game['bet_type_code'])
+
+        SingleSum = conn.select_SingleSum(user,tuple_bet,lotteryid,date)# 各玩法目前  注數和
+        solo_num = conn.select_SingleSolo(lotteryid=lotteryid,bet_type_list=tuple_bet)
+        print(SingleSum)
+        for bet_type_code in data["bet_type_code"]:# 把bet_type_code 取出 來mapping
+            if solo_num[bet_type_code][1] == 0:# 後台關閉 ,不會走單挑
+                Single_list.append('否')
+            else:# 後台單挑有開啟
+                if SingleSum[bet_type_code][0] <= solo_num[bet_type_code][0]:# 要用當期該完法的總注數 小於等於  後台 該玩法後台設定
                     Single_list.append('是')
                 else:
                     Single_list.append('否')
-            data['是否進入單挑'] = Single_list
+            Single_open.append(solo_num[bet_type_code][1])
+            Single_num.append(solo_num[bet_type_code][0])
+            Single_all.append(SingleSum[bet_type_code][0])
+        data['單挑後台設定值'] = Single_num
+        data['單挑後台開關'] = ["開啟" if i==1 else "關閉" for i in Single_open]
+        #data['單挑後台開關']
+        data['是否進入單挑'] = Single_list
+        data['當期該注數總和'] = Single_all
+        #print(data)
+        '''
         elif check_type == 'Single_game':#查詢 彩種 玩法的 注數狀況
-            lottery_game = conn.select_Single(user,date,lotteryid,check_type)# 多增加 check_type ,查詢 目前 帶開獎的 所有玩法
+            lottery_game = conn.select_Single(user,date,lotteryid,check_type)# 多增加 check_type ,查詢 目前 帶開獎的 所有不重複 玩法
             if len(lottery_game) == 0:
                 return '無資料'
-            print(lottery_game)
-            SingleSum = conn.select_SingleSum(user,lottery_game["bet_type_code"],lotteryid,date)# 各玩法目前  注數和
-            print(SingleSum,lottery_game["玩法"])
-            lottery_game['注數總和'] = SingleSum["注數總和"]
+            if len(lottery_game['bet_type_code']) == 1:#長度為1 轉tuple 到陣列 會變成 ('ex',)  ,到sql會有問題
+                tuple_bet = "('%s')"%lottery_game['bet_type_code'][0]
+            else:
+                tuple_bet = tuple(lottery_game['bet_type_code'])
+            SingleSum = conn.select_SingleSum(user,tuple_bet,lotteryid,date)# 各玩法目前  注數和
+            solo_num = conn.select_SingleSolo(lotteryid=lotteryid,bet_type_list=tuple_bet)# 查詢 單挑後台設置
+            Sum_num = []# 從新mapping 注數總和的位置
+            Single_open , Single_num = [],[]# 後台單挑 設定和開關
+            for bet_type in lottery_game['bet_type_code']:
+                Sum_num.append(SingleSum[bet_type][0])
+                Single_open.append(solo_num[bet_type][1])
+                Single_num.append(solo_num[bet_type][0])
+
+            lottery_game['注數總和'] = Sum_num
+            lottery_game['單挑後台開關'] = ["開啟" if i==1 else "關閉" for i in Single_open]
+            lottery_game['單挑後台注數值'] = Single_num
             data = lottery_game
+            '''
         return data
     lottery_dict = FF_Joy188.FF_().lottery_dict
     return render_template('Single.html',lottery_dict=lottery_dict)
