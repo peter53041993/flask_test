@@ -130,8 +130,8 @@ p{margin-top: 1%;}
                             $('#user_detail').append(key+": "+value+" ")
                             GP_sum =  parseFloat(Number(GP_sum) + Number(value)).toFixed(2)
                         })
-                        var red_test = ("紅包抵扣" in b) ? ", 總和又扣掉一次紅包抵扣, 是bug" : "" 
-                        $('#user_detail').append("<p>"+"<span style='color:red;'>"+"分紅/佣金 不計算"+red_test)
+                        //var red_test = ("紅包抵扣" in b) ? ", 總和又扣掉一次紅包抵扣, 是bug" : "" 
+                        $('#user_detail').append("<p>"+"<span style='color:red;'>"+"分紅/佣金 不計算")
                         $('#user_detail').append("<p>"+"總和: "+GP_sum)
                     }
                     else{
@@ -140,14 +140,14 @@ p{margin-top: 1%;}
                         if (check_type.id=='Red'){
                             var sum = String(parseFloat(sum_reason1) - parseFloat(sum_reason2))
                             $('#user_detail').append(' 紅包收入: '+sum_reason1 )
-                            $('#user_detail').append(' 紅包抵扣: '+-sum_reason2 )//紅包抵扣 顯示 負數
-                            $('#user_detail').append("<p>"+' 總和: '+sum )
+                            $('#user_detail').append("<p>"+"<span style='color:red;'>"+"紅包抵扣不算進去" )
                         }
                         else if (check_type.id=='Turnover'){//4.0計算 包含 銷量,中獎
                             var sum_winlose =  (parseFloat(sum_reason1) - parseFloat(sum_reason2)).toFixed(2)
                             $('#user_detail').append(' 總銷量: '+sum_reason2 )
                             $('#user_detail').append(' 總中獎: '+sum_reason1 )
                             $('#user_detail').append(' 總輸贏: '+sum_winlose )
+                            $('#user_detail').append("<p>"+"<span style='color:red;'>"+"新代理銷量: 會把紅包抵扣加上")
                             
                         }
                         else{
