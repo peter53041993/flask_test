@@ -469,15 +469,17 @@ class OracleConnection:
         cursor.close()
         return result
 
-    def select_game_order_data(self, order_code):
+    def select_game_order_data(self, order_code,lotteryid,date):
         cursor = self._get_oracle_conn().cursor()
-        sql = f"select * from GAME_ORDER where ORDER_CODE = '{order_code}'"
+        sql = f"select * from GAME_ORDER where ORDER_CODE = '{order_code}' and lotteryid = {lotteryid} and  "\
+            f"ORDER_TIME between to_date('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
+            f"and to_date('{date}  23:59:59','YYYY/MM/DD HH24:MI:SS') "
         logger.info(sql)
 
         cursor.execute(sql)
         result = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
         cursor.close()
-        return result[0]
+        return result
 
     def select_number_record(self, lotteryid, issue_code):
         cursor = self._get_oracle_conn().cursor()
@@ -753,7 +755,7 @@ class OracleConnection:
         solo = defaultdict(list)
         
         sql = f"select solo_num, solo_flag,bettype_code from game_solo where lotteryid = {lotteryid} and bettype_code in {bet_type_list} "
-        #print(sql)
+        print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
         for solo_nun in rows:
@@ -783,7 +785,7 @@ class OracleConnection:
         f"where user_.account = '{user}'   and slip.status = 1 and slip.lotteryid = {lotteryid} and "\
         f"slip.create_time BETWEEN TO_DATE('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
         f"AND TO_DATE('{date} 23:59:59','YYYY/MM/DD HH24:MI:SS') and  betttype.group_code_title not in ('大小单双','双面盘','龙虎') {query2} "
-        #print(sql)
+        print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
         Single = defaultdict(list)
@@ -804,17 +806,16 @@ class OracleConnection:
                 Single['玩法'].append("%s_%s_%s"%(i[1],i[2],i[3]))
         cursor.close()
         return Single
-    def select_SingleSum(self,user,bet_type_list,lotteryid,date):#查詢用戶目前 彩種當期 的總注數
+    def select_SingleSum(self,userid,bet_type_list,lotteryid,issue_code):#查詢用戶目前 彩種當期 的總注數
         cursor = self._get_oracle_conn().cursor()
         Sum_bets = defaultdict(list)
        
         sql = "select  betttype.bet_type_code, sum(slip.totbets) from GAME_SLIP slip inner join user_customer user_  on  \
         slip.userid = user_.id \
         inner join game_bettype_status betttype on slip.bet_type_code = betttype.bet_type_code and slip.lotteryid = betttype.lotteryid " \
-        f"where user_.account = '{user}' and slip.status = 1 and slip.bet_type_code in {bet_type_list} " \
-        f"and slip.lotteryid = {lotteryid} and slip.create_time BETWEEN TO_DATE('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS') " \
-        f"AND TO_DATE('{date} 23:59:59','YYYY/MM/DD HH24:MI:SS') group  by betttype.bet_type_code"
-        #print(sql)
+        f"where user_.id = '{userid}'  and slip.bet_type_code in {bet_type_list} " \
+        f"and slip.lotteryid = {lotteryid} and slip.ISSUE_CODE = '{issue_code}' group  by betttype.bet_type_code"
+        print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
         for i in rows:
@@ -824,19 +825,20 @@ class OracleConnection:
         #print(Sum_bets)
         cursor.close()
         return Sum_bets
-
-    def select_SingleGame(self,lotteryid):#查詢 彩種的所有玩法 , 目前暫時不用
+    
+    def select_SingleGame(self,lotteryid,BetTypeCode_list):#查詢 彩種的所有玩法 , 目前暫時不用
         cursor = self._get_oracle_conn().cursor()
-        sql = f"select group_code_title, set_code_title, method_code_title ,bet_type_code from game_bettype_status where lotteryid =  {lotteryid} and group_code_title not in ('大小单双','双面盘','龙虎')"
-        #print(sql)
+        sql = f"select GROUP_CODE_TITLE , SET_CODE_TITLE, METHOD_CODE_TITLE, BET_TYPE_CODE from game_bettype_status where " \
+        f"lotteryid =  {lotteryid} and  BET_TYPE_CODE in  {BetTypeCode_list}"
+        print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
-        lottery_game = defaultdict(list)
+        result = defaultdict(list)
+        #result = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
         for i in rows:
-            lottery_game["玩法"].append("%s_%s_%s"%(i[0],i[1],i[2]))
-            lottery_game["bet_type_code"].append(i[3])
+            result[i[3]].append('%s_%s_%s'%(i[0],i[1],i[2]))
         cursor.close()
-        return lottery_game
+        return result
 
 
     def close_conn(self):

@@ -19,7 +19,7 @@ p{margin-top: 1%;}
             var today_day =  new Date().getDate()// -1 用意 ,統計日期 最新 為昨日
             var cur_year = new Date().getFullYear()//今年
             //var ben_today = document.getElementById('day_day').getElementsByTagName('option')[today_day].selected= true//日工資 日期預設
-            for (i=today_month; i>=today_month-1;i--){//設置月份
+            for (i=today_month; i>=today_month;i--){//設置月份
                 addOption(day_month,i,i)
                 //addOption(month_month,i,i)
             }
@@ -56,7 +56,7 @@ p{margin-top: 1%;}
         if ($('.dataframe').length>0){
                 $('.dataTables_wrapper.no-footer').remove();//已經有了先清空
         }
-        if($("#user").val() ==""){//判斷用戶名為空
+        if($("#order_code").val() ==""){//判斷用戶名為空
             alert("請輸入用戶名");
             //location.reload()
         }
@@ -74,13 +74,22 @@ p{margin-top: 1%;}
                 console.log(data)
                 game_detail = data;
                 console.log(typeof(data))
-                if (data=='沒有該用戶'){
-                    alert(data);
+                if (data=='無該單號'){
                     $('.submit').removeAttr('disabled');  
-                    //location.reload()  
+                    $('#user_detail').append("<span style ='color: #9C27B0 '>"+'無該單號' )
+                        return false
                 }
-                else if (data=='無資料'){
-                    $('#user_detail').append("<span style ='color: #9C27B0 '>"+'沒有投注資料' )
+                else if (data=='該單沒中獎, 不會進單挑'){
+                    $('#user_detail').append("<span style ='color: #9C27B0 '>"+'該單沒中獎, 不會進單挑' )
+                    $('.submit').removeAttr('disabled');  
+                }
+                else if (data=='該單未開獎, 不會進單挑'){
+                    $('#user_detail').append("<span style ='color: #9C27B0 '>"+'該單未開獎, 不會進單挑' )
+                    $('.submit').removeAttr('disabled');  
+                    
+                }
+                else if (data=='該單撤銷, 不會進單挑'){
+                    $('#user_detail').append("<span style ='color: #9C27B0 '>"+'該單撤銷, 不會進單挑' )
                     $('.submit').removeAttr('disabled');  
                     
                 }
@@ -90,6 +99,8 @@ p{margin-top: 1%;}
                     
                 }
                 else{
+                    $('#user_detail').append("<span style='color:#9c27b0; font-size: 20Px'>"+" 進入單挑: </span>"+
+                        "<span style='color:#ff2222; font-size: 15Px'> 當期玩法總投注數slipNum 小於等於 當期玩法後台單挑值 </span> ")
                     var type_data = []
                     var key_name = Object.keys(data)
                     var len_data = data[key_name[0]].length//動態取得 data 第一個key 名稱的長度
@@ -174,10 +185,10 @@ p{margin-top: 1%;}
         {% endfor %}
     </select>
     <li>
-    <label>請輸入用戶名</label>
-    <input type="text" id="user" name="user"
-    size="16"  maxlength="16"></li>
-        <p><input type="button" onclick="check(this)" id="Single_order" class="submit" value="單挑查詢">
+    <label>請輸入單號</label>
+    <input type="text" id="order_code" name="order_code"
+    size="25"  maxlength="25"></li>
+        <p><input type="button" onclick="check(this)" id="Single_order" class="submit" value="查詢">
             <!--input type="button" onclick="check(this)" id="Single_game" class="submit" value="玩法查詢"-->
 <form>
 <div id='user_detail'></div>

@@ -1853,74 +1853,91 @@ def new_Agent():#新代理中心
 def Single():#單挑
     if request.method == "POST":
         env_type = request.form.get('env_type')
-        user = request.form.get('user')
+        order_code = request.form.get('order_code')
         day = request.form.get('day_day')
         month = request.form.get('day_month')
         year = request.form.get('day_year')
         date = "%s/%s/%s" % (year, month, day)
         lotteryid = request.form.get('lottery')
-        check_type = request.form.get('check_type')#判斷頁面是點了哪個查詢 
-        conn = OracleConnection(env_id=int(env_type))
-        user_id = conn.select_user_id(user)
-        print(user_id)
-        if len(user_id) == 0:
-            return '無該用戶'
         
-        data = conn.select_Single(user,date,lotteryid)# 查詢目前用戶投注的 訂單狀況
-        if len(data) == 0:
-            return '無資料'
-        Single_list = []#存放各玩法是否進入單挑
-        Single_open , Single_num,Single_all = [],[],[]# 後台單挑 設定和開關 , 注數總和
-        lottery_game = conn.select_Single(user,date,lotteryid,'')#查出 全部的單一 bet_type_code ,丟進 SingleSum 查注數總和
-        if len(lottery_game['bet_type_code']) == 1:#長度為1 轉tuple 到陣列 會變成 ('ex',)  ,到sql會有問題
-            tuple_bet = "('%s')"%lottery_game['bet_type_code'][0]
+        
+        conn = OracleConnection(env_id=int(env_type))
+        order_ = conn.select_game_order_data(order_code,lotteryid,date)# 用來確認 該環境有沒有 該order_code
+        if len(order_) == 0:
+            return '無該單號'
+        elif order_[0]["STATUS"] == 3:# 該game_order 未中獎 一定不會進單挑:
+            return '該單沒中獎, 不會進單挑'
+        elif order_[0]["STATUS"] == 1:# 該game_order 等待開獎 一定不會進單挑:
+            return '該單未開獎, 不會進單挑'
+        elif order_[0]["STATUS"] == 4:# 該game_order 等待開獎 一定不會進單挑:
+            return '該單撤銷, 不會進單挑'
+        
+        key_name = "Single:%s_%s_%s_%s"%(env_type,order_code,lotteryid, order_[0]["STATUS"])# redis key存入
+        result = RedisConnection.get_key(2, key_name)
+        if result != 'not exist':  # result是 not exist, 代表 redis 沒值 ,不等於 就是 redis有值
+            return result
+
+        slip_ = conn.select_game_slip(order_[0]['ID'])
+        userid = order_[0]['USERID']
+        issue_code = order_[0]['ISSUE_CODE']
+        print(slip_)
+        BetTypeCode_list,Totbets_list,Status_list,Amount_list = [], [] , [], []
+        for index in range(len(slip_)):# 一張訂單 可能要很多個detail
+            BetTypeCode_list.append(slip_[index]['BET_TYPE_CODE'])
+            Totbets_list.append(slip_[index]['TOTBETS'])
+            Status_list.append(slip_[index]['STATUS'])# 一張單 的各個玩法 是否中獎  3 沒中獎
+            Amount_list.append(slip_[index]['TOTAMOUNT']/10000)# 該完法 投注金額 ,看驗證  投中比
+        #print(BetTypeCode_list)
+        if len(BetTypeCode_list) == 1: # 轉tuple 需處理, 否則帶到sql 會有問題
+            BetTypeCode_tuple = "('%s')"%BetTypeCode_list[0]
         else:
-            tuple_bet = tuple(lottery_game['bet_type_code'])
+            BetTypeCode_tuple = tuple(BetTypeCode_list)
 
-        SingleSum = conn.select_SingleSum(user,tuple_bet,lotteryid,date)# 各玩法目前  注數和
-        solo_num = conn.select_SingleSolo(lotteryid=lotteryid,bet_type_list=tuple_bet)
-        print(SingleSum)
-        for bet_type_code in data["bet_type_code"]:# 把bet_type_code 取出 來mapping
-            if solo_num[bet_type_code][1] == 0:# 後台關閉 ,不會走單挑
-                Single_list.append('否')
-            else:# 後台單挑有開啟
-                if SingleSum[bet_type_code][0] <= solo_num[bet_type_code][0]:# 要用當期該完法的總注數 小於等於  後台 該玩法後台設定
-                    Single_list.append('是')
+        slipNum = conn.select_SingleSum(userid,BetTypeCode_tuple,lotteryid,issue_code)# 找出該單號 該期 的總 投注總數
+        bet_type_name = conn.select_SingleGame(lotteryid,BetTypeCode_tuple)# 用 bet_type 數值 對應 找出 中文
+        soloNum = conn.select_SingleSolo(lotteryid,BetTypeCode_tuple)# 查詢該玩法後台設定的 單挑設定
+        
+        #print(slipNum,bet_type_name,soloNum)
+        bet_type_list = []# 存放中文名稱
+        slipNum_list = []#存放總注數
+        soloNum_list = []#存放後台單挑設置
+        soloOpen_list = []# 存放後台單挑開關
+        solo_status = []# 存放是否進入單挑
+        #print(bet_type_name,slipNum,soloNum)
+        for index,bet_code in enumerate(BetTypeCode_list):
+            try:
+                bet_type_list.append(bet_type_name[bet_code])
+                slipNum_list.append(slipNum[bet_code][0])
+                soloNum_list.append(soloNum[bet_code][0])
+                soloOpen_list.append(soloNum[bet_code][1])
+
+                if Status_list[index] == 3:# 該完法沒中獎 ,不會進單挑
+                    solo_status.append("否")
+                elif soloNum[bet_code][1] == 0: #後台該玩法 關閉單挑, 也不進
+                    solo_status.append("否")
                 else:
-                    Single_list.append('否')
-            Single_open.append(solo_num[bet_type_code][1])
-            Single_num.append(solo_num[bet_type_code][0])
-            Single_all.append(SingleSum[bet_type_code][0])
-        data['單挑後台設定值'] = Single_num
-        data['單挑後台開關'] = ["開啟" if i==1 else "關閉" for i in Single_open]
-        #data['單挑後台開關']
-        data['是否進入單挑'] = Single_list
-        data['當期該注數總和'] = Single_all
-        #print(data)
-        '''
-        elif check_type == 'Single_game':#查詢 彩種 玩法的 注數狀況
-            lottery_game = conn.select_Single(user,date,lotteryid,check_type)# 多增加 check_type ,查詢 目前 帶開獎的 所有不重複 玩法
-            if len(lottery_game) == 0:
-                return '無資料'
-            if len(lottery_game['bet_type_code']) == 1:#長度為1 轉tuple 到陣列 會變成 ('ex',)  ,到sql會有問題
-                tuple_bet = "('%s')"%lottery_game['bet_type_code'][0]
-            else:
-                tuple_bet = tuple(lottery_game['bet_type_code'])
-            SingleSum = conn.select_SingleSum(user,tuple_bet,lotteryid,date)# 各玩法目前  注數和
-            solo_num = conn.select_SingleSolo(lotteryid=lotteryid,bet_type_list=tuple_bet)# 查詢 單挑後台設置
-            Sum_num = []# 從新mapping 注數總和的位置
-            Single_open , Single_num = [],[]# 後台單挑 設定和開關
-            for bet_type in lottery_game['bet_type_code']:
-                Sum_num.append(SingleSum[bet_type][0])
-                Single_open.append(solo_num[bet_type][1])
-                Single_num.append(solo_num[bet_type][0])
+                    if slipNum[bet_code][0] <=  soloNum[bet_code][0]:# 當期該玩法 的總注注和slipNUm 小於等於 後台 設定值 就會進單挑
+                        solo_status.append("是")
+                    else:
+                        solo_status.append("否")
+            except IndexError:# 有可能注單理的玩法,是 後台單挑值沒有的玩法
+                soloNum_list.append('無')
+                soloOpen_list.append('')
+                solo_status.append("玩法沒開放")
 
-            lottery_game['注數總和'] = Sum_num
-            lottery_game['單挑後台開關'] = ["開啟" if i==1 else "關閉" for i in Single_open]
-            lottery_game['單挑後台注數值'] = Single_num
-            data = lottery_game
-            '''
-        return data
+        data = {}
+        data["當期玩法總投注數slipNum"] = slipNum_list
+        data["投注玩法名稱"] = bet_type_list
+        data["投注玩法bet_type_code"] = BetTypeCode_list
+        data["該玩法注數"] = Totbets_list
+        data["當期玩法後台單挑值"] = soloNum_list
+        data["該單後台單挑開關"] = ["開" if i == 1 else "無" if i==""  else "關閉" for i in soloOpen_list ]
+        data["是否進入單挑"] = solo_status
+        data["玩法是否中獎"] = ["未中獎" if i == 3 else "中獎" for i in Status_list]
+        data["該玩法投注金額"] = Amount_list
+         
+        RedisConnection.set_key(key_name, data)
+        return data      
     lottery_dict = FF_Joy188.FF_().lottery_dict
     return render_template('Single.html',lottery_dict=lottery_dict)
 
