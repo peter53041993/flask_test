@@ -9,46 +9,61 @@ p{margin-top: 1%;}
 #form1 > table > tbody{
     text-align: center;
     }
+.pickmeup .pmu-instance .pmu-today {
+    color: #88c5eb;
+}
+.pickmeup {
+    background: #e094ec;
+}
+.pickmeup .pmu-instance .pmu-button {
+    color: black;
+}
+.pickmeup .pmu-instance .pmu-day-of-week {
+    color: #fff;
+}
+.pickmeup .pmu-instance:first-child .pmu-prev, .pickmeup .pmu-instance:last-child .pmu-next {
+    display: none;
+}
+.pickmeup .pmu-instance .pmu-today {
+    background: #e094ec;
+    color: #cf00f3;
+}
+.pickmeup .pmu-instance .pmu-selected {
+    background: #e6bf48;
+    /* color: #eee; */
+}
+.pmu-month.pmu-button {
+    pointer-events: none;
+}
+.start_time,.end_time{
+    text-align: center;
+}
+
 </style>
 {% endblock %}  
 {% block script %}
+<link rel="stylesheet" href="{{ url_for('static', filename='node_modules/pickmeup/css/pickmeup.css') }}">
+<script src="{{ url_for('static',filename='node_modules/pickmeup/js/pickmeup.js') }}"></script>
+
+
 <script>
     $(document).ready(function(){
+       
         var last_month = new Date().getMonth()//上個月 分紅用
             var today_month =  new Date().getMonth()+1//當前月份
             var today_day =  new Date().getDate()// -1 用意 ,統計日期 最新 為昨日
             var cur_year = new Date().getFullYear()//今年
             //var ben_today = document.getElementById('day_day').getElementsByTagName('option')[today_day].selected= true//日工資 日期預設
-            for (i=today_month; i>=today_month-1;i--){//設置月份
-                addOption(day_month,i,i)
-                //addOption(month_month,i,i)
-            }
-            for (i=1;i<=today_day;i++){// 日期可查 今天
-                addOption(day_day,i,i)//設置日期
-            } 
-            addOption(day_year,cur_year,cur_year)//設置年分
-            //addOption(month_year,cur_year,cur_year)//設置年分
-            $('#day_month option[value='+today_month+']').attr('selected','selected')
-            //$('#month_month option[value='+today_month+']').attr('selected','selected')
-            $('#day_day option[value='+today_day+']').attr('selected','selected')
-            $('#day_year option[value='+cur_year+']').attr('selected','selected')
-            //$('#month_year option[value='+cur_year+']').attr('selected','selected')
-
-            $('#day_month').change(function(){
-                if ($('#day_month').val()==today_month){//
-                    $('#day_day').empty()
-                    for (i=1;i<=today_day;i++){
-                        addOption(day_day,i,i)//設置日期
-                    } 
-                }
-                else{
-                    $('#day_day').empty()
-                    for (i=1;i<=31;i++){
-                        addOption(day_day,i,i)//設置日期
-                    } 
-                } 
+            $('.start_time').val(cur_year+'-'+today_month+'-'+today_day)
+            $('.end_time').val(cur_year+'-'+today_month+'-'+today_day)
             })
+</script>
+<script>
+$(function(){
+    $(document).click(function(e){
+        PickMeUp(e)
     })
+})
 </script>
 <script type="text/javascript">
     function check(check_type){
@@ -144,15 +159,15 @@ p{margin-top: 1%;}
                         }
                         else if (check_type.id=='Turnover'){//4.0計算 包含 銷量,中獎
                             var sum_winlose =  (parseFloat(sum_reason1) - parseFloat(sum_reason2)).toFixed(2)
-                            $('#user_detail').append(' 總銷量: '+sum_reason2 )
-                            $('#user_detail').append(' 總中獎: '+sum_reason1 )
+                            $('#user_detail').append(' 總銷量: '+sum_reason2.toFixed(2) )
+                            $('#user_detail').append(' 總中獎: '+sum_reason1.toFixed(2) )
                             $('#user_detail').append(' 總輸贏: '+sum_winlose )
                             $('#user_detail').append("<p>"+"<span style='color:red;'>"+"新代理銷量: 會把紅包抵扣加上")
                             
                         }
                         else{
                             sum = sum_reason1
-                            $('#user_detail').append(' 總和: '+sum )
+                            $('#user_detail').append(' 總和: '+sum.toFixed(2) )
                         }
                             
                     }
@@ -197,20 +212,17 @@ p{margin-top: 1%;}
         <option value="0">一般版</option>
         <option value="1">合營版</option>
     </select>
-    <li id='day'>
-        <label for="check_day">時間</label>
-        <label>年</label>
-        <select name='day_year' id='day_year'>
-        </select>
-        <label>月</label>
-        <select name='day_month' id='day_month'>
-        </select>
-        <label>日</label>
-        <select name='day_day' id='day_day'>
-        </select>
+    <li>
+        <label for="start_time">開始時間
+        <input type="text" class="start_time" name="start_time"></label>
+        <label for="end_time">結束時間
+        <input type="text" class="end_time"  name="end_time"></label>
     </li>
-    請輸入用戶名<input type="text" id="user" name="user"
-    size="16"  maxlength="16">
+    <div class="example"></div>
+    <li>
+    <label for="user">請輸入用戶名
+    <input type="text" id="user" name="user"  size="16"  maxlength="16"></label></li>
+
         <p> <input type="button" onclick="check(this)" class="submit" id="ThirdBet" value="三方輸贏">
         {% for reson in items %}
         <input type="button" onclick="check(this)" class="submit" id={{reson}} value={{items[reson][1]}}>
