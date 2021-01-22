@@ -651,7 +651,7 @@ class OracleConnection:
         cursor.close()
         return lottery_point
     
-    def select_NewAgent_ThirdBet(self,user,joint_type,date,type_=""):# 新代理三方銷量表 ,type =""抓全部, 帶sum 抓總和
+    def select_NewAgent_ThirdBet(self,user,joint_type,start_date,end_date,type_=""):# 新代理三方銷量表 ,type =""抓全部, 帶sum 抓總和
         cursor = self._get_oracle_conn().cursor()
         if joint_type == '0':#一般  ,找整條
             query = f"(select * from user_customer where user_chain like '%/{user}/%') user_agent " \
@@ -668,8 +668,8 @@ class OracleConnection:
         sql = f"{query_col}" \
             f"from THIRDLY_AGENT_CENTER agent_ inner join user_customer user_ on agent_.USER_ID = user_.id, "\
             f"{query}" \
-            f"and  agent_.create_date between  to_date('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
-            f"and to_date('{date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
+            f"and  agent_.create_date between  to_date('{start_date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
+            f"and to_date('{end_date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
             f"order by agent_.create_date desc "
         print(sql)
         cursor.execute(sql)
@@ -693,7 +693,7 @@ class OracleConnection:
         cursor.close()
         return NewAgent_ThirdBet
     
-    def select_NewAgent(self,user,joint_type,date,reason,check_type):#新代理中心 查reason 表
+    def select_NewAgent(self,user,joint_type,start_date,end_date,reason,check_type):#新代理中心 查reason 表
         cursor = self._get_oracle_conn().cursor()
         if joint_type == '0':#一般  ,找整條
             query = f"(select * from user_customer where user_chain like '%/{user}/%') user_agent " \
@@ -712,8 +712,8 @@ class OracleConnection:
             sql = f"{query_col}" \
             f" from fund_change_log fund_ inner join user_customer user_ on fund_.USER_ID = user_.id, "\
             f"{query}" \
-            f"and  fund_.GMT_CREATED between  to_date('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
-            f"and to_date('{date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
+            f"and  fund_.GMT_CREATED between  to_date('{start_date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
+            f"and to_date('{end_date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
             f"and fund_.reason in {reason} " \
             f"order by fund_.GMT_CREATED desc "
             print(sql)
@@ -735,8 +735,8 @@ class OracleConnection:
                 sql = f"{query_col}" \
                 f" from fund_change_log fund_ inner join user_customer user_ on fund_.USER_ID = user_.id, "\
                 f"{query}" \
-                f"and  fund_.GMT_CREATED between  to_date('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
-                f"and to_date('{date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
+                f"and  fund_.GMT_CREATED between  to_date('{start_date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
+                f"and to_date('{end_date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
                 f"and fund_.reason in {reason[key][0]} " \
                 f"order by fund_.GMT_CREATED desc "
                 print(sql)
