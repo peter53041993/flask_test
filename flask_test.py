@@ -1794,13 +1794,11 @@ def new_Agent():#新代理中心
         env_type = request.form.get('env_type')
         joint_type = request.form.get('joint_type')
         user = request.form.get('user')
-        day = request.form.get('day_day')
-        month = request.form.get('day_month')
-        year = request.form.get('day_year')
-        date = "%s/%s/%s" % (year, month, day) 
+        start_time = request.form.get('start_time')
+        end_time = request.form.get('end_time')
         check_type = request.form.get('check_type')#判斷頁面是點了哪個查詢
         
-        print(check_type,date)
+        print(check_type,start_time,end_time)
         conn = OracleConnection(env_id=int(env_type))
         user_id = conn.select_user_id(user, joint_type)
         print(user_id)
@@ -1808,29 +1806,30 @@ def new_Agent():#新代理中心
             return '無該用戶'
         now_hour = datetime.datetime.now().hour # 當下 小時
         now_day = datetime.datetime.now().day #當下 日期
-        if str(now_day) in date:# 查詢時間 是今天的話, 需要待now_hour 進去key , 因為當天的 每個小時牌成 都有可能變動
+        print(now_day)
+        if str(now_day) == start_time and str(now_day) ==  end_time:# 開始/結束時間 是今天的話, 需要待now_hour 進去key , 因為當天的 每個小時牌成 都有可能變動
             print('查詢今天日期')
-            key_name = 'NewAgent: %s/%s/%s:%s' % (check_type,user,date,now_hour)
+            key_name = 'NewAgent: %s/%s/%s-%s:%s' % (check_type,user,start_time,end_time,now_hour)
         else:
-            key_name = 'NewAgent: %s/%s/%s' % (check_type,user,date)  # 0/環境:日期
+            key_name = 'NewAgent: %s/%s/%s-%s' % (check_type,user,start_time,end_time)  # 0/環境:日期
         result = RedisConnection.get_key(2, key_name)
         if result != 'not exist':  # result是 not exist, 代表 redis 沒值 ,不等於 就是 redis有值
             return result
         if check_type == "ThirdBet":# 第三方 抓 COLLECT_THIRDLY_BET_RECORD 表
-            data = conn.select_NewAgent_ThirdBet(user,joint_type,date)
+            data = conn.select_NewAgent_ThirdBet(user,joint_type,start_time,end_time)
         elif check_type == 'GP':# 淨輸贏 需把所有reason 做出來,  但只抓sum  和 三方 
-            data_third = conn.select_NewAgent_ThirdBet(user,joint_type,date,'sum')
+            data_third = conn.select_NewAgent_ThirdBet(user,joint_type,start_time,end_time,'sum')
             #移除淨輸贏 沒計算 的項目
             del reson_dict['Depoist']
             del reson_dict['Withdraw']
             del reson_dict['MonthWage']
             del reson_dict['ThirdShares']
-            data_fund = conn.select_NewAgent(user,joint_type,date,reson_dict,check_type)
+            data_fund = conn.select_NewAgent(user,joint_type,start_time,end_time,reson_dict,check_type)
             #print(data_third,data_fund)
             data = data_third.copy()
             data.update(data_fund)
         else: #其他 fund_change_log ,需帶不同reson
-            data = conn.select_NewAgent(user,joint_type,date,reson_dict[check_type][0],check_type)
+            data = conn.select_NewAgent(user,joint_type,start_time,end_time,reson_dict[check_type][0],check_type)
         print(data)
         if len(data) == 0:
             return "無資料"
