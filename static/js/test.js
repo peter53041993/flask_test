@@ -48,3 +48,79 @@ function toCurrency(num){// 轉換成 數值字元
     par[0] = par[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')// 數字符號
     return par.join('.')
 }
+
+function PickMeUp(event){
+    var targe_name = event.target.className;
+    if (targe_name == "start_time" || targe_name == "end_time" ){
+        if ($('.pmu-instance').length == 0){
+        var datesFromDatabase = [];
+        pickmeup('.example',{
+        flat: true,
+        mode: 'single',
+        locale:'en',
+        hide_on_select: true,
+        position :'right',
+        // Before rendering dates, highlight if from database
+        render: function(date) {
+            if ($.inArray(date.getTime(), datesFromDatabase) > -1){
+                return {
+                    class_name : ''
+                }
+            }
+        }
+        });
+        var check = targe_name+"_check";//確認按鈕
+        $('.pmu-instance').after('<div class="check_submit" ><input type="button" value="確認" class="'+ check + '"></div>')
+        $('.'+check).css({
+            "background": "#ffe086",
+            "color": "#7a0e8c",
+            "font-family": "unset",
+            "margin-left": "40%",
+        })
+        if(targe_name=='end_time'){
+            $('.example').css({
+            "margin-left": "16.7%"
+            })
+        }
+        else{
+            $('.example').css({
+            "margin-left": "3.4%"
+            })
+        }
+        
+        return false;
+        }
+        var child_name = $('.check_submit').children()[0].className // 或者 子元素的 確認按鈕
+        if (child_name.indexOf(targe_name)==-1){// 為-1 ,代表初始化 的確認按鈕,和 當下點擊的 按鈕 名稱不同
+            $('.'+child_name).attr('class',targe_name+"_check")
+        }
+        $('.example').show()
+        if(targe_name=='end_time'){
+            $('.example').css({
+            "margin-left": "16.7%"
+            })
+        }
+        else{
+            $('.example').css({
+            "margin-left": "3.4%"
+            })
+        }
+    }
+    else if (targe_name=='start_time_check' || targe_name=='end_time_check' ){//確認按鈕 , 要把text更新
+        var select_year = $('.pmu-years > .pmu-selected.pmu-button').text()
+        var select_month = $('.pmu-months > .pmu-selected.pmu-button').text()
+        var select_day = $('.pmu-days > .pmu-selected.pmu-button').text()
+        $('.example').hide()
+        if(targe_name == "start_time_check" ){
+            $('.start_time').val(select_year+"-"+select_month+"-"+select_day)  
+        }
+        else{
+            $('.end_time').val(select_year+"-"+select_month+"-"+select_day)  
+        }
+           
+    }
+    else if (targe_name== "" || targe_name=="example"){//空白處
+        $('.example').hide()  
+    }
+}
+
