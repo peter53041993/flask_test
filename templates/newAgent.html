@@ -9,35 +9,7 @@ p{margin-top: 1%;}
 #form1 > table > tbody{
     text-align: center;
     }
-.pickmeup .pmu-instance .pmu-today {
-    color: #88c5eb;
-}
-.pickmeup {
-    background: #e094ec;
-}
-.pickmeup .pmu-instance .pmu-button {
-    color: black;
-}
-.pickmeup .pmu-instance .pmu-day-of-week {
-    color: #fff;
-}
-.pickmeup .pmu-instance:first-child .pmu-prev, .pickmeup .pmu-instance:last-child .pmu-next {
-    display: none;
-}
-.pickmeup .pmu-instance .pmu-today {
-    background: #e094ec;
-    color: #cf00f3;
-}
-.pickmeup .pmu-instance .pmu-selected {
-    background: #e6bf48;
-    /* color: #eee; */
-}
-.pmu-month.pmu-button {
-    pointer-events: none;
-}
-.start_time,.end_time{
-    text-align: center;
-}
+
 
 </style>
 {% endblock %}  
@@ -78,6 +50,7 @@ $(function(){
         }
         else {
             button_disabled('.submit')
+            $('.submit').css({'background':'gray'})
         $.ajax({
             url:"/newAgent",
             type:"POST",
@@ -98,12 +71,12 @@ $(function(){
                 else if (data=='無資料'){
                     $('#user_detail').append('數據: 0' )
                     $('.submit').removeAttr('disabled');  
-                    
+                    $('.submit').removeAttr('style') 
                 }
                 else if (data=='無該用戶'){
                     alert('無該用戶')
                     $('.submit').removeAttr('disabled');  
-                    
+                    $('.submit').removeAttr('style') 
                 }
                 else{
                     $('#user_detail').append("項目: "+title+", ")
@@ -165,6 +138,15 @@ $(function(){
                             $('#user_detail').append("<p>"+"<span style='color:red;'>"+"新代理銷量: 會把紅包抵扣加上")
                             
                         }
+                        else if (check_type.id=='Depoist'){// 充值 多著名 充直手續費 不在 充值 排程裡
+                            sum = sum_reason1
+                            $('#user_detail').append(' 總和: '+sum.toFixed(2) )
+                            $('#user_detail').append("<p>"+"<span style='color:red;'>"+"充值手續費不在充值計算裡")
+                        }
+                        else if (check_type.id=='Withdraw'){// 提線 是使用 sum_reason2 帳變凍結金額
+                            $('#user_detail').append(' 總和: '+sum_reason2.toFixed(2) )
+                            $('#user_detail').append("<p>"+"<span style='color:red;'>"+"提現手續費不在提現計算裡")
+                        }
                         else{
                             sum = sum_reason1
                             $('#user_detail').append(' 總和: '+sum.toFixed(2) )
@@ -181,12 +163,14 @@ $(function(){
                     $('.dataframe').DataTable( {
                     data:  type_data ,
                     });
-                    $('.submit').removeAttr('disabled');  
+                    $('.submit').removeAttr('disabled'); 
+                    $('.submit').removeAttr('style') 
                 }  
                 
             },
             error:function(e){
                 $('.submit').removeAttr('disabled');  
+                $('.submit').removeAttr('style') 
             }
         })
         } 
