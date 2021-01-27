@@ -102,7 +102,7 @@ function PickMeUp(event){
         }
         else{
             $('.example').css({
-            "margin-left": "3.4%"
+            "margin-left": ".4%"
             })
         }
     }
