@@ -1774,21 +1774,22 @@ def FundCharge():  # 充值成功金額 查詢
 @app.route('/newAgent',methods=["POST","GET"])
 def new_Agent():#新代理中心
     reson_dict = {
-                'Turnover': [('GM,DVCB,null,2','GM,DVCN,null,2','GM,PDXX,null,3','GM,BDRX,null,1','OT,RBAP,null,3','OT,BDBA,null,3',
-                'HB,DHBS,null,2'),
-                "4.0輸贏"],
-                "Activities": [('PM,PGXX,null,3','PM,IPXX,null,3','PM,PMXX,null,3','GM,FBRX,null,1','OT,ADBA,null,3','PM,PGXX,null,4','PM,PGXX,null,5','PM,PGPT,null,1','PM,PGAP,null,1','PM,PGFX,null,1','PM,EGPR,null,1','PM,PGSP,null,1','PM,PGNS,null,1','PM,PGNP,null,1','PM,PGLC,null,1','PM,PLCP,null,1','PM,PGSB,null,1','PM,PSBP,null,1','PM,PGAG,null,1','PM,PAGP,null,1','PM,PGKY,null,1','PM,PKYP,null,1','PM,PGIM,null,1','PM,PIMP,null,1','PM,PBCP,null,1','PM,PGCT,null,1','PM,PGBB,null,1','PM,PBBP,null,1',
-                'PM,PGBG,null,1','PM,PGPG,null,1','PM,PGPL,null,1','PM,TAAM,null,3'),"活動獎金總計"],
-                "Rebates": [('OT,RDBA,null,3','GM,RHAX,null,2','GM,RSXX,null,1','GM,RRSX,null,1','GM,RRHA,null,2'),"彩票反點"],
-                "NewVipReward": [('PM,SVUR,null,1','PM,RHYB,null,6','PM,RHYB,null,3','PM,RHYB,null,4','PM,RHYB,null,5','PM,RHYB,null,7','OT,SVWD,null,3','OT,SVWF,null,3'),"星級獎勵"],
-                'Red': [('HB,AHBC,null,1',''),'紅包'],
-                'Depoist': [('FD,ADAL,null,3','OT,AAXX,null,3','FD,ADML,null,8','FD,MDAX,null,5'),'充直'],
-                'Withdraw':  [('FD,CWTS,null,5','FD,CWTS,null,6','FD,CWCS,null,4','FD,CWCS,null,6'),'提現'],
-                'DailyWage': [('TF,DLSY,null,1','PM,AADS,null,3','OT,WDBA,null,3'),'日工資'],
-                'MonthWage': [('TF,MLDD,null,1','PM,AAMD,null,3','GM,DDAX,null,1','OT,DDBA,null,3'),'月分紅'],
-                'ThirdRebates': [('GM,SFFS,null,1','OT,TDBA,null,3'),'反水'],
-                'ThirdShares': [('GM,SFYJ,null,1','OT,TDDA,null,3'),'佣金'],
-                "Compensation": [('OT,CEXX,null,3','OT,PCXX,null,3'),'理賠']         
+                'Turnover': [{'GM,DVCB,null,2':"投注扣款",'GM,DVCN,null,2':"追号投注扣款",'GM,PDXX,null,3':"奖金派送",'GM,BDRX,null,1':"撤销派奖",'OT,RBAP,null,3':"加币-补发奖金",'OT,BDBA,null,3':"扣币-中奖减项",'HB,DHBS,null,2':"红包抵扣"},"4.0輸贏"],
+                "Activities": [{'PM,PGXX,null,3': "活动礼金-加幣/舊代理也用",'PM,IPXX,null,3':"平台奖励/舊代理也用",'PM,PMXX,null,3':'加币-积分商城','GM,FBRX,null,1':'首投返利','OT,ADBA,null,3':'扣币-活动减项','PM,PGXX,null,4':'活动礼金-自动/舊代理也用','PM,PGXX,null,5':'活动礼金-代活动系统派发/舊代理也用','PM,PGPT,null,1':'PT活动奖金','PM,PGAP,null,1':'PT活动礼金','PM,PGFX,null,1':'FHX活动礼金','PM,EGPR,null,1':"凤凰体育体验金活动",'PM,PGSP,null,1':"凤凰体育活动奖金",'PM,PGNS,null,1':"GNS活动礼金",'PM,PGNP,null,1':"GNS活动奖金",'PM,PGLC,null,1':"凤凰棋牌活动礼金",'PM,PLCP,null,1':"凤凰棋牌活动奖金",'PM,PGSB,null,1':"沙巴活动礼金",'PM,PSBP,null,1':"沙巴活动奖金",'PM,PGAG,null,1':"AG活动礼金",'PM,PAGP,null,1':"AG活动奖金",'PM,PGKY,null,1':"开元活动礼金",'PM,PKYP,null,1':"开元活动奖金",'PM,PGIM,null,1':"IM活动礼金",'PM,PIMP,null,1':"IM活动奖金",'PM,PBCP,null,1':"BC体育活动奖金",'PM,PGCT,null,1':"爱棋牌活动礼金",'PM,PGBB,null,1':"BBIN活动礼金",'PM,PBBP,null,1':"BBIN活动奖金",'PM,PGBG,null,1':"BG真人活动礼金",'PM,PGPG,null,1':"PG电子活动礼金",'PM,PGPL,null,1':"凤凰真人活动礼金",'PM,TAAM,null,3':"三方活动奖金"},"活動獎金總計"],
+                "Rebates": [{'OT,RDBA,null,3':"反點扣項",'GM,RHAX,null,2':"上级投注返点",'GM,RSXX,null,1':"本人投注返点",'GM,RRSX,null,1':"撤销本人投注返点",'GM,RRHA,null,2':"撤销上级投注返点"},"彩票反點"],
+                "NewVipReward": [{'PM,SVUR,null,1':"晋级礼金",'PM,RHYB,null,6':"彩票返水",'PM,RHYB,null,3':"体育返水",'PM,RHYB,null,4':"电竞返水",'PM,RHYB,null,5':"真人返水",'PM,RHYB,null,7':"加幣-星级返水",'OT,SVWD,null,3':"扣币-星级返水",'OT,SVWF,null,3':"扣币-星级三方返水"},"星級獎勵"],
+                'Red': [{'HB,AHBC,null,1':"红包收入",'':''},'紅包'],
+                'Depoist': [{'FD,ADAL,null,3':"一般充值",'OT,AAXX,null,3':"人工加幣",'FD,ADML,null,8':"人工干预",'FD,MDAX,null,5':"加币-人工充值"},'充直'],
+                "DepoistFee":[{"FD,ADAC,null,1":"充值手續費","":""},"充直手續費"],
+                'Withdraw':  [{'FD,CWTS,null,5':"发起提现成功",'FD,CWTS,null,6':"打款部分成功 ",'FD,CWCS,null,4':"打款-人工提现",'FD,CWCS,null,6':"?"},'提現'],
+                "WithdrawFee":[{"FD,ADAC,null,1":"充值手續費","":""},"提現手續費"],
+                'DailyWage': [{'TF,DLSY,null,1': "转入日工资-系統",'PM,AADS,null,3': "日工资派发" ,
+                   'OT,WDBA,null,3': "扣币-日工资减项" },'日工資'],
+                'MonthWage': [{'TF,MLDD,null,1':'转入月分红-系統','PM,AAMD,null,3': '月分红派发','GM,DDAX,null,1': '彩票分红',
+                    'OT,DDBA,null,3': '扣币-分红减项'},'月分紅'],
+                'ThirdRebates': [{'GM,SFFS,null,1':"三方返水/後台加幣",'OT,TDBA,null,3':"扣币-返水减项"},'反水'],
+                'ThirdShares': [{'GM,SFYJ,null,1':"三方佣金/後台加幣",'OT,TDDA,null,3':"扣币-佣金减项"},'佣金'],
+                "Compensation": [{'OT,CEXX,null,3':"客户理赔/人工-加币-投诉理赔",'OT,PCXX,null,3':"平台理赔"},'理賠']         
             }
     if request.method == "POST":
         env_type = request.form.get('env_type')
@@ -1829,23 +1830,20 @@ def new_Agent():#新代理中心
             data = data_third.copy()
             data.update(data_fund)
         else: #其他 fund_change_log ,需帶不同reson
-            data = conn.select_NewAgent(user,joint_type,start_time,end_time,reson_dict[check_type][0],check_type)
+            reson_key = tuple(reson_dict[check_type][0].keys())# reson名稱 ,tuple 格式 
+            data = conn.select_NewAgent(user,joint_type,start_time,end_time,reson_key,check_type)
         print(data)
         if len(data) == 0:
             return "無資料"
-        RedisConnection.set_key(key_name, data)
-        if check_type =='Turnover':# 需做處理,不然items都叫 銷量/中獎
-            items = []
-            for i in range(len(data['用戶名'])):# key一定會有account. 並知道有多少長度
-                if data['帳變摘要'][i] in  ['GM,DVCB,null,2','GM,DVCN,null,2']:#銷量項目
-                    items.append('投注銷量')
-                elif data['帳變摘要'][i] in  ['GM,PDXX,null,3','GM,BDRX,null,1']:#中獎/撤銷派獎
-                    items.append('中獎金額')
-                elif data['帳變摘要'][i] in ['HB,DHBS,null,2']:# 紅包抵扣
-                    items.append('紅包抵扣')
-                else:
-                    items.append('')
+        items = []#存放 reson中文名稱
+        if check_type in ['ThirdBet','GP']:# 需做處理,不然items都叫 銷量/中獎
+           pass
+        else:
+            for i in range(len(data['用戶名'])):
+                reson_name =   reson_dict[check_type][0][data['帳變摘要'][i]]# data['帳變摘要'][i] 取出  reson的英文名稱
+                items.append(reson_name)
             data["備註"] = items
+        RedisConnection.set_key(key_name, data)
         return data
     return render_template('newAgent.html',items=reson_dict)
 @app.route('/Single',methods=["GET","POST"])
