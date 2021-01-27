@@ -702,7 +702,7 @@ class OracleConnection:
             query = f"(select * from user_customer where account = '{user}') user_agent "\
                 f"where (user_.id = user_agent.id or user_.parent_id = user_agent.id)"
         NewAgent = defaultdict(list)
-        if check_type != 'GP':
+        if check_type != 'GP':# 不是淨輸贏, reason 會 回傳 指定的  單一 reason
             query_col = "select user_.account, fund_.user_id,fund_.reason, fund_.sn, fund_.gmt_created, " \
             "(ct_bal - befor_bal)/10000  ,(before_damt - ct_damt)/10000"\
     
@@ -737,7 +737,7 @@ class OracleConnection:
                 f"{query}" \
                 f"and  fund_.GMT_CREATED between  to_date('{start_date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
                 f"and to_date('{end_date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
-                f"and fund_.reason in {reason[key][0]} " \
+                f"and fund_.reason in { tuple(reason[key][0].keys()) } " \
                 f"order by fund_.GMT_CREATED desc "
                 print(sql)
                 cursor.execute(sql)
