@@ -75,27 +75,27 @@ p{margin-top: 1%;}
                 game_detail = data;
                 console.log(typeof(data))
                 if (data=='無該單號'){
-                    $('.submit').removeAttr('disabled');  
+                    button_RemoveDisabeld('.submit') 
                     $('#user_detail').append("<span style ='color: #9C27B0 '>"+'無該單號' )
                         return false
                 }
                 else if (data=='該單沒中獎, 不會進單挑'){
                     $('#user_detail').append("<span style ='color: #9C27B0 '>"+'該單沒中獎, 不會進單挑' )
-                    $('.submit').removeAttr('disabled');  
+                        button_RemoveDisabeld('.submit')
                 }
                 else if (data=='該單未開獎, 不會進單挑'){
                     $('#user_detail').append("<span style ='color: #9C27B0 '>"+'該單未開獎, 不會進單挑' )
-                    $('.submit').removeAttr('disabled');  
+                        button_RemoveDisabeld('.submit') 
                     
                 }
                 else if (data=='該單撤銷, 不會進單挑'){
                     $('#user_detail').append("<span style ='color: #9C27B0 '>"+'該單撤銷, 不會進單挑' )
-                    $('.submit').removeAttr('disabled');  
+                        button_RemoveDisabeld('.submit') 
                     
                 }
                 else if (data=='無該用戶'){
                     alert('無該用戶')
-                    $('.submit').removeAttr('disabled');  
+                    button_RemoveDisabeld('.submit')
                     
                 }
                 else{
@@ -140,12 +140,12 @@ p{margin-top: 1%;}
                     $('.dataframe').DataTable( {
                     data:  type_data ,
                     });
-                    $('.submit').removeAttr('disabled');  
+                    button_RemoveDisabeld('.submit')
                 }  
                 
             },
             error:function(e){
-                $('.submit').removeAttr('disabled');  
+                button_RemoveDisabeld('.submit')  
             }
         })
         } 
