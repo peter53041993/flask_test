@@ -30,10 +30,12 @@ function form_trim(form_element){ // 輸入框,去除 空白
 
 function button_disabled(element){// 按扭送出後  置灰
     var element_disabled = $(element).attr('disabled','true');
+    $(element).css({'background':'gray'})
     return element_disabled
 }
 function button_RemoveDisabeld(element){// 取消置灰{
     var element_remove  = $(element).removeAttr('disabled');
+    $(element).removeAttr('style') 
     return element_remove
 }
 
@@ -79,12 +81,12 @@ function PickMeUp(event){
         })
         if(targe_name=='end_time'){
             $('.example').css({
-            "margin-left": "16.7%"
+            "margin-left": "12.7%"
             })
         }
         else{
             $('.example').css({
-            "margin-left": "3.4%"
+            "margin-left": ".4%"
             })
         }
         
@@ -97,7 +99,7 @@ function PickMeUp(event){
         $('.example').show()
         if(targe_name=='end_time'){
             $('.example').css({
-            "margin-left": "16.7%"
+            "margin-left": "12.7%"
             })
         }
         else{
