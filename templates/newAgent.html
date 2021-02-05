@@ -50,7 +50,6 @@ $(function(){
         }
         else {
             button_disabled('.submit')
-            $('.submit').css({'background':'gray'})
         $.ajax({
             url:"/newAgent",
             type:"POST",
@@ -65,18 +64,16 @@ $(function(){
                 console.log(typeof(data))
                 if (data=='沒有該用戶'){
                     alert(data);
-                    $('.submit').removeAttr('disabled');  
+                    button_RemoveDisabeld('.submit')
                     //location.reload()  
                 }
                 else if (data=='無資料'){
                     $('#user_detail').append('數據: 0' )
-                    $('.submit').removeAttr('disabled');  
-                    $('.submit').removeAttr('style') 
+                    button_RemoveDisabeld('.submit') 
                 }
                 else if (data=='無該用戶'){
                     alert('無該用戶')
-                    $('.submit').removeAttr('disabled');  
-                    $('.submit').removeAttr('style') 
+                    button_RemoveDisabeld('.submit') 
                 }
                 else{
                     $('#user_detail').append("項目: "+title+", ")
