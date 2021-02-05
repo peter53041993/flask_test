@@ -1774,22 +1774,39 @@ def FundCharge():  # 充值成功金額 查詢
 @app.route('/newAgent',methods=["POST","GET"])
 def new_Agent():#新代理中心
     reson_dict = {
-                'Turnover': [{'GM,DVCB,null,2':"投注扣款",'GM,DVCN,null,2':"追号投注扣款",'GM,PDXX,null,3':"奖金派送",'GM,BDRX,null,1':"撤销派奖",'OT,RBAP,null,3':"加币-补发奖金",'OT,BDBA,null,3':"扣币-中奖减项",'HB,DHBS,null,2':"红包抵扣"},"4.0輸贏"],
-                "Activities": [{'PM,PGXX,null,3': "活动礼金-加幣/舊代理也用",'PM,IPXX,null,3':"平台奖励/舊代理也用",'PM,PMXX,null,3':'加币-积分商城','GM,FBRX,null,1':'首投返利','OT,ADBA,null,3':'扣币-活动减项','PM,PGXX,null,4':'活动礼金-自动/舊代理也用','PM,PGXX,null,5':'活动礼金-代活动系统派发/舊代理也用','PM,PGPT,null,1':'PT活动奖金','PM,PGAP,null,1':'PT活动礼金','PM,PGFX,null,1':'FHX活动礼金','PM,EGPR,null,1':"凤凰体育体验金活动",'PM,PGSP,null,1':"凤凰体育活动奖金",'PM,PGNS,null,1':"GNS活动礼金",'PM,PGNP,null,1':"GNS活动奖金",'PM,PGLC,null,1':"凤凰棋牌活动礼金",'PM,PLCP,null,1':"凤凰棋牌活动奖金",'PM,PGSB,null,1':"沙巴活动礼金",'PM,PSBP,null,1':"沙巴活动奖金",'PM,PGAG,null,1':"AG活动礼金",'PM,PAGP,null,1':"AG活动奖金",'PM,PGKY,null,1':"开元活动礼金",'PM,PKYP,null,1':"开元活动奖金",'PM,PGIM,null,1':"IM活动礼金",'PM,PIMP,null,1':"IM活动奖金",'PM,PBCP,null,1':"BC体育活动奖金",'PM,PGCT,null,1':"爱棋牌活动礼金",'PM,PGBB,null,1':"BBIN活动礼金",'PM,PBBP,null,1':"BBIN活动奖金",'PM,PGBG,null,1':"BG真人活动礼金",'PM,PGPG,null,1':"PG电子活动礼金",'PM,PGPL,null,1':"凤凰真人活动礼金",'PM,TAAM,null,3':"三方活动奖金"},"活動獎金總計"],
-                "Rebates": [{'OT,RDBA,null,3':"反點扣項",'GM,RHAX,null,2':"上级投注返点",'GM,RSXX,null,1':"本人投注返点",'GM,RRSX,null,1':"撤销本人投注返点",'GM,RRHA,null,2':"撤销上级投注返点"},"彩票反點"],
-                "NewVipReward": [{'PM,SVUR,null,1':"晋级礼金",'PM,RHYB,null,6':"彩票返水",'PM,RHYB,null,3':"体育返水",'PM,RHYB,null,4':"电竞返水",'PM,RHYB,null,5':"真人返水",'PM,RHYB,null,7':"加幣-星级返水",'OT,SVWD,null,3':"扣币-星级返水",'OT,SVWF,null,3':"扣币-星级三方返水"},"星級獎勵"],
+                'Turnover': [{'GM,DVCB,null,2':"投注扣款",'GM,DVCN,null,2':"追号投注扣款",'GM,PDXX,null,3':"奖金派送",
+                    'GM,BDRX,null,1':"撤销派奖",'OT,RBAP,null,3':"加币-补发奖金",'OT,BDBA,null,3':"扣币-中奖减项",'HB,DHBS,null,2':"红包抵扣"},"4.0輸贏"],
+                "Activities": [{'PM,PGXX,null,3': "活动礼金-加幣/舊代理也用",'PM,IPXX,null,3':"平台奖励/舊代理也用",
+                    'PM,PMXX,null,3':'加币-积分商城','GM,FBRX,null,1':'首投返利','OT,ADBA,null,3':'扣币-活动减项',
+                    'PM,PGXX,null,4':'活动礼金-自动/舊代理也用','PM,PGXX,null,5':'活动礼金-代活动系统派发/舊代理也用',
+                    'PM,PGPT,null,1':'PT活动奖金','PM,PGAP,null,1':'PT活动礼金','PM,PGFX,null,1':'FHX活动礼金',
+                    'PM,EGPR,null,1':"凤凰体育体验金活动",'PM,PGSP,null,1':"凤凰体育活动奖金",
+                    'PM,PGNS,null,1':"GNS活动礼金",'PM,PGNP,null,1':"GNS活动奖金",'PM,PGLC,null,1':"凤凰棋牌活动礼金",
+                    'PM,PLCP,null,1':"凤凰棋牌活动奖金",'PM,PGSB,null,1':"沙巴活动礼金",'PM,PSBP,null,1':"沙巴活动奖金",
+                    'PM,PGAG,null,1':"AG活动礼金",'PM,PAGP,null,1':"AG活动奖金",'PM,PGKY,null,1':"开元活动礼金",
+                    'PM,PKYP,null,1':"开元活动奖金",'PM,PGIM,null,1':"IM活动礼金",'PM,PIMP,null,1':"IM活动奖金",
+                    'PM,PBCP,null,1':"BC体育活动奖金",'PM,PGCT,null,1':"爱棋牌活动礼金",'PM,PGBB,null,1':"BBIN活动礼金",
+                    'PM,PBBP,null,1':"BBIN活动奖金",'PM,PGBG,null,1':"BG真人活动礼金",'PM,PGPG,null,1':"PG电子活动礼金",
+                    'PM,PGPL,null,1':"凤凰真人活动礼金",'PM,TAAM,null,3':"三方活动奖金"},"活動獎金總計"],
+                "Rebates": [{'OT,RDBA,null,3':"反點扣項",'GM,RHAX,null,2':"上级投注返点",'GM,RSXX,null,1':"本人投注返点",
+                    'GM,RRSX,null,1':"撤销本人投注返点",'GM,RRHA,null,2':"撤销上级投注返点"},"彩票反點"],
+                "NewVipReward": [{'PM,SVUR,null,1':"晋级礼金",'PM,RHYB,null,6':"彩票返水",'PM,RHYB,null,3':"体育返水",
+                    'PM,RHYB,null,4':"电竞返水",'PM,RHYB,null,5':"真人返水",'PM,RHYB,null,7':"加幣-星级返水",
+                    'OT,SVWD,null,3':"扣币-星级返水",'OT,SVWF,null,3':"扣币-星级三方返水"},"星級獎勵"],
                 'Red': [{'HB,AHBC,null,1':"红包收入",'':''},'紅包'],
-                'Depoist': [{'FD,ADAL,null,3':"一般充值",'OT,AAXX,null,3':"人工加幣",'FD,ADML,null,8':"人工干预",'FD,MDAX,null,5':"加币-人工充值"},'充直'],
+                'Depoist': [{'FD,ADAL,null,3':"一般充值",'OT,AAXX,null,3':"人工加幣",'FD,ADML,null,8':"人工干预",
+                    'FD,MDAX,null,5':"加币-人工充值"},'充直'],
                 "DepoistFee":[{"FD,ADAC,null,1":"充值手續費","":""},"充直手續費"],
-                'Withdraw':  [{'FD,CWTS,null,5':"发起提现成功",'FD,CWTS,null,6':"打款部分成功 ",'FD,CWCS,null,4':"打款-人工提现",'FD,CWCS,null,6':"?"},'提現'],
+                'Withdraw':  [{'FD,CWTS,null,5':"发起提现成功",'FD,CWTS,null,6':"打款部分成功 ",
+                    'FD,CWCS,null,4':"打款-人工提现",'FD,CWCS,null,6':"?"},'提現'],
                 "WithdrawFee":[{"FD,ADAC,null,1":"充值手續費","":""},"提現手續費"],
-                'DailyWage': [{'TF,DLSY,null,1': "转入日工资-系統",'PM,AADS,null,3': "日工资派发" ,
-                   'OT,WDBA,null,3': "扣币-日工资减项" },'日工資'],
-                'MonthWage': [{'TF,MLDD,null,1':'转入月分红-系統','PM,AAMD,null,3': '月分红派发','GM,DDAX,null,1': '彩票分红',
-                    'OT,DDBA,null,3': '扣币-分红减项'},'月分紅'],
-                'ThirdRebates': [{'GM,SFFS,null,1':"三方返水/後台加幣",'OT,TDBA,null,3':"扣币-返水减项"},'反水'],
+                'DailyWage': [{'TF,DLSY,null,1': "转入日工资-系統(新舊)",'PM,AADS,null,3': "日工资派发-人工(新)" ,
+                   'OT,WDBA,null,3': "扣币-日工资减项(新)","TF,DABR,null,1": '轉入下級日工資/系統(新舊)' },'日工資'],
+                'MonthWage': [{'TF,MLDD,null,1':'转入月分红-系統(新舊)','PM,AAMD,null,3': '月分红派发-人工(新)','GM,DDAX,null,1': '彩票分红(新舊)','OT,DDBA,null,3': '扣币-分红减项(新)'},'月分紅'],# 轉入下級分紅  暫時沒扣除
+                'ThirdRebates': [{'GM,SFFS,null,1':"三方返水/後台加幣(新舊)",'OT,TDBA,null,3':"扣币-返水减项(新)",
+                    "TF,TADS,null,1":"轉入反水/系統(新舊)", "TF,DTWR,null,1":"下級反水/系統(新舊)"},'反水'],
                 'ThirdShares': [{'GM,SFYJ,null,1':"三方佣金/後台加幣",'OT,TDDA,null,3':"扣币-佣金减项"},'佣金'],
-                "Compensation": [{'OT,CEXX,null,3':"客户理赔/人工-加币-投诉理赔",'OT,PCXX,null,3':"平台理赔"},'理賠']         
+                #"Compensation": [{'OT,CEXX,null,3':"客户理赔/人工-加币-投诉理赔",'OT,PCXX,null,3':"平台理赔"},'理賠'] 理賠移除 淨數贏        
             }
     if request.method == "POST":
         env_type = request.form.get('env_type')
@@ -1808,7 +1825,7 @@ def new_Agent():#新代理中心
         now_hour = datetime.datetime.now().hour # 當下 小時
         now_day = datetime.datetime.now().day #當下 日期
         print(now_day)
-        if str(now_day) == start_time and str(now_day) ==  end_time:# 開始/結束時間 是今天的話, 需要待now_hour 進去key , 因為當天的 每個小時牌成 都有可能變動
+        if str(now_day) == start_time[-1] and str(now_day) == end_time[-1]:# 開始/結束時間 是今天的話, 需要待now_hour 進去key , 因為當天的 每個小時牌成 都有可能變動
             print('查詢今天日期')
             key_name = 'NewAgent: %s/%s/%s-%s:%s' % (check_type,user,start_time,end_time,now_hour)
         else:
