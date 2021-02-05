@@ -34,27 +34,10 @@ a.dropdown-item:hover {
 h1 {
     font-size: 1.5rem;
 }
-.pickmeup .pmu-instance .pmu-today {
-    color: #88c5eb;
-}
 .pickmeup.pmu-view-days.pmu-flat {
     background: #e094ec;
 }
-.pickmeup .pmu-instance .pmu-button {
-    color: black;
-}
-.pickmeup .pmu-instance .pmu-day-of-week {
-    color: #fff;
-}
 
-.pickmeup .pmu-instance .pmu-today {
-    background: #e094ec;
-    color: #cf00f3;
-}
-.pickmeup .pmu-instance .pmu-selected {
-    background: #e6bf48;
-    /* color: #eee; */
-}
 .pmu-month.pmu-button {
     pointer-events: none;
 }
