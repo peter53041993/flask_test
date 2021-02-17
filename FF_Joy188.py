@@ -26,7 +26,7 @@ class FF_:  # 4.0專案
 
         self.param = b'ba359dddc3c5dfd979169d056de72638',  # 固定寫死即可
         self.session = requests.Session()
-        self.session.proxies = {"http": "http://127.0.0.1:8888"}
+        # self.session.proxies = {"http": "http://127.0.0.1:8888"}
         self.lottery_dict = LotteryData.lottery_dict  # 吃config ,後續只需增加一邊
 
     def session_post(self, request_url, request_func, postData, header):

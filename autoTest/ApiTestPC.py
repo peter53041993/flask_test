@@ -66,7 +66,7 @@ class ApiTestPC(unittest.TestCase):
         self._third_list = ['gns', 'shaba', 'im', 'ky', 'lc', 'city']
         self._conn_mysql = mysql
         self._conn_oracle = oracle
-        self.SESSION.proxies = {"http": "http://127.0.0.1:8888"}
+        # self.SESSION.proxies = {"http": "http://127.0.0.1:8888"}
         if COOKIE:  # 若已有Cookie則加入Header
             logger.info('已有Cookie')
             self._header['Cookie'] = f'ANVOID={COOKIE}'
