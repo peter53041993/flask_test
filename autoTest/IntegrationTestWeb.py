@@ -79,26 +79,6 @@ class IntegrationTestWeb(unittest.TestCase):
         self.user = user
         self.red_type = red_type
 
-    # def mul_submit(self):  # 追號
-    #     try:
-    #         if self.driver.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').is_selected():
-    #             self.driver.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').click()  # 取消紅包追號
-    #     except:
-    #         pass
-    #     self.id_element('randomone')  # 先隨機一住
-    #     self.id_element('J-trace-switch')  # 追號
-    #
-
-    # def mul_submit(self):  # 追號
-    #     try:
-    #         if self.driver.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').is_selected():
-    #             self.driver.find_element_by_xpath('//*[@id="J-redenvelope-switch"]/label/input').click()  # 取消紅包追號
-    #     except:
-    #         pass
-    #     self.id_element('randomone')  # 先隨機一住
-    #     self.id_element('J-trace-switch')  # 追號
-    #
-
     def test_cqssc(self):
         """
         重慶時時彩測試

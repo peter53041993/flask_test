@@ -1771,100 +1771,107 @@ def FundCharge():  # 充值成功金額 查詢
         # frame = pd.DataFrame(data,index=date_list)
         # return frame.to_html()
     return render_template('FundCharge.html')
-@app.route('/newAgent',methods=["POST","GET"])
-def new_Agent():#新代理中心
+
+
+@app.route('/newAgent', methods=["POST", "GET"])
+def new_Agent():  # 新代理中心
     reson_dict = {
-                'Turnover': [{'GM,DVCB,null,2':"投注扣款",'GM,DVCN,null,2':"追号投注扣款",'GM,PDXX,null,3':"奖金派送",
-                    'GM,BDRX,null,1':"撤销派奖",'OT,RBAP,null,3':"加币-补发奖金",'OT,BDBA,null,3':"扣币-中奖减项",'HB,DHBS,null,2':"红包抵扣"},"4.0輸贏"],
-                "Activities": [{'PM,PGXX,null,3': "活动礼金-加幣/舊代理也用",'PM,IPXX,null,3':"平台奖励/舊代理也用",
-                    'PM,PMXX,null,3':'加币-积分商城','GM,FBRX,null,1':'首投返利','OT,ADBA,null,3':'扣币-活动减项',
-                    'PM,PGXX,null,4':'活动礼金-自动/舊代理也用','PM,PGXX,null,5':'活动礼金-代活动系统派发/舊代理也用',
-                    'PM,PGPT,null,1':'PT活动奖金','PM,PGAP,null,1':'PT活动礼金','PM,PGFX,null,1':'FHX活动礼金',
-                    'PM,EGPR,null,1':"凤凰体育体验金活动",'PM,PGSP,null,1':"凤凰体育活动奖金",
-                    'PM,PGNS,null,1':"GNS活动礼金",'PM,PGNP,null,1':"GNS活动奖金",'PM,PGLC,null,1':"凤凰棋牌活动礼金",
-                    'PM,PLCP,null,1':"凤凰棋牌活动奖金",'PM,PGSB,null,1':"沙巴活动礼金",'PM,PSBP,null,1':"沙巴活动奖金",
-                    'PM,PGAG,null,1':"AG活动礼金",'PM,PAGP,null,1':"AG活动奖金",'PM,PGKY,null,1':"开元活动礼金",
-                    'PM,PKYP,null,1':"开元活动奖金",'PM,PGIM,null,1':"IM活动礼金",'PM,PIMP,null,1':"IM活动奖金",
-                    'PM,PBCP,null,1':"BC体育活动奖金",'PM,PGCT,null,1':"爱棋牌活动礼金",'PM,PGBB,null,1':"BBIN活动礼金",
-                    'PM,PBBP,null,1':"BBIN活动奖金",'PM,PGBG,null,1':"BG真人活动礼金",'PM,PGPG,null,1':"PG电子活动礼金",
-                    'PM,PGPL,null,1':"凤凰真人活动礼金",'PM,TAAM,null,3':"三方活动奖金"},"活動獎金總計"],
-                "Rebates": [{'OT,RDBA,null,3':"反點扣項",'GM,RHAX,null,2':"上级投注返点",'GM,RSXX,null,1':"本人投注返点",
-                    'GM,RRSX,null,1':"撤销本人投注返点",'GM,RRHA,null,2':"撤销上级投注返点"},"彩票反點"],
-                "NewVipReward": [{'PM,SVUR,null,1':"晋级礼金",'PM,RHYB,null,6':"彩票返水",'PM,RHYB,null,3':"体育返水",
-                    'PM,RHYB,null,4':"电竞返水",'PM,RHYB,null,5':"真人返水",'PM,RHYB,null,7':"加幣-星级返水",
-                    'OT,SVWD,null,3':"扣币-星级返水",'OT,SVWF,null,3':"扣币-星级三方返水"},"星級獎勵"],
-                'Red': [{'HB,AHBC,null,1':"红包收入",'':''},'紅包'],
-                'Depoist': [{'FD,ADAL,null,3':"一般充值",'OT,AAXX,null,3':"人工加幣",'FD,ADML,null,8':"人工干预",
-                    'FD,MDAX,null,5':"加币-人工充值"},'充直'],
-                "DepoistFee":[{"FD,ADAC,null,1":"充值手續費","":""},"充直手續費"],
-                'Withdraw':  [{'FD,CWTS,null,5':"发起提现成功",'FD,CWTS,null,6':"打款部分成功 ",
-                    'FD,CWCS,null,4':"打款-人工提现",'FD,CWCS,null,6':"?"},'提現'],
-                "WithdrawFee":[{"FD,ADAC,null,1":"充值手續費","":""},"提現手續費"],
-                'DailyWage': [{'TF,DLSY,null,1': "转入日工资-系統(新舊)",'PM,AADS,null,3': "日工资派发-人工(新)" ,
-                   'OT,WDBA,null,3': "扣币-日工资减项(新)","TF,DABR,null,1": '轉入下級日工資/系統(新舊)' },'日工資'],
-                'MonthWage': [{'TF,MLDD,null,1':'转入月分红-系統(新舊)','PM,AAMD,null,3': '月分红派发-人工(新)','GM,DDAX,null,1': '彩票分红(新舊)','OT,DDBA,null,3': '扣币-分红减项(新)'},'月分紅'],# 轉入下級分紅  暫時沒扣除
-                'ThirdRebates': [{'GM,SFFS,null,1':"三方返水/後台加幣(新舊)",'OT,TDBA,null,3':"扣币-返水减项(新)",
-                    "TF,TADS,null,1":"轉入反水/系統(新舊)", "TF,DTWR,null,1":"下級反水/系統(新舊)"},'反水'],
-                'ThirdShares': [{'GM,SFYJ,null,1':"三方佣金/後台加幣",'OT,TDDA,null,3':"扣币-佣金减项"},'佣金'],
-                #"Compensation": [{'OT,CEXX,null,3':"客户理赔/人工-加币-投诉理赔",'OT,PCXX,null,3':"平台理赔"},'理賠'] 理賠移除 淨數贏        
-            }
+        'Turnover': [{'GM,DVCB,null,2': "投注扣款", 'GM,DVCN,null,2': "追号投注扣款", 'GM,PDXX,null,3': "奖金派送",
+                      'GM,BDRX,null,1': "撤销派奖", 'OT,RBAP,null,3': "加币-补发奖金", 'OT,BDBA,null,3': "扣币-中奖减项",
+                      'HB,DHBS,null,2': "红包抵扣"}, "4.0輸贏"],
+        "Activities": [{'PM,PGXX,null,3': "活动礼金-加幣/舊代理也用", 'PM,IPXX,null,3': "平台奖励/舊代理也用",
+                        'PM,PMXX,null,3': '加币-积分商城', 'GM,FBRX,null,1': '首投返利', 'OT,ADBA,null,3': '扣币-活动减项',
+                        'PM,PGXX,null,4': '活动礼金-自动/舊代理也用', 'PM,PGXX,null,5': '活动礼金-代活动系统派发/舊代理也用',
+                        'PM,PGPT,null,1': 'PT活动奖金', 'PM,PGAP,null,1': 'PT活动礼金', 'PM,PGFX,null,1': 'FHX活动礼金',
+                        'PM,EGPR,null,1': "凤凰体育体验金活动", 'PM,PGSP,null,1': "凤凰体育活动奖金",
+                        'PM,PGNS,null,1': "GNS活动礼金", 'PM,PGNP,null,1': "GNS活动奖金", 'PM,PGLC,null,1': "凤凰棋牌活动礼金",
+                        'PM,PLCP,null,1': "凤凰棋牌活动奖金", 'PM,PGSB,null,1': "沙巴活动礼金", 'PM,PSBP,null,1': "沙巴活动奖金",
+                        'PM,PGAG,null,1': "AG活动礼金", 'PM,PAGP,null,1': "AG活动奖金", 'PM,PGKY,null,1': "开元活动礼金",
+                        'PM,PKYP,null,1': "开元活动奖金", 'PM,PGIM,null,1': "IM活动礼金", 'PM,PIMP,null,1': "IM活动奖金",
+                        'PM,PBCP,null,1': "BC体育活动奖金", 'PM,PGCT,null,1': "爱棋牌活动礼金", 'PM,PGBB,null,1': "BBIN活动礼金",
+                        'PM,PBBP,null,1': "BBIN活动奖金", 'PM,PGBG,null,1': "BG真人活动礼金", 'PM,PGPG,null,1': "PG电子活动礼金",
+                        'PM,PGPL,null,1': "凤凰真人活动礼金", 'PM,TAAM,null,3': "三方活动奖金"}, "活動獎金總計"],
+        "Rebates": [{'OT,RDBA,null,3': "反點扣項", 'GM,RHAX,null,2': "上级投注返点", 'GM,RSXX,null,1': "本人投注返点",
+                     'GM,RRSX,null,1': "撤销本人投注返点", 'GM,RRHA,null,2': "撤销上级投注返点"}, "彩票反點"],
+        "NewVipReward": [{'PM,SVUR,null,1': "晋级礼金", 'PM,RHYB,null,6': "彩票返水", 'PM,RHYB,null,3': "体育返水",
+                          'PM,RHYB,null,4': "电竞返水", 'PM,RHYB,null,5': "真人返水", 'PM,RHYB,null,7': "加幣-星级返水",
+                          'OT,SVWD,null,3': "扣币-星级返水", 'OT,SVWF,null,3': "扣币-星级三方返水"}, "星級獎勵"],
+        'Red': [{'HB,AHBC,null,1': "红包收入", '': ''}, '紅包'],
+        'Depoist': [{'FD,ADAL,null,3': "一般充值", 'OT,AAXX,null,3': "人工加幣", 'FD,ADML,null,8': "人工干预",
+                     'FD,MDAX,null,5': "加币-人工充值"}, '充直'],
+        "DepoistFee": [{"FD,ADAC,null,1": "充值手續費", "": ""}, "充直手續費"],
+        'Withdraw': [{'FD,CWTS,null,5': "发起提现成功", 'FD,CWTS,null,6': "打款部分成功 ",
+                      'FD,CWCS,null,4': "打款-人工提现", 'FD,CWCS,null,6': "?"}, '提現'],
+        "WithdrawFee": [{"FD,ADAC,null,1": "充值手續費", "": ""}, "提現手續費"],
+        'DailyWage': [{'TF,DLSY,null,1': "转入日工资-系統(新舊)", 'PM,AADS,null,3': "日工资派发-人工(新)",
+                       'OT,WDBA,null,3': "扣币-日工资减项(新)", "TF,DABR,null,1": '轉入下級日工資/系統(新舊)'}, '日工資'],
+        'MonthWage': [{'TF,MLDD,null,1': '转入月分红-系統(新舊)', 'PM,AAMD,null,3': '月分红派发-人工(新)', 'GM,DDAX,null,1': '彩票分红(新舊)',
+                       'OT,DDBA,null,3': '扣币-分红减项(新)'}, '月分紅'],  # 轉入下級分紅  暫時沒扣除
+        'ThirdRebates': [{'GM,SFFS,null,1': "三方返水/後台加幣(新舊)", 'OT,TDBA,null,3': "扣币-返水减项(新)",
+                          "TF,TADS,null,1": "轉入反水/系統(新舊)", "TF,DTWR,null,1": "下級反水/系統(新舊)"}, '反水'],
+        'ThirdShares': [{'GM,SFYJ,null,1': "三方佣金/後台加幣", 'OT,TDDA,null,3': "扣币-佣金减项"}, '佣金'],
+        # "Compensation": [{'OT,CEXX,null,3':"客户理赔/人工-加币-投诉理赔",'OT,PCXX,null,3':"平台理赔"},'理賠'] 理賠移除 淨數贏
+    }
     if request.method == "POST":
         env_type = request.form.get('env_type')
         joint_type = request.form.get('joint_type')
         user = request.form.get('user')
         start_time = request.form.get('start_time')
         end_time = request.form.get('end_time')
-        check_type = request.form.get('check_type')#判斷頁面是點了哪個查詢
-        
-        print(check_type,start_time,end_time)
+        check_type = request.form.get('check_type')  # 判斷頁面是點了哪個查詢
+
+        print(check_type, start_time, end_time)
         conn = OracleConnection(env_id=int(env_type))
         user_id = conn.select_user_id(user, joint_type)
         print(user_id)
         if len(user_id) == 0:
             return '無該用戶'
-        now_hour = datetime.datetime.now().hour # 當下 小時
-        now_day = datetime.datetime.now().day #當下 日期
+        now_hour = datetime.datetime.now().hour  # 當下 小時
+        now_day = datetime.datetime.now().day  # 當下 日期
         print(now_day)
-        if str(now_day) == start_time[-1] and str(now_day) == end_time[-1]:# 開始/結束時間 是今天的話, 需要待now_hour 進去key , 因為當天的 每個小時牌成 都有可能變動
+        if str(now_day) == start_time[-1] and str(now_day) == end_time[
+            -1]:  # 開始/結束時間 是今天的話, 需要待now_hour 進去key , 因為當天的 每個小時牌成 都有可能變動
             print('查詢今天日期')
-            key_name = 'NewAgent: %s/%s/%s-%s:%s' % (check_type,user,start_time,end_time,now_hour)
+            key_name = 'NewAgent: %s/%s/%s-%s:%s' % (check_type, user, start_time, end_time, now_hour)
         else:
-            key_name = 'NewAgent: %s/%s/%s-%s' % (check_type,user,start_time,end_time)  # 0/環境:日期
+            key_name = 'NewAgent: %s/%s/%s-%s' % (check_type, user, start_time, end_time)  # 0/環境:日期
         result = RedisConnection.get_key(2, key_name)
         if result != 'not exist':  # result是 not exist, 代表 redis 沒值 ,不等於 就是 redis有值
             return result
-        if check_type == "ThirdBet":# 第三方 抓 COLLECT_THIRDLY_BET_RECORD 表
-            data = conn.select_NewAgent_ThirdBet(user,joint_type,start_time,end_time)
-        elif check_type == 'GP':# 淨輸贏 需把所有reason 做出來,  但只抓sum  和 三方 
-            data_third = conn.select_NewAgent_ThirdBet(user,joint_type,start_time,end_time,'sum')
-            #移除淨輸贏 沒計算 的項目
+        if check_type == "ThirdBet":  # 第三方 抓 COLLECT_THIRDLY_BET_RECORD 表
+            data = conn.select_NewAgent_ThirdBet(user, joint_type, start_time, end_time)
+        elif check_type == 'GP':  # 淨輸贏 需把所有reason 做出來,  但只抓sum  和 三方
+            data_third = conn.select_NewAgent_ThirdBet(user, joint_type, start_time, end_time, 'sum')
+            # 移除淨輸贏 沒計算 的項目
             del reson_dict['Depoist']
             del reson_dict['Withdraw']
             del reson_dict['MonthWage']
             del reson_dict['ThirdShares']
-            data_fund = conn.select_NewAgent(user,joint_type,start_time,end_time,reson_dict,check_type)
-            #print(data_third,data_fund)
+            data_fund = conn.select_NewAgent(user, joint_type, start_time, end_time, reson_dict, check_type)
+            # print(data_third,data_fund)
             data = data_third.copy()
             data.update(data_fund)
-        else: #其他 fund_change_log ,需帶不同reson
-            reson_key = tuple(reson_dict[check_type][0].keys())# reson名稱 ,tuple 格式 
-            data = conn.select_NewAgent(user,joint_type,start_time,end_time,reson_key,check_type)
+        else:  # 其他 fund_change_log ,需帶不同reson
+            reson_key = tuple(reson_dict[check_type][0].keys())  # reson名稱 ,tuple 格式
+            data = conn.select_NewAgent(user, joint_type, start_time, end_time, reson_key, check_type)
         print(data)
         if len(data) == 0:
             return "無資料"
-        items = []#存放 reson中文名稱
-        if check_type in ['ThirdBet','GP']:# 需做處理,不然items都叫 銷量/中獎
-           pass
+        items = []  # 存放 reson中文名稱
+        if check_type in ['ThirdBet', 'GP']:  # 需做處理,不然items都叫 銷量/中獎
+            pass
         else:
             for i in range(len(data['用戶名'])):
-                reson_name =   reson_dict[check_type][0][data['帳變摘要'][i]]# data['帳變摘要'][i] 取出  reson的英文名稱
+                reson_name = reson_dict[check_type][0][data['帳變摘要'][i]]  # data['帳變摘要'][i] 取出  reson的英文名稱
                 items.append(reson_name)
             data["備註"] = items
         RedisConnection.set_key(key_name, data)
         return data
-    return render_template('newAgent.html',items=reson_dict)
-@app.route('/Single',methods=["GET","POST"])
-def Single():#單挑
+    return render_template('newAgent.html', items=reson_dict)
+
+
+@app.route('/Single', methods=["GET", "POST"])
+def Single():  # 單挑
     if request.method == "POST":
         env_type = request.form.get('env_type')
         order_code = request.form.get('order_code')
@@ -1873,20 +1880,19 @@ def Single():#單挑
         year = request.form.get('day_year')
         date = "%s/%s/%s" % (year, month, day)
         lotteryid = request.form.get('lottery')
-        
-        
+
         conn = OracleConnection(env_id=int(env_type))
-        order_ = conn.select_game_order_data(order_code,lotteryid,date)# 用來確認 該環境有沒有 該order_code
+        order_ = conn.select_game_order_data(order_code, lotteryid, date)  # 用來確認 該環境有沒有 該order_code
         if len(order_) == 0:
             return '無該單號'
-        elif order_[0]["STATUS"] == 3:# 該game_order 未中獎 一定不會進單挑:
+        elif order_[0]["STATUS"] == 3:  # 該game_order 未中獎 一定不會進單挑:
             return '該單沒中獎, 不會進單挑'
-        elif order_[0]["STATUS"] == 1:# 該game_order 等待開獎 一定不會進單挑:
+        elif order_[0]["STATUS"] == 1:  # 該game_order 等待開獎 一定不會進單挑:
             return '該單未開獎, 不會進單挑'
-        elif order_[0]["STATUS"] == 4:# 該game_order 等待開獎 一定不會進單挑:
+        elif order_[0]["STATUS"] == 4:  # 該game_order 等待開獎 一定不會進單挑:
             return '該單撤銷, 不會進單挑'
-        
-        key_name = "Single:%s_%s_%s_%s"%(env_type,order_code,lotteryid, order_[0]["STATUS"])# redis key存入
+
+        key_name = "Single:%s_%s_%s_%s" % (env_type, order_code, lotteryid, order_[0]["STATUS"])  # redis key存入
         result = RedisConnection.get_key(2, key_name)
         if result != 'not exist':  # result是 not exist, 代表 redis 沒值 ,不等於 就是 redis有值
             return result
@@ -1895,46 +1901,46 @@ def Single():#單挑
         userid = order_[0]['USERID']
         issue_code = order_[0]['ISSUE_CODE']
         print(slip_)
-        BetTypeCode_list,Totbets_list,Status_list,Amount_list = [], [] , [], []
-        for index in range(len(slip_)):# 一張訂單 可能要很多個detail
+        BetTypeCode_list, Totbets_list, Status_list, Amount_list = [], [], [], []
+        for index in range(len(slip_)):  # 一張訂單 可能要很多個detail
             BetTypeCode_list.append(slip_[index]['BET_TYPE_CODE'])
             Totbets_list.append(slip_[index]['TOTBETS'])
-            Status_list.append(slip_[index]['STATUS'])# 一張單 的各個玩法 是否中獎  3 沒中獎
-            Amount_list.append(slip_[index]['TOTAMOUNT']/10000)# 該完法 投注金額 ,看驗證  投中比
-        #print(BetTypeCode_list)
-        if len(BetTypeCode_list) == 1: # 轉tuple 需處理, 否則帶到sql 會有問題
-            BetTypeCode_tuple = "('%s')"%BetTypeCode_list[0]
+            Status_list.append(slip_[index]['STATUS'])  # 一張單 的各個玩法 是否中獎  3 沒中獎
+            Amount_list.append(slip_[index]['TOTAMOUNT'] / 10000)  # 該完法 投注金額 ,看驗證  投中比
+        # print(BetTypeCode_list)
+        if len(BetTypeCode_list) == 1:  # 轉tuple 需處理, 否則帶到sql 會有問題
+            BetTypeCode_tuple = "('%s')" % BetTypeCode_list[0]
         else:
             BetTypeCode_tuple = tuple(BetTypeCode_list)
 
-        slipNum = conn.select_SingleSum(userid,BetTypeCode_tuple,lotteryid,issue_code)# 找出該單號 該期 的總 投注總數
-        bet_type_name = conn.select_SingleGame(lotteryid,BetTypeCode_tuple)# 用 bet_type 數值 對應 找出 中文
-        soloNum = conn.select_SingleSolo(lotteryid,BetTypeCode_tuple)# 查詢該玩法後台設定的 單挑設定
-        
-        #print(slipNum,bet_type_name,soloNum)
-        bet_type_list = []# 存放中文名稱
-        slipNum_list = []#存放總注數
-        soloNum_list = []#存放後台單挑設置
-        soloOpen_list = []# 存放後台單挑開關
-        solo_status = []# 存放是否進入單挑
-        #print(bet_type_name,slipNum,soloNum)
-        for index,bet_code in enumerate(BetTypeCode_list):
+        slipNum = conn.select_SingleSum(userid, BetTypeCode_tuple, lotteryid, issue_code)  # 找出該單號 該期 的總 投注總數
+        bet_type_name = conn.select_SingleGame(lotteryid, BetTypeCode_tuple)  # 用 bet_type 數值 對應 找出 中文
+        soloNum = conn.select_SingleSolo(lotteryid, BetTypeCode_tuple)  # 查詢該玩法後台設定的 單挑設定
+
+        # print(slipNum,bet_type_name,soloNum)
+        bet_type_list = []  # 存放中文名稱
+        slipNum_list = []  # 存放總注數
+        soloNum_list = []  # 存放後台單挑設置
+        soloOpen_list = []  # 存放後台單挑開關
+        solo_status = []  # 存放是否進入單挑
+        # print(bet_type_name,slipNum,soloNum)
+        for index, bet_code in enumerate(BetTypeCode_list):
             try:
                 bet_type_list.append(bet_type_name[bet_code])
                 slipNum_list.append(slipNum[bet_code][0])
                 soloNum_list.append(soloNum[bet_code][0])
                 soloOpen_list.append(soloNum[bet_code][1])
 
-                if Status_list[index] == 3:# 該完法沒中獎 ,不會進單挑
+                if Status_list[index] == 3:  # 該完法沒中獎 ,不會進單挑
                     solo_status.append("否")
-                elif soloNum[bet_code][1] == 0: #後台該玩法 關閉單挑, 也不進
+                elif soloNum[bet_code][1] == 0:  # 後台該玩法 關閉單挑, 也不進
                     solo_status.append("否")
                 else:
-                    if slipNum[bet_code][0] <=  soloNum[bet_code][0]:# 當期該玩法 的總注注和slipNUm 小於等於 後台 設定值 就會進單挑
+                    if slipNum[bet_code][0] <= soloNum[bet_code][0]:  # 當期該玩法 的總注注和slipNUm 小於等於 後台 設定值 就會進單挑
                         solo_status.append("是")
                     else:
                         solo_status.append("否")
-            except IndexError:# 有可能注單理的玩法,是 後台單挑值沒有的玩法
+            except IndexError:  # 有可能注單理的玩法,是 後台單挑值沒有的玩法
                 soloNum_list.append('無')
                 soloOpen_list.append('')
                 solo_status.append("玩法沒開放")
@@ -1945,15 +1951,16 @@ def Single():#單挑
         data["投注玩法bet_type_code"] = BetTypeCode_list
         data["該玩法注數"] = Totbets_list
         data["當期玩法後台單挑值"] = soloNum_list
-        data["該單後台單挑開關"] = ["開" if i == 1 else "無" if i==""  else "關閉" for i in soloOpen_list ]
+        data["該單後台單挑開關"] = ["開" if i == 1 else "無" if i == "" else "關閉" for i in soloOpen_list]
         data["是否進入單挑"] = solo_status
         data["玩法是否中獎"] = ["未中獎" if i == 3 else "中獎" for i in Status_list]
         data["該玩法投注金額"] = Amount_list
-         
+
         RedisConnection.set_key(key_name, data)
-        return data      
+        return data
     lottery_dict = FF_Joy188.FF_().lottery_dict
-    return render_template('Single.html',lottery_dict=lottery_dict)
+    return render_template('Single.html', lottery_dict=lottery_dict)
+
 
 @app.route('/login_cookie', methods=["POST"])  # 傳回登入cookie, 在api_test頁面.  取得登入cookie的方式
 def login_cookie():
@@ -2326,6 +2333,13 @@ def handle_http_exception(error):
     return response
 
 
+# @app.route('/favicon.ico')
+# def favicon():
+#     from flask import send_from_directory
+#     return send_from_directory(os.path.join(app.root_path, 'static'),
+#                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
+
 '''
 @celery.task()
 def test_fun():
@@ -2343,4 +2357,5 @@ if __name__ == "__main__":
     app.config['TESTING'] = True
     app.config['PROPAGATE_EXCEPTIONS'] = True
     app.run(host="0.0.0.0", debug=True, port=4444, threaded=True)
+
     # app.config.from_object(DevConfig)
