@@ -9,10 +9,8 @@ import datetime
 from dateutil.relativedelta import relativedelta
 import requests
 import json
-
-import image_test
+#import image_test
 import os
-
 from autoTest import AutoTest
 from autoTest import ApiTestPC
 from time import sleep
@@ -265,13 +263,11 @@ def sb_api():  # 體育api
     get_sb()
     return jsonify(SB_LIST)
 
-
+'''
 @app.route('/image', methods=['GET'])
 def image_():  # 調整圖片大小
     img_path = (os.path.join(os.path.expanduser("~"), 'Desktop'))
     return render_template('image.html', img_path=img_path)
-
-
 @app.route('/imageAdj', methods=["POST"])
 def image_adj():
     testInfo = {}  # 存放 圖名,長,寬 的資料
@@ -283,7 +279,7 @@ def image_adj():
     testInfo['width'] = width
     testInfo['msg'] = image_test.image_resize(image_name, height, width)  # 將圖名, 長,寬 回傳給 image_test檔案下 image_的 func使用
     return json.dumps(testInfo['msg'])
-
+'''
 
 @app.route('/autoTest', methods=["GET"])  # 自動化測試 頁面
 def auto_test():
