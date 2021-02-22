@@ -7,10 +7,6 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, R
 import datetime
 import requests
 import json
-<<<<<<< HEAD
-#import image_test
-=======
->>>>>>> DB連線統合
 import os
 from autoTest import AutoTest
 from autoTest import ApiTestPC
