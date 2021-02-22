@@ -3,16 +3,11 @@
 import math
 import traceback
 from http.client import HTTPException
-
 from flask import Flask, render_template, request, jsonify, redirect, url_for, Response, abort
 import datetime
-from dateutil.relativedelta import relativedelta
 import requests
 import json
-
-import image_test
 import os
-
 from autoTest import AutoTest
 from autoTest import ApiTestPC
 from time import sleep
@@ -35,7 +30,7 @@ from functools import reduce
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
-URL_DICT = {}  # 存放url 和街口狀態 , 給domain_ 用
+
 
 
 def iapi_login(envir):  # iapi 抓取沙巴token
@@ -134,7 +129,7 @@ def get_sb():  # 沙巴體育
             date_day = dict_['Etm'].split('T')  # 將str 分割成 日棋 和時間
             d = datetime.datetime.strptime(date_day[0] + ' ' + date_day[1], '%Y-%m-%d %H:%M:%S')  # date_day 0為年月日, 1為時間
             # print(d)
-            game_dict['Etm'] = (d + relativedelta(hours=12)).strftime('%Y-%m-%d %H:%M:%S')  # 加12小時
+            game_dict['Etm'] = (d).strftime('%Y-%m-%d %H:%M:%S')  # 加12小時
         SB_LIST.append(game_dict)
     SB_LIST.sort(key=lambda k: (k.get('Etm', 0)))  # 列表裡包字典, 時間排序
 
@@ -265,13 +260,11 @@ def sb_api():  # 體育api
     get_sb()
     return jsonify(SB_LIST)
 
-
+'''
 @app.route('/image', methods=['GET'])
 def image_():  # 調整圖片大小
     img_path = (os.path.join(os.path.expanduser("~"), 'Desktop'))
     return render_template('image.html', img_path=img_path)
-
-
 @app.route('/imageAdj', methods=["POST"])
 def image_adj():
     testInfo = {}  # 存放 圖名,長,寬 的資料
@@ -283,7 +276,7 @@ def image_adj():
     testInfo['width'] = width
     testInfo['msg'] = image_test.image_resize(image_name, height, width)  # 將圖名, 長,寬 回傳給 image_test檔案下 image_的 func使用
     return json.dumps(testInfo['msg'])
-
+'''
 
 @app.route('/autoTest', methods=["GET"])  # 自動化測試 頁面
 def auto_test():
@@ -1355,7 +1348,7 @@ def sun_user2():  # 查詢太陽成 指定domain
 
 
 @app.route('/sun_user', methods=["POST", "GET"])
-def sun_user():  # 太陽成用戶 找尋
+def sun_user():  # 太陽成用����� 找尋
     if request.method == "POST":
         user = request.form.get('user')
         env = request.form.get('env_type')
