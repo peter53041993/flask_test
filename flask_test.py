@@ -3,13 +3,14 @@
 import math
 import traceback
 from http.client import HTTPException
-
 from flask import Flask, render_template, request, jsonify, redirect, url_for, Response, abort
 import datetime
-from dateutil.relativedelta import relativedelta
 import requests
 import json
+<<<<<<< HEAD
 #import image_test
+=======
+>>>>>>> DB連線統合
 import os
 from autoTest import AutoTest
 from autoTest import ApiTestPC
@@ -33,7 +34,7 @@ from functools import reduce
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
-URL_DICT = {}  # 存放url 和街口狀態 , 給domain_ 用
+
 
 
 def iapi_login(envir):  # iapi 抓取沙巴token
@@ -132,7 +133,7 @@ def get_sb():  # 沙巴體育
             date_day = dict_['Etm'].split('T')  # 將str 分割成 日棋 和時間
             d = datetime.datetime.strptime(date_day[0] + ' ' + date_day[1], '%Y-%m-%d %H:%M:%S')  # date_day 0為年月日, 1為時間
             # print(d)
-            game_dict['Etm'] = (d + relativedelta(hours=12)).strftime('%Y-%m-%d %H:%M:%S')  # 加12小時
+            game_dict['Etm'] = (d).strftime('%Y-%m-%d %H:%M:%S')  # 加12小時
         SB_LIST.append(game_dict)
     SB_LIST.sort(key=lambda k: (k.get('Etm', 0)))  # 列表裡包字典, 時間排序
 
@@ -1351,7 +1352,7 @@ def sun_user2():  # 查詢太陽成 指定domain
 
 
 @app.route('/sun_user', methods=["POST", "GET"])
-def sun_user():  # 太陽成用戶 找尋
+def sun_user():  # 太陽成用����� 找尋
     if request.method == "POST":
         user = request.form.get('user')
         env = request.form.get('env_type')
