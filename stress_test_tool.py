@@ -6,6 +6,7 @@ class ApiStressTestTool:
     """
     最小的壓測模型，依照各環境與需求不同繼承後補足功能。
     """
+
     def __init__(self):
         self.session = requests.Session()
 
@@ -26,7 +27,6 @@ class ApiStressTestTool:
                     print(data)
                 except Exception as e:
                     print(e)
-
 
     def output_request_result(self, data):
         """
@@ -114,6 +114,9 @@ class FF4LiteTool(ApiStressTestTool):
         壓力測試本體，以index來針對每一次請求變更請求內容
         :param index: 1~run_times
         """
+        import timeit
+        timer = timeit.default_timer()
+
         if self.is_bet_test is None:  # 若測試方式尚未定義
             import sys
             sys.exit('壓測時未知測試方式')
@@ -124,7 +127,8 @@ class FF4LiteTool(ApiStressTestTool):
         else:  # 若為其他接口測試
             r = self.session.post(self.target_api, headers=self.header, data=self.content, verify=False)
         self.output_request_result([r.status_code, r.elapsed.total_seconds()])
-        return r.content
+        print(f'index: {index}, cost time: {timeit.default_timer() - timer}')
+        return None  # r.content
 
     def __get_newest_issue(self, lottery: str = 'cqssc') -> None:
         """
@@ -180,5 +184,5 @@ class FF4LiteTool(ApiStressTestTool):
 
 ff = FF4LiteTool('dev02', use_proxy=True)
 ff.login('twen101', '123qwe')
-# ff.start_bet_stress_test(run_times=5, lottery='cqssc')  # 單一彩種單式連續投注
-ff.start_api_stress_test(run_times=100, api=ff.env_data.get_em_url() + '/gameUserCenter/queryOrders', api_content='')
+ff.start_bet_stress_test(run_times=5, lottery='cqssc')  # 單一彩種單式連續投注
+# ff.start_api_stress_test(run_times=100, api=ff.env_data.get_em_url() + '/gameUserCenter/queryOrders', api_content='')
