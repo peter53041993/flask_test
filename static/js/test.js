@@ -126,3 +126,24 @@ function PickMeUp(event){
     }
 }
 
+
+function alert(title,e){
+    // $("body").append("<div id='msg'><span>"+e+"</span></div>");
+    var html="";
+    //element_ = 'body'
+    	html+="<div class='con'><div id='msg'>";
+    	html+="<div class='info_message'>";
+        html+="<button class='close' data-dismiss='modal' id='alertSure'>×</button>"
+    	html+="<div class='alertTitle'>"+title+"提示</div>";
+    	html+="<span class='detail_message'>"+e+"</span>";
+    	//html+="<div id='alertCancel'>取消</div></div></div>"
+    $('.submit').before(html);
+    clearmsg();
+}
+function clearmsg(){
+    $('#alertSure').click(function(){
+    	$("#msg").remove();
+    	$('.con').remove();
+    })
+};
+

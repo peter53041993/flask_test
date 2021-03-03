@@ -14,17 +14,13 @@ from functools import reduce
 
 logger = create_logger(log_folder='/logger', log_name='Connection')
 
-
 def map_list(x):  # sql抓出來 null的直,在python 為None 處理成0 EX:  [None, None]
     if x != None:
         return x
     return 0
-
-
 def list_cal(list_):  # 列表直數直計算 ,新代理有用到, 後續其他sql可使用
     return reduce(lambda x, y: x - y, list_)
-
-
+    
 class OracleConnection:
     __slots__ = '_env_id', '_conn'
 
@@ -474,11 +470,11 @@ class OracleConnection:
         cursor.close()
         return result
 
-    def select_game_order_data(self, order_code, lotteryid, date):
+    def select_game_order_data(self, order_code,lotteryid,date):
         cursor = self._get_oracle_conn().cursor()
-        sql = f"select * from GAME_ORDER where ORDER_CODE = '{order_code}' and lotteryid = {lotteryid} and  " \
-              f"ORDER_TIME between to_date('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
-              f"and to_date('{date}  23:59:59','YYYY/MM/DD HH24:MI:SS') "
+        sql = f"select * from GAME_ORDER where ORDER_CODE = '{order_code}' and lotteryid = {lotteryid} and  "\
+            f"ORDER_TIME between to_date('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
+            f"and to_date('{date}  23:59:59','YYYY/MM/DD HH24:MI:SS') "
         logger.info(sql)
 
         cursor.execute(sql)
@@ -539,21 +535,16 @@ class OracleConnection:
                 logger.debug(f'tuple_ = {tuple_}')
                 # 玩法為Key，內容為平台獎金/理論獎金/蛋蛋理論獎金/蛋蛋玩法名稱
                 if int(lottery_id) == 99204:
-                    bonus[tuple_[6]] = {'ACTUAL_BONUS': tuple_[3] / 10000, 'THEORY_BONUS': tuple_[5] / 10000,
-                                        'LHC_THEORY_BONUS': tuple_[4] / 10000}
+                    bonus[tuple_[6]] = {'ACTUAL_BONUS': tuple_[3] / 10000, 'THEORY_BONUS': tuple_[5] / 10000, 'LHC_THEORY_BONUS': tuple_[4] / 10000}
                 else:
                     if '67_75_111_70' == tuple_[7]:
                         bonus[f'{tuple_[0]}.{tuple_[1]}.{tuple_[2]}_70'] = {
                             'ACTUAL_BONUS': tuple_[3] / 10000, 'THEORY_BONUS': 2.22,
                             'LHC_THEORY_BONUS': tuple_[4] / 10000}
                     elif '67_75_111_71' == tuple_[7]:  # 龍虎和玩法群相同，因此判斷後在後方加上BET_TYPE_CODE進行區分
-                        bonus[f'{tuple_[0]}.{tuple_[1]}.{tuple_[2]}_71'] = {'ACTUAL_BONUS': tuple_[3] / 10000,
-                                                                            'THEORY_BONUS': tuple_[5] / 10000,
-                                                                            'LHC_THEORY_BONUS': tuple_[4] / 10000}
+                        bonus[f'{tuple_[0]}.{tuple_[1]}.{tuple_[2]}_71'] = {'ACTUAL_BONUS': tuple_[3] / 10000, 'THEORY_BONUS': tuple_[5] / 10000, 'LHC_THEORY_BONUS': tuple_[4] / 10000}
                     else:
-                        bonus[f'{tuple_[0]}.{tuple_[1]}.{tuple_[2]}'] = {'ACTUAL_BONUS': tuple_[3] / 10000,
-                                                                         'THEORY_BONUS': tuple_[5] / 10000,
-                                                                         'LHC_THEORY_BONUS': tuple_[4] / 10000}
+                        bonus[f'{tuple_[0]}.{tuple_[1]}.{tuple_[2]}'] = {'ACTUAL_BONUS': tuple_[3] / 10000, 'THEORY_BONUS': tuple_[5] / 10000, 'LHC_THEORY_BONUS': tuple_[4] / 10000}
             else:
                 bonus[index] = tuple_
         cursor.close()
@@ -660,37 +651,36 @@ class OracleConnection:
             lottery_point[index] = content
         cursor.close()
         return lottery_point
-
-    def select_NewAgent_ThirdBet(self, user, joint_type, start_date, end_date,
-                                 type_=""):  # 新代理三方銷量表 ,type =""抓全部, 帶sum 抓總和
+    
+    def select_NewAgent_ThirdBet(self,user,joint_type,start_date,end_date,type_=""):# 新代理三方銷量表 ,type =""抓全部, 帶sum 抓總和
         cursor = self._get_oracle_conn().cursor()
-        if joint_type == '0':  # 一般  ,找整條
+        if joint_type == '0':#一般  ,找整條
             query = f"(select * from user_customer where user_chain like '%/{user}/%') user_agent " \
                     f"where (user_.id = user_agent.id )"
-        else:  # 合營
-            query = f"(select * from user_customer where account = '{user}') user_agent " \
-                    f"where (user_.id = user_agent.id or user_.parent_id = user_agent.id)"
-        if type_ == "":  # 預設用法
+        else:#合營
+            query = f"(select * from user_customer where account = '{user}') user_agent "\
+                f"where (user_.id = user_agent.id or user_.parent_id = user_agent.id)"
+        if type_ == "": #預設用法
             query_col = "select user_.account,user_.id,agent_.create_date,agent_.thirdly_sn,agent_.plat,agent_.cost,agent_.prize \
             ,agent_.thirdly_game_name "
         else:
             query_col = "select sum(agent_.prize) - sum(agent_.cost) "
-
+            
         sql = f"{query_col}" \
-              f"from THIRDLY_AGENT_CENTER agent_ inner join user_customer user_ on agent_.USER_ID = user_.id, " \
-              f"{query}" \
-              f"and  agent_.create_date between  to_date('{start_date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
-              f"and to_date('{end_date} 23:59:59','YYYY/MM/DD HH24:MI:SS') " \
-              f"order by agent_.create_date desc "
+            f"from THIRDLY_AGENT_CENTER agent_ inner join user_customer user_ on agent_.USER_ID = user_.id, "\
+            f"{query}" \
+            f"and  agent_.create_date between  to_date('{start_date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
+            f"and to_date('{end_date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
+            f"order by agent_.create_date desc "
         print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
         NewAgent_ThirdBet = defaultdict(list)
         for i in rows:
-            if type_ != "sum":  # 不是 sum
+            if type_ != "sum":# 不是 sum
                 NewAgent_ThirdBet['用戶名'].append(i[0])
                 NewAgent_ThirdBet['用戶ID'].append(i[1])
-                NewAgent_ThirdBet['投注時間'].append(datetime.datetime.strftime(i[2], '%Y-%m-%d %H:%M:%S'))
+                NewAgent_ThirdBet['投注時間'].append(datetime.datetime.strftime(i[2],'%Y-%m-%d %H:%M:%S'))
                 NewAgent_ThirdBet['投注單號'].append(i[3])
                 NewAgent_ThirdBet['三方名稱'].append(i[4])
                 NewAgent_ThirdBet['有效銷量'].append(i[5])
@@ -698,35 +688,35 @@ class OracleConnection:
                 NewAgent_ThirdBet['遊戲名稱'].append(i[7])
             else:
                 NewAgent_ThirdBet['三方輸贏'].append(i[0])
-                # NewAgent_ThirdBet['三方總獎金'].append(i[1])
+                #NewAgent_ThirdBet['三方總獎金'].append(i[1])
                 for key in NewAgent_ThirdBet.keys():
-                    NewAgent_ThirdBet[key] = list(map(map_list, NewAgent_ThirdBet[key]))
+                    NewAgent_ThirdBet[key] = list(map(map_list,NewAgent_ThirdBet[key]))
         cursor.close()
         return NewAgent_ThirdBet
-
-    def select_NewAgent(self, user, joint_type, start_date, end_date, reason, check_type):  # 新代理中心 查reason 表
+    
+    def select_NewAgent(self,user,joint_type,start_date,end_date,reason,check_type):#新代理中心 查reason 表
         cursor = self._get_oracle_conn().cursor()
-        if joint_type == '0':  # 一般  ,找整條
+        if joint_type == '0':#一般  ,找整條
             query = f"(select * from user_customer where user_chain like '%/{user}/%') user_agent " \
                     f"where (user_.id = user_agent.id )"
-        else:  # 合營
-            query = f"(select * from user_customer where account = '{user}') user_agent " \
-                    f"where (user_.id = user_agent.id or user_.parent_id = user_agent.id)"
+        else:#合營
+            query = f"(select * from user_customer where account = '{user}') user_agent "\
+                f"where (user_.id = user_agent.id or user_.parent_id = user_agent.id)"
         NewAgent = defaultdict(list)
-        if check_type != 'GP':  # 不是淨輸贏, reason 會 回傳 指定的  單一 reason
+        if check_type != 'GP':# 不是淨輸贏, reason 會 回傳 指定的  單一 reason
             query_col = "select user_.account, fund_.user_id,fund_.reason, fund_.sn, fund_.gmt_created, " \
-                        "(ct_bal - befor_bal)/10000  ,(before_damt - ct_damt)/10000" \
- \
+            "(ct_bal - befor_bal)/10000  ,(before_damt - ct_damt)/10000"\
+    
             # 4.0銷量和 彩票反點 ,多把 ex_code抓出來
-            if check_type in ['Rebates', 'Turnover']:
+            if check_type in ['Rebates','Turnover']: 
                 query_col = query_col + ",fund_.ex_code "
             sql = f"{query_col}" \
-                  f" from fund_change_log fund_ inner join user_customer user_ on fund_.USER_ID = user_.id, " \
-                  f"{query}" \
-                  f"and  fund_.GMT_CREATED between  to_date('{start_date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
-                  f"and to_date('{end_date} 23:59:59','YYYY/MM/DD HH24:MI:SS') " \
-                  f"and fund_.reason in {reason} " \
-                  f"order by fund_.GMT_CREATED desc "
+            f" from fund_change_log fund_ inner join user_customer user_ on fund_.USER_ID = user_.id, "\
+            f"{query}" \
+            f"and  fund_.GMT_CREATED between  to_date('{start_date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
+            f"and to_date('{end_date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
+            f"and fund_.reason in {reason} " \
+            f"order by fund_.GMT_CREATED desc "
             print(sql)
             cursor.execute(sql)
             rows = cursor.fetchall()
@@ -735,21 +725,21 @@ class OracleConnection:
                 NewAgent["用戶ID"].append(i[1])
                 NewAgent["帳變摘要"].append(i[2])
                 NewAgent["帳變sn"].append(i[3])
-                NewAgent["帳變時間"].append(datetime.datetime.strftime(i[4], '%Y-%m-%d %H:%M:%S'))
+                NewAgent["帳變時間"].append(datetime.datetime.strftime(i[4],'%Y-%m-%d %H:%M:%S'))
                 NewAgent["帳變金額"].append(i[5])
                 NewAgent["帳變凍結金額"].append(i[6])
-                if check_type in ['Rebates', 'Turnover']:  # 4.0銷量和 彩票反點 ,多把 ex_code抓出來
+                if check_type in ['Rebates','Turnover']:# 4.0銷量和 彩票反點 ,多把 ex_code抓出來
                     NewAgent["遊戲單號"].append(i[7])
-        else:  # GP  需用Loop  每個大項把所有reason 取出和執行
+        else:# GP  需用Loop  每個大項把所有reason 取出和執行
             query_col = "select  sum(ct_bal - befor_bal)/10000   , sum(before_damt - ct_damt)/10000 "
-            for key in reason:  # reason =   reson_dict
+            for key in reason:# reason =   reson_dict
                 sql = f"{query_col}" \
-                      f" from fund_change_log fund_ inner join user_customer user_ on fund_.USER_ID = user_.id, " \
-                      f"{query}" \
-                      f"and  fund_.GMT_CREATED between  to_date('{start_date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
-                      f"and to_date('{end_date} 23:59:59','YYYY/MM/DD HH24:MI:SS') " \
-                      f"and fund_.reason in {tuple(reason[key][0].keys())} " \
-                      f"order by fund_.GMT_CREATED desc "
+                f" from fund_change_log fund_ inner join user_customer user_ on fund_.USER_ID = user_.id, "\
+                f"{query}" \
+                f"and  fund_.GMT_CREATED between  to_date('{start_date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
+                f"and to_date('{end_date} 23:59:59','YYYY/MM/DD HH24:MI:SS') "\
+                f"and fund_.reason in { tuple(reason[key][0].keys()) } " \
+                f"order by fund_.GMT_CREATED desc "
                 print(sql)
                 cursor.execute(sql)
                 rows = cursor.fetchall()
@@ -757,15 +747,14 @@ class OracleConnection:
                     NewAgent[reason[key][1]].append(i[0])
                     NewAgent[reason[key][1]].append(i[1])
             for key in NewAgent.keys():
-                NewAgent[key] = [list_cal(list(map(map_list, NewAgent[key])))]  # 將陣列理的元素,有none直調整為0 ,list_cal 在將列表直做計算
-
+                NewAgent[key] =  [list_cal(list(map(map_list,NewAgent[key])))]#將陣列理的元素,有none直調整為0 ,list_cal 在將列表直做計算
+                
         cursor.close()
         return NewAgent
-
-    def select_SingleSolo(self, lotteryid, bet_type_list):  # 查詢 後台 該完法 設訂單挑值
+    def select_SingleSolo(self,lotteryid,bet_type_list):# 查詢 後台 該完法 設訂單挑值
         cursor = self._get_oracle_conn().cursor()
         solo = defaultdict(list)
-
+        
         sql = f"select solo_num, solo_flag,bettype_code from game_solo where lotteryid = {lotteryid} and bettype_code in {bet_type_list} "
         print(sql)
         cursor.execute(sql)
@@ -776,80 +765,94 @@ class OracleConnection:
         cursor.close()
         return solo
 
-    def select_Single(self, user, date, lotteryid, check_type="Single_order"):  # 查詢 用戶 目前各彩種 投注注數
+    def select_Single(self,user,date,lotteryid,check_type="Single_order"):#查詢 用戶 目前各彩種 投注注數
         cursor = self._get_oracle_conn().cursor()
         if check_type == "Single_order":
             query = " select distinct game_order.order_code,  game_series.lottery_name, game_order.order_time, \
             slip.issue_code, slip.totbets, betttype.theory_bonus/10000  ,slip.single_win/10000, \
             betttype.group_code_title,betttype.set_code_title,betttype.method_code_title, slip.bet_type_code "
-            query2 = "order by game_order.order_code"
-        # Single_game 查詢玩法
+            query2= "order by game_order.order_code"
+        #Single_game 查詢玩法 
         else:
             query = " select distinct slip.bet_type_code, betttype.group_code_title, betttype.set_code_title, betttype.method_code_title \
-            "
-            query2 = "order by slip.bet_type_code"
-        sql = f"{query}" \
-              "from GAME_SLIP slip  inner join user_customer user_  on  slip.userid = user_.id \
-              inner join game_bettype_status betttype on slip.bet_type_code = betttype.bet_type_code and slip.lotteryid = betttype.lotteryid \
-              inner join game_order on game_order.userid = user_.id and game_order.lotteryid = slip.lotteryid and  \
-              slip.status = game_order.status and slip.orderid = game_order.id \
-              inner join game_series on game_series.lotteryid =  slip.lotteryid " \
-              f"where user_.account = '{user}'   and slip.status = 1 and slip.lotteryid = {lotteryid} and " \
-              f"slip.create_time BETWEEN TO_DATE('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
-              f"AND TO_DATE('{date} 23:59:59','YYYY/MM/DD HH24:MI:SS') and  betttype.group_code_title not in ('大小单双','双面盘','龙虎') {query2} "
+            " 
+            query2= "order by slip.bet_type_code"
+        sql =f"{query}" \
+        "from GAME_SLIP slip  inner join user_customer user_  on  slip.userid = user_.id \
+        inner join game_bettype_status betttype on slip.bet_type_code = betttype.bet_type_code and slip.lotteryid = betttype.lotteryid \
+        inner join game_order on game_order.userid = user_.id and game_order.lotteryid = slip.lotteryid and  \
+        slip.status = game_order.status and slip.orderid = game_order.id \
+        inner join game_series on game_series.lotteryid =  slip.lotteryid " \
+        f"where user_.account = '{user}'   and slip.status = 1 and slip.lotteryid = {lotteryid} and "\
+        f"slip.create_time BETWEEN TO_DATE('{date} 00:00:00','YYYY/MM/DD HH24:MI:SS')" \
+        f"AND TO_DATE('{date} 23:59:59','YYYY/MM/DD HH24:MI:SS') and  betttype.group_code_title not in ('大小单双','双面盘','龙虎') {query2} "
         print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
         Single = defaultdict(list)
-        # print(rows)
+        #print(rows)
         for i in rows:
             if check_type == "Single_order":
                 Single["單號"].append(i[0])
                 Single["彩種名"].append(i[1])
-                Single["遊戲時間"].append(datetime.datetime.strftime(i[2], '%Y-%m-%d %H:%M:%S'))
+                Single["遊戲時間"].append(datetime.datetime.strftime(i[2],'%Y-%m-%d %H:%M:%S'))
                 Single["期號"].append(i[3])
                 Single["投注注數"].append(i[4])
                 Single["理論獎金"].append(i[5])
                 Single["單注獎金"].append(i[6])
-                Single['玩法'].append("%s_%s_%s" % (i[7], i[8], i[9]))
+                Single['玩法'].append("%s_%s_%s"%(i[7],i[8],i[9]))
                 Single["bet_type_code"].append(i[10])
             else:
                 Single['bet_type_code'].append(i[0])
-                Single['玩法'].append("%s_%s_%s" % (i[1], i[2], i[3]))
+                Single['玩法'].append("%s_%s_%s"%(i[1],i[2],i[3]))
         cursor.close()
         return Single
-
-    def select_SingleSum(self, userid, bet_type_list, lotteryid, issue_code):  # 查詢用戶目前 彩種當期 的總注數
+    def select_SingleSum(self,userid,bet_type_list,lotteryid,issue_code):#查詢用戶目前 彩種當期 的總注數
         cursor = self._get_oracle_conn().cursor()
         Sum_bets = defaultdict(list)
-
         sql = "select  betttype.bet_type_code, sum(slip.totbets) from GAME_SLIP slip inner join user_customer user_  on  \
         slip.userid = user_.id \
         inner join game_bettype_status betttype on slip.bet_type_code = betttype.bet_type_code and slip.lotteryid = betttype.lotteryid " \
-              f"where user_.id = '{userid}'  and slip.bet_type_code in {bet_type_list} " \
-              f"and slip.lotteryid = {lotteryid} and slip.ISSUE_CODE = '{issue_code}' group  by betttype.bet_type_code"
+        f"where user_.id = '{userid}'  and slip.bet_type_code in {bet_type_list} " \
+        f"and slip.lotteryid = {lotteryid} and slip.ISSUE_CODE = '{issue_code}' group  by betttype.bet_type_code"
+
+
         print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
         for i in rows:
-            sum_ = 0 if i[1] is None else i[1]
+            sum_ = 0 if i[1] is None else  i[1]
             Sum_bets[i[0]].append(sum_)
-            # Sum_bets["注數總和"].append(sum_)
-        # print(Sum_bets)
+            #Sum_bets["注數總和"].append(sum_)
+        #print(Sum_bets)
         cursor.close()
         return Sum_bets
-
-    def select_SingleGame(self, lotteryid, BetTypeCode_list):  # 查詢 彩種的所有玩法 , 目前暫時不用
+    
+    def select_SingleGame(self,lotteryid,BetTypeCode_list):#查詢 彩種的所有玩法 , 目前暫時不用
         cursor = self._get_oracle_conn().cursor()
         sql = f"select GROUP_CODE_TITLE , SET_CODE_TITLE, METHOD_CODE_TITLE, BET_TYPE_CODE from game_bettype_status where " \
-              f"lotteryid =  {lotteryid} and  BET_TYPE_CODE in  {BetTypeCode_list}"
+        f"lotteryid =  {lotteryid} and  BET_TYPE_CODE in  {BetTypeCode_list}"
         print(sql)
         cursor.execute(sql)
         rows = cursor.fetchall()
         result = defaultdict(list)
-        # result = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
+        #result = [dict((cursor.description[i][0], value) for i, value in enumerate(row)) for row in cursor.fetchall()]
         for i in rows:
-            result[i[3]].append('%s_%s_%s' % (i[0], i[1], i[2]))
+            result[i[3]].append('%s_%s_%s'%(i[0],i[1],i[2]))
+        cursor.close()
+        return result
+    def select_SingleBet(self,orderid):# 查詢 投注內容, 用來 單挑去重用
+        cursor = self._get_oracle_conn().cursor()
+        sql = "SELECT  slip.bet_type_code,slip.bet_detail FROM game_slip slip \
+        INNER JOIN user_customer user_ ON slip.userid = user_.id \
+        INNER JOIN game_bettype_status betttype ON slip.bet_type_code = betttype.bet_type_code \
+        AND slip.lotteryid = betttype.lotteryid WHERE slip.orderid = '%s'"%orderid
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        result = defaultdict(list)
+        #print(sql)
+        for i in rows:
+            result[i[0]].append(i[1])
         cursor.close()
         return result
 
