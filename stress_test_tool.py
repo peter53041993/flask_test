@@ -3,16 +3,30 @@ from utils import Config
 
 
 class ApiStressTestTool:
+    """
+    最小的壓測模型，依照各環境與需求不同繼承後補足功能。
+    """
     def __init__(self):
         self.session = requests.Session()
 
     def stress_test(self, index):
+        """
+        壓測實體，壓測實際運行的內容，需繼承後改寫
+        :param index: 壓測流水號
+        """
         pass
 
     def start_stress_test(self, run_times: int = 10000):
         from tornado import concurrent
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future_to_index = [executor.submit(self.stress_test, index) for index in range(run_times)]
+            for future in concurrent.futures.as_completed(future_to_index):
+                try:
+                    data = future.result()
+                    print(data)
+                except Exception as e:
+                    print(e)
+
 
     def output_request_result(self, data):
         """
@@ -110,6 +124,7 @@ class FF4LiteTool(ApiStressTestTool):
         else:  # 若為其他接口測試
             r = self.session.post(self.target_api, headers=self.header, data=self.content, verify=False)
         self.output_request_result([r.status_code, r.elapsed.total_seconds()])
+        return r.content
 
     def __get_newest_issue(self, lottery: str = 'cqssc') -> None:
         """
