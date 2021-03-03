@@ -9,6 +9,9 @@ p{margin-top: 1%;}
 #form1 > table > tbody{
     text-align: center;
     }
+.alert{color: #ad3fbf}
+.alert:hover{text-decoration: underline;
+    font-weight:bold}
 </style>
 {% endblock %}  
 {% block script %}
@@ -99,8 +102,8 @@ p{margin-top: 1%;}
                     
                 }
                 else{
-                    $('#user_detail').append("<span style='color:#9c27b0; font-size: 20Px'>"+" 進入單挑: </span>"+
-                        "<span style='color:#ff2222; font-size: 15Px'> 當期玩法總投注數slipNum 小於等於 當期玩法後台單挑值 </span> ")
+                    $('#user_detail').append("<span style='color:black; font-size: 20Px'>"+" 進入單挑: </span>"+
+                        "<span style='color:#9c27b0; font-size: 15Px'> 當期玩法'去重後'新總投注數"+"<span style='color:red; font-size: 18Px'> 小於等於 </span>" +"當期玩法後台單挑值 </span> ")
                     var type_data = []
                     var key_name = Object.keys(data)
                     var len_data = data[key_name[0]].length//動態取得 data 第一個key 名稱的長度
@@ -120,19 +123,10 @@ p{margin-top: 1%;}
                             a.push(data_)
                         });
                         type_data.push(a)// 陣列包陣列 ex: [[123],[456]]
-                        
-                        //if (data["注數"][i]<=data["單挑設置"][i]){//把有數直的放進b, 到時可以直接顯示 出來, 0的過濾掉
-                            //c.push(data["玩法"][i])}
+
                     }
                     console.log(b)
-                    
-                    /*b["進入單挑"] = c
-                    $('#user_detail').append("<span style='color: red'>"+"進入單挑 玩法: ")
-                    $.each( b, function( key, value ) 
-                        {
-                            $('#user_detail').append(" "+value+" ")
-                        })*/
-                    
+
                     tabel_text = tabel_text + "</tr></thead><tbody><tr><th></th></tr></tbody></table>"
                     $('#user_detail').after(tabel_text)
                     console.log(type_data);
@@ -141,16 +135,60 @@ p{margin-top: 1%;}
                     data:  type_data ,
                     });
                     button_RemoveDisabeld('.submit')
-                }  
+                    $('.sorting_1').attr('onclick',"bet_detail(this)")
+                }
+
+                var order_code = $('#order_code').val()
+                console.log(check_type)
+                $.ajax({
+                    url:"/Single/bet",
+                    type:"POST",
+                    //dataType: "json",
+                    headers:{
+                            Accept:"application/json; charset=utf-8"
+                        },
+                    data: "order_code="+order_code,
+                    success:function(data){
+                        detail_bet =  data
+                        console.log(data)  
+                    }
+                })
                 
+                $('.sorting_1').attr('class','alert')
+                $('.alert').each(function(index){ 
+                    $(this).attr('id','alert'+String(index))
+                     }) 
+                
+
+
             },
             error:function(e){
                 button_RemoveDisabeld('.submit')  
             }
         })
+        //後續再去要 去重的玩法,顯示再 小談窗
         } 
         }
 </script>
+
+<script>
+    function bet_detail(check_type){//點選 bet_type_code 跳出 去重投注號碼
+        //var element_ = '#'+check_type.id
+        var bet_type_code = check_type.textContent
+        var content_ = JSON.stringify(detail_bet[bet_type_code][1])
+        var elementt_len = $('#msg').length// 判斷 頁面是否出現 彈窗
+        if (elementt_len == 0) {// 還未出現
+            alert(bet_type_code+'/號碼重複次數',content_);
+        }
+        else{//已衝現過的,先清除, 在跳 ,情境就是 點選 其他 bet_type_code
+            $("#msg").remove();
+            $('.con').remove();
+            alert(bet_type_code+'/號碼重複次數',content_);
+        }
+    }
+</script>
+
+
 
 
 
