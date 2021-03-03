@@ -64,12 +64,15 @@
             type:'POST', 
             data: form_trim("#form1"),
             success: function(data){
+                var sum_fund = data['sum_fund'].reduce((a,b)=>a+b)//總實際充值額
+                $('#user_detail').append("<span style='color: #9c27b0;'>"+"總實際充值金額: "+ parseFloat(sum_fund).toFixed(2))
                 $('#user_detail').after("<table border='1' class='dataframe'><thead><tr style='text-align: right;'><th>日期</th><th>實際充值金額</th><th>成功充值個數</th><th>充值總數</th><th>充值率 %</th></tr></thead><tbody><tr><th></th></tr></tbody></table>")
                 console.log(data);
                 toCurrency(data['sum_fund'])
                 toCurrency(data['len_Allfund'])
                 toCurrency(data['len_fund'])
                 button_RemoveDisabeld('#submit');
+                console.log(data)
                 if(check_value=='0'){ // 當日的 ,data 不用轉, 當月的 data 是array 包array ,DataTable 不用帶 columns 參數 
                         var type_data = [data]
                         $('.dataframe').DataTable( {
