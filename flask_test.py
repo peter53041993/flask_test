@@ -19,9 +19,7 @@ import logging
 from flask import current_app
 import urllib3
 from bs4 import BeautifulSoup
-# import twstock, stock
 import pandas as pd
-import re
 from utils import Config
 from utils.Connection import PostgresqlConnection, OracleConnection, RedisConnection
 import FF_Joy188
@@ -30,7 +28,6 @@ from functools import reduce
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
-
 
 
 def iapi_login(envir):  # iapi 抓取沙巴token
@@ -260,6 +257,7 @@ def sb_api():  # 體育api
     get_sb()
     return jsonify(SB_LIST)
 
+
 '''
 @app.route('/image', methods=['GET'])
 def image_():  # 調整圖片大小
@@ -277,6 +275,7 @@ def image_adj():
     testInfo['msg'] = image_test.image_resize(image_name, height, width)  # 將圖名, 長,寬 回傳給 image_test檔案下 image_的 func使用
     return json.dumps(testInfo['msg'])
 '''
+
 
 @app.route('/autoTest', methods=["GET"])  # 自動化測試 頁面
 def auto_test():
@@ -537,162 +536,6 @@ def domain_status():  # 查詢domain_list 所有網域的  url 接口狀態
     # return render_template('domain_status.html',url_dict=url_dict)
 
 
-@app.route('/stock_search', methods=["GET", "POST"])
-def stock_search():
-    stock_detail = {}
-    try:
-        if request.method == "POST":
-            stock_num = request.form.get('stock_search')
-            stock_name = request.form.get('stock_search2')
-            print(stock_num, stock_name)  # 股票號碼,股票名稱
-            if stock_name not in [None, '']:  # 代表頁面 輸入名稱 , 先從DB 找 有沒有該名稱,在去yahoo找
-                stock.stock_selectname(stock.kerr_conn(), stock_name)  # 找出相關資訊
-                stock_detail2 = stock.stock_detail2
-                if len(stock_detail2) == 0:  # 名稱營收db為空的, 就不列印營收資訊
-                    raise Exception(f'沒有該股票名稱: {stock_name}')
-                else:  # DB有找到該名稱 ,
-                    stock_deatil2 = stock.stock_detail2
-                    print(stock_deatil2)
-                    stock_num = str(list(stock_deatil2.values())[0][1])  # 號碼
-                    stock.df_test(stock_num)
-                    stock.df_test2(stock_num)
-                    now = stock.now  # 查詢時間
-                    latest_close = stock.latest_close  # 最新收盤
-                    latest_open = stock.latest_open
-                    latest_high = stock.latest_high
-                    latest_low = stock.latest_low
-                    latest_volume = stock.latest_volume
-            else:  # 輸入號碼 ,和頁面輸入名稱流程不同,  有號碼 先從yahoo直接去找
-                try:
-                    stock_name = twstock.codes[stock_num][2]
-                    stock.df_test(stock_num)
-                    stock.df_test2(stock_num)
-                    now = stock.now  # 查詢時間
-                    latest_close = stock.latest_close  # 最新收盤
-                    latest_open = stock.latest_open
-                    latest_high = stock.latest_high
-                    latest_low = stock.latest_low
-                    latest_volume = stock.latest_volume
-                except KeyError:
-                    raise Exception(f'沒有該股票號碼: {stock_num}')  # yahoo沒有,DB正常就不會有
-                stock.stock_selectnum(stock.kerr_conn(), int(stock_num))  # 有股號後, 從mysql 抓出更多資訊
-                stock_detail2 = stock.stock_detail2
-                if len(stock_detail2) == 0:  # 營收db為空的,但 yahoo查詢是有該股的, 就不列印營收資訊 ,
-                    data = {"股票名稱": stock_name, '股票號碼': stock_num, "目前股價": latest_close,
-                            '開盤': latest_open, '高點': latest_high, '低點': latest_low, '成交量': latest_volume,
-                            "查詢時間": now
-                            }
-                    frame = pd.DataFrame(data, index=[0])
-                    print(frame)
-                    return (frame.to_html())
-                else:  # yahoo有, DB也有, 就是多列印 營收
-                    pass  # 走到下面  和輸入 名稱  共用  營收邏輯
-
-            # 有營收, 輸入號碼 和輸入 名稱 共用
-            stock_curMonRev = list(stock_detail2.values())[0][4]
-            stock_lastMonRev = list(stock_detail2.values())[0][5]
-            stock_lastYearMonRev = list(stock_detail2.values())[0][6]
-            stock_lastMonRate = list(stock_detail2.values())[0][7]
-            stock_lastYearMonRate = list(stock_detail2.values())[0][8]
-            stock_curYearRev = list(stock_detail2.values())[0][9]
-            stock_lastYearRev = list(stock_detail2.values())[0][10]
-            stock_lastYearRate = list(stock_detail2.values())[0][11]
-            stock_memo = list(stock_detail2.values())[0][12]
-            data = {"股票名稱": stock_name, '股票號碼': stock_num, "目前股價": latest_close,
-                    '開盤': latest_open, '高點': latest_high, '低點': latest_low, '成交量': latest_volume,
-                    "當月營收": stock_curMonRev, '上月營收': stock_lastMonRev, '去年當月': stock_lastYearMonRev,
-                    "上月營收增": stock_lastMonRate,
-                    '去年同月營收增減': stock_lastYearMonRate, '今年營收': stock_curYearRev, '去年營收': stock_lastYearRev,
-                    '去年營收增減': stock_lastYearRate, '股票備注': stock_memo, "查詢時間": now
-                    }
-            now_hour = datetime.datetime.now().hour  # 現在時間 :時
-            weekday = datetime.date.today().weekday() + 1  # 現在時間 :周, 需加1 , 禮拜一為0
-            print(f'現在時數: {now_hour},禮拜:{weekday}')
-            if now_hour > 14 or weekday in [6, 7]:
-                print('大於最後成交時間或者六日,不再做更新股價')
-            else:
-                print(stock.stock_detail2)  # mysql抓出來的 資訊
-                '''
-                stock_prize = (stock_detail['realtime']['latest_trade_price'])  # 股票 最新一筆成交價
-                print(stock_prize, type(stock_prize))  # 為一個 str ,需把 小數點  . 三和四 去除掉
-                if stock_prize == '-':  # 抓出來 是  "-"  就先不理會,給一個值0
-                    stock_prize = 0
-                else:
-                    stock_prize = stock_prize[0:-2]  # 後面兩個00不用,   到小數電第四位即可
-                # stock_prize = stock_prize[0:-2]# 後面兩個00不用,   到小數電第四位即可
-                print(stock_prize)
-                '''
-
-                stock.stock_update(stock.kerr_conn(), float(latest_close), int(stock_num))  # 將股價 Update進去 Mysql
-
-                '''
-                data = {"股票名稱": stock_detail['info']['name'], "目前股價": latest_close,
-                        "開盤": latest_open,
-                        "高點": stock_detail['realtime']['high'], "低點": stock_detail['realtime']['low'],
-                        "查詢時間": stock_detail['info']['time']}
-                '''
-            frame = pd.DataFrame(data, index=[0])
-            print(frame)
-            # print(frame.to_html())
-            return frame.to_html()
-        return render_template('stock.html')
-    except requests.exceptions.Timeout as e:
-        print(e)
-
-
-@app.route('/stock_search2', methods=["POST"])
-def stock_search2():
-    stock_type = request.form.getlist('Revenue')
-    print(stock_type)
-    stock.stock_select2(stock.kerr_conn(), stock_type)  # select 出來
-    stock_detail3 = stock.stock_detail3
-    stock_num, stock_name, stock_prize, stock_curMonRev, stock_lastMonRev, stock_lastYearMonRev, stock_lastMonRate, stock_lastYearMonRate, stock_curYearRev, stock_lastYearRev, stock_lastYearRate, stock_memo = [], [], [], [], [], [], [], [], [], [], [], []
-
-    for num in stock_detail3.keys():
-        stock_num.append(stock_detail3[num][1])
-        stock_name.append(stock_detail3[num][2])
-        try:
-            if stock_detail3[num][3] == 0:  # 股價是0,代表還沒有Update 股價過
-
-                stock_detail = twstock.realtime.get(str(stock_detail3[num][1]))
-                print(stock_detail)
-                prize = (stock_detail['realtime']['latest_trade_price'])  # 股票 最新一筆成交價
-                if prize == '-':  # 抓出來 是  "-"  就先不理會,給一個值0
-                    prize = 0
-                else:
-                    prize = prize[0:-2]  # 後面兩個00不用,   到小數電第四位即可
-                print(prize, type(prize))
-                stock_prize.append(prize)
-                stock.stock_update(stock.kerr_conn(), float(prize),
-                                   int(stock_detail3[num][1]))  # 將股價 Update進去 Mysql
-            else:
-                stock_prize.append(stock_detail3[num][3])
-        except requests.exceptions.ConnectionError:
-            print('連線失敗')
-            stock_prize.append(stock_detail3[num][3])
-        stock_curMonRev.append(stock_detail3[num][4])
-        stock_lastMonRev.append(stock_detail3[num][5])
-        stock_lastYearMonRev.append(stock_detail3[num][6])
-        stock_lastMonRate.append(stock_detail3[num][7])
-        stock_lastYearMonRate.append(stock_detail3[num][8])
-        stock_curYearRev.append(stock_detail3[num][9])
-        stock_lastYearRev.append(stock_detail3[num][10])
-        stock_lastYearRate.append(stock_detail3[num][11])
-        stock_memo.append(stock_detail3[num][12])
-
-    # print(stock_num,stock_name,stock_prize,stock_curMonRev,stock_lastMonRev,stock_lastYearMonRev,stock_lastMonRate,stock_lastYearMonRate,stock_curYearRev,stock_lastYearRev,stock_lastYearRate,stock_memo)
-    print(stock_prize)
-
-    data = {'股票號碼': stock_num, "股票名稱": stock_name, "股價": stock_prize, "當月營收": stock_curMonRev,
-            "上月營收增減": stock_lastMonRate,
-            '去年同月營收增減': stock_lastYearMonRate, '今年營收': stock_curYearRev, '去年營收': stock_lastYearRev,
-            '去年營收增減': stock_lastYearRate, '股票備注': stock_memo}
-    frame = pd.DataFrame(data)
-    print(frame)
-    # print(frame.to_html())
-    return frame.to_html()
-
-
 def number_map(number_record):  # 開獎號使用
     if number_record == '':
         return ''
@@ -785,12 +628,6 @@ def game_map(type_=''):  # 玩法 和 說明 mapping,type_ 預設  '' ,為玩法
         data['理論獎金'] = theory_data
     # data['獎金計算'] = game_cal
     data['遊戲說明'] = game_explan
-
-
-@app.route('/stock_search3', methods=["POST"])
-def stock_search3():
-    stock.stock_search3(stock.kerr_conn())
-    stock_detail = stock.stock_detail3
 
 
 def status_style(val):  # 判斷狀態,來顯示顏色屬性 , 給 game_order 裡的order_status用
