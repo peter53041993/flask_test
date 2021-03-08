@@ -1,5 +1,6 @@
 import itertools
 import json
+import math
 import random
 
 import requests
@@ -140,13 +141,17 @@ class FF4LiteTool(ApiStressTestTool):
         bet_amount = 0
         self.__get_newest_issue(lottery_code=lottery_code, trace_times=trace_times)
         for method in self.game_content_generator.methods:
-            if bet_amount > target_amount > 0:
+            print(f'Start bet method: {method.title}')
+            self.__check_issue_time()
+            if target_amount > 0 and bet_amount > target_amount:
                 break
             bet_content = self.game_content_generator.get_bet_content(method=method, issues=self.newest_issue)
+            print(f'bet_content={bet_content}')
             if bet_content is not None:
                 bet_amount += bet_content['amount']
                 r = self.session.post(self.env_data.get_em_url() + f'/gameBet/{lottery_code}/submit',
                                       headers=self.header, json=bet_content, verify=False)
+            print(f'Done.')
 
     def __get_newest_issue(self, lottery_code: str = 'cqssc', trace_times: int = 1) -> None:
         """
@@ -247,7 +252,6 @@ class Method:
                 if method['LOTTERYID'] == lotteryID:
                     result.append(Method(lotteryID, method['GROUP_CODE_NAME'], method['SET_CODE_NAME'],
                                          method['METHOD_CODE_NAME'], method['TITLE']))
-        print(result)
         return result
 
 
@@ -256,7 +260,7 @@ class FF4GameContentGenerator:
         self.lotteryID = lotteryID
         self.methods = Method.get_all_games(self.lotteryID)
 
-    def get_bet_content(self, method: Method, issues: dict):
+    def get_bet_content(self, method: Method, issues: list):
         random_ball = self.__get_random_method_ball(method)
         if random_ball is None:
             return None
@@ -302,6 +306,8 @@ class FF4GameContentGenerator:
         """
         if method.method_name in ["fushi"]:
             content = self.__random_fushi(method)
+        elif method.method_name in ['danshi', 'zuliudanshi', 'zusandanshi']:
+            content = self.__random_danshi(method)
         else:
             content = None
         return content
@@ -353,8 +359,37 @@ class FF4GameContentGenerator:
             return [','.join(balls), num]
         return None
 
-    def __random_danshi(self, method: Method -> [str, int]:
-        pass
+    def __random_danshi(self, method: Method) -> [str, int]:
+        balls = []
+        if method.method_name == 'danshi':  # 5/4/3/2星單式
+            # amount = random.randint(1, int(math.pow(10, method.digit)))  # 投注位數取隨機注數
+            amount = random.randint(1, 100)  # 投注位數取隨機注數
+            while len(balls) < amount:
+                num = str(random.randint(0, math.pow(10, method.digit))).zfill(method.digit)  # 取隨機號，若開頭為0則須補0至足夠位數
+                if num not in balls:
+                    balls.append(num)
+            return [' '.join(balls), len(balls)]
+        elif method.method_name == 'zuliudanshi':  # 組六邏輯
+            amount = random.randint(1, 100)  # 組三組六上限需計算，先行固定100
+            while len(balls) < amount:
+                ball = ''
+                while len(ball) < 3:
+                    num = str(random.randint(0, 10))
+                    if num not in ball:
+                        ball += num
+                if ball not in balls:
+                    balls.append(ball)
+            return [' '.join(balls), amount]
+        elif method.method_name == 'zusandanshi':  # 組三邏輯
+            amount = random.randint(1, 100)  # 組三組六上限需計算，先行固定100
+            while len(balls) < amount:
+                ball = ''
+                num = str(random.randint(0, 10))
+                ball += num + num + str(random.randint(0, 9))
+                if ball not in balls:
+                    balls.append(ball)
+            return [' '.join(balls), amount]
+        return None
 
 
 ff = FF4LiteTool('joy188', use_proxy=True)
@@ -366,4 +401,4 @@ for user in ['twen101']:
 # ff.start_api_stress_test(run_times=100, api=ff.env_data.get_em_url() + '/gameUserCenter/queryOrders', api_content='')
 
 # ffgcg = FF4GameContentGenerator(99111)
-# print(ffgcg.get_bet_content(ffgcg.get_method('四星直选复式'), "", ""))
+# print(ffgcg.get_bet_content(ffgcg.get_method('前三直选单式'), [{'number': '123', 'issueCode': '4123'}]))
