@@ -1,3 +1,4 @@
+import itertools
 import json
 import random
 
@@ -139,7 +140,7 @@ class FF4LiteTool(ApiStressTestTool):
         bet_amount = 0
         self.__get_newest_issue(lottery_code=lottery_code, trace_times=trace_times)
         for method in self.game_content_generator.methods:
-            if bet_amount > target_amount:
+            if bet_amount > target_amount > 0:
                 break
             bet_content = self.game_content_generator.get_bet_content(method=method, issues=self.newest_issue)
             if bet_content is not None:
@@ -316,7 +317,7 @@ class FF4GameContentGenerator:
                     r_int = random.randint(0, 9)
                     if str(r_int) not in ball:
                         ball += str(r_int)
-                balls.append(ball)
+                balls.append(''.join(sorted(ball)))
             for _ball in balls:
                 num *= len(_ball)
             for _ in range(method.offset):  # 前方省略號碼補 '-'
@@ -326,15 +327,40 @@ class FF4GameContentGenerator:
             print(','.join(balls))
             return [','.join(balls), num]
         elif method.set_name == 'zuxuan':
-            return None
+            ball = ""
+            _len = random.randint(2, 9)  # 隨機投注數量
+            while len(ball) < _len:
+                r_int = random.randint(0, 9)  # 隨機不重複數字
+                if str(r_int) not in ball:
+                    ball += str(r_int)
+            num = len(list(itertools.combinations(ball, 2)))  # 組選取組合數
+            return [','.join(sorted(ball)), num]
         elif method.set_name == 'dingweidan':
-            return None
+            num = 0
+            balls = []
+            for _digit in range(0, 5):  # 萬~個獨立判斷
+                _amount = random.randint(0, 10)  # 隨機0~10位數
+                if _amount == 0:
+                    balls.append('-')
+                else:
+                    ball = ""
+                    while len(ball) < _amount:
+                        r_int = random.randint(0, 9)
+                        if str(r_int) not in ball:
+                            ball += str(r_int)
+                    num += _amount
+                    balls.append(''.join(sorted(ball)))
+            return [','.join(balls), num]
+        return None
+
+    def __random_danshi(self, method: Method -> [str, int]:
+        pass
 
 
 ff = FF4LiteTool('joy188', use_proxy=True)
 for user in ['twen101']:
     ff.login(user, 'amberrd')
-    ff.bet_orderd_times(lottery_code='jlffc', lottery_id=99111, trace_times=3, target_amount=5000)
+    ff.bet_orderd_times(lottery_code='jlffc', lottery_id=99111, trace_times=3, target_amount=-1)
 
 # ff.start_bet_stress_test(run_times=5, lottery='cqssc')  # 單一彩種單式連續投注
 # ff.start_api_stress_test(run_times=100, api=ff.env_data.get_em_url() + '/gameUserCenter/queryOrders', api_content='')
