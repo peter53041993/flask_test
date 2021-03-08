@@ -332,8 +332,10 @@ class FF4GameContentGenerator:
 
 
 ff = FF4LiteTool('joy188', use_proxy=True)
-ff.login('twen101', 'amberrd')
-ff.bet_orderd_times(lottery_code='jlffc', lottery_id=99111, trace_times=3)
+for user in ['twen101']:
+    ff.login(user, 'amberrd')
+    ff.bet_orderd_times(lottery_code='jlffc', lottery_id=99111, trace_times=3, target_amount=5000)
+
 # ff.start_bet_stress_test(run_times=5, lottery='cqssc')  # 單一彩種單式連續投注
 # ff.start_api_stress_test(run_times=100, api=ff.env_data.get_em_url() + '/gameUserCenter/queryOrders', api_content='')
 
