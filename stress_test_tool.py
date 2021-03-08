@@ -1,3 +1,6 @@
+import json
+import random
+
 import requests
 from utils import Config
 
@@ -130,14 +133,28 @@ class FF4LiteTool(ApiStressTestTool):
         print(f'index: {index}, cost time: {timeit.default_timer() - timer}')
         return None  # r.content
 
-    def __get_newest_issue(self, lottery: str = 'cqssc') -> None:
+    def bet_orderd_times(self, lottery_code: str, lottery_id: int, trace_times: int = 1, target_amount: float = 5000):
+        self.game_content_generator = FF4GameContentGenerator(lottery_id)
+        self.lottery_code = lottery_code
+        bet_amount = 0
+        self.__get_newest_issue(lottery_code=lottery_code, trace_times=trace_times)
+        for method in self.game_content_generator.methods:
+            if bet_amount > target_amount:
+                break
+            bet_content = self.game_content_generator.get_bet_content(method=method, issues=self.newest_issue)
+            if bet_content is not None:
+                bet_amount += bet_content['amount']
+                r = self.session.post(self.env_data.get_em_url() + f'/gameBet/{lottery_code}/submit',
+                                      headers=self.header, json=bet_content, verify=False)
+
+    def __get_newest_issue(self, lottery_code: str = 'cqssc', trace_times: int = 1) -> None:
         """
         投注壓測用，取得當前玩法最新期號與期號過期時間
         """
         self.content = ''
-        target_api = self.env_data.get_em_url() + f'/gameBet/{lottery}/dynamicConfig'
+        target_api = self.env_data.get_em_url() + f'/gameBet/{lottery_code}/dynamicConfig'
         response = self.session.post(target_api, headers=self.header, data=self.content, verify=False)
-        self.newest_issue = response.json()['data']['gamenumbers'][0]
+        self.newest_issue = response.json()['data']['gamenumbers'][:trace_times:]
         self.now_stop_time = response.json()['data']['nowstoptime']
 
     def __check_issue_time(self):
@@ -182,7 +199,143 @@ class FF4LiteTool(ApiStressTestTool):
         return rx
 
 
-ff = FF4LiteTool('dev02', use_proxy=True)
-ff.login('twen101', '123qwe')
-ff.start_bet_stress_test(run_times=5, lottery='cqssc')  # 單一彩種單式連續投注
+class Method:
+    def __init__(self, lottery: int, code_name: str, set_name: str, method_name: str, title: str):
+        self.lottery = lottery
+        self.code_name = code_name
+        self.set_name = set_name
+        self.method_name = method_name
+        self.title = title
+        if code_name in ['yixing']:  # 一星
+            self.offset = 4
+        elif code_name in ['houer']:  # 後二
+            self.offset = 3
+        elif code_name in ['housan']:  # 後三
+            self.offset = 2
+        elif code_name in ['sixing', 'zhongsan']:  # 四星 中三
+            self.offset = 1
+        elif code_name in ['wuxing', 'qianer', 'qiansan']:  # 五星 前二 前三
+            self.offset = 0
+        else:
+            self.offset = None
+
+        if code_name in ['wuxing']:
+            self.digit = 5
+        elif code_name in ['sixing']:
+            self.digit = 4
+        elif code_name in ['qiansan', 'zhongsan', 'housan']:
+            self.digit = 3
+        elif code_name in ['qianer', 'houer']:
+            self.digit = 2
+        elif code_name in ['yixing']:
+            self.digit = 1
+        else:
+            self.digit = None
+
+    @staticmethod
+    def get_all_games(lotteryID: int) -> list:
+        """
+        自FF4GameAwards.json取得所有對應採種玩法，並以Array<GameAward>回傳
+        :param lotteryID: 彩種ID
+        :return: Array<GameAward>
+        """
+        result = []
+        with open('FF4GameAwards.json', encoding='utf8', errors='ignore') as json_file:
+            method_json = json.load(json_file)
+            for method in method_json['data']:
+                if method['LOTTERYID'] == lotteryID:
+                    result.append(Method(lotteryID, method['GROUP_CODE_NAME'], method['SET_CODE_NAME'],
+                                         method['METHOD_CODE_NAME'], method['TITLE']))
+        print(result)
+        return result
+
+
+class FF4GameContentGenerator:
+    def __init__(self, lotteryID: int):
+        self.lotteryID = lotteryID
+        self.methods = Method.get_all_games(self.lotteryID)
+
+    def get_bet_content(self, method: Method, issues: dict):
+        random_ball = self.__get_random_method_ball(method)
+        if random_ball is None:
+            return None
+        orders = []
+        for issue in issues:
+            orders.append(
+                {"number": issue['number'],
+                 "issueCode": issue['issueCode'],
+                 "multiple": 1}
+            )
+        return {
+            "gameType": method.lottery,
+            "isTrace": 0 if len(issues) == 1 else 1,
+            "traceWinStop": 0,
+            "traceStopValue": -1,
+            "balls": [
+                {
+                    "id": 1,
+                    "ball": random_ball[0],
+                    "type": f'{method.code_name}.{method.set_name}.{method.method_name}',
+                    "moneyunit": "1",
+                    "multiple": 1,
+                    "awardMode": 1,
+                    "num": random_ball[1]
+                }
+            ],
+            "orders": orders,
+            "redDiscountAmount": 0,
+            "amount": random_ball[1] * 2 * len(orders)
+        }
+
+    def get_method(self, title):
+        for method in self.methods:
+            if method.title == title:
+                return method
+        return None
+
+    def __get_random_method_ball(self, method: Method) -> [str, int]:
+        """
+        回傳當前玩法的隨機投注內容與注數
+        :param method:
+        :return:
+        """
+        if method.method_name in ["fushi"]:
+            content = self.__random_fushi(method)
+        else:
+            content = None
+        return content
+
+    def __random_fushi(self, method: Method) -> [str, int]:
+        balls = []
+        num = 1
+        if method.set_name == 'zhixuan':
+            for digit in range(method.digit):  # 運行(投注號長度)次
+                ball = ""
+                _len = random.randint(1, 9)  # 單一位數的投注數量
+                while len(ball) < _len:
+                    r_int = random.randint(0, 9)
+                    if str(r_int) not in ball:
+                        ball += str(r_int)
+                balls.append(ball)
+            for _ball in balls:
+                num *= len(_ball)
+            for _ in range(method.offset):  # 前方省略號碼補 '-'
+                balls.insert(0, '-')
+            for _ in range(5 - method.offset - method.digit):  # 剩餘後方補 '-'
+                balls.append('-')
+            print(','.join(balls))
+            return [','.join(balls), num]
+        elif method.set_name == 'zuxuan':
+            return None
+        elif method.set_name == 'dingweidan':
+            return None
+
+
+ff = FF4LiteTool('joy188', use_proxy=True)
+ff.login('twen101', 'amberrd')
+ff.bet_orderd_times(lottery_code='jlffc', lottery_id=99111, trace_times=3)
+# ff.start_bet_stress_test(run_times=5, lottery='cqssc')  # 單一彩種單式連續投注
 # ff.start_api_stress_test(run_times=100, api=ff.env_data.get_em_url() + '/gameUserCenter/queryOrders', api_content='')
+
+# ffgcg = FF4GameContentGenerator(99111)
+# print(ffgcg.get_bet_content(ffgcg.get_method('四星直选复式'), "", ""))
