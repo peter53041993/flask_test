@@ -363,20 +363,32 @@ class FF4GameContentGenerator:
         balls = []
         if method.method_name == 'danshi':  # 5/4/3/2星單式
             # amount = random.randint(1, int(math.pow(10, method.digit)))  # 投注位數取隨機注數
-            amount = random.randint(1, 100)  # 投注位數取隨機注數
+            amount = random.randint(1, 80)  # 投注位數取隨機注數
             while len(balls) < amount:
-                num = str(random.randint(0, math.pow(10, method.digit))).zfill(method.digit)  # 取隨機號，若開頭為0則須補0至足夠位數
-                if num not in balls:
-                    balls.append(num)
+                if method.set_name == 'zhixuan':  # 直選單式
+                    num = str(random.randint(0, int(math.pow(10, method.digit) - 1))).zfill(method.digit)  # 取隨機號，若開頭為0則須補0至足夠位數
+                    if num not in balls:
+                        balls.append(num)
+                elif method.set_name == 'zuxuan':  # 組選單式
+                    ball = ''
+                    for _ in range(0, method.digit):  # 依照單式的號碼長度運行N次
+                        num = str(random.randint(0, 9))
+                        while ball.count(num) + 1 == method.digit:  # 若加入新數字後形成豹子號
+                            num = str(random.randint(0, 9))
+                        ball += num
+                    ball = ''.join(sorted(ball))
+                    if ball not in balls:
+                        balls.append(ball)
             return [' '.join(balls), len(balls)]
         elif method.method_name == 'zuliudanshi':  # 組六邏輯
             amount = random.randint(1, 100)  # 組三組六上限需計算，先行固定100
             while len(balls) < amount:
                 ball = ''
                 while len(ball) < 3:
-                    num = str(random.randint(0, 10))
+                    num = str(random.randint(0, 9))
                     if num not in ball:
                         ball += num
+                ball = ''.join(sorted(ball))
                 if ball not in balls:
                     balls.append(ball)
             return [' '.join(balls), amount]
@@ -384,8 +396,13 @@ class FF4GameContentGenerator:
             amount = random.randint(1, 100)  # 組三組六上限需計算，先行固定100
             while len(balls) < amount:
                 ball = ''
-                num = str(random.randint(0, 10))
-                ball += num + num + str(random.randint(0, 9))
+                num = str(random.randint(0, 9))  # 00/11/22...
+                num2 = str(random.randint(0, 9))
+                while num == num2:
+                    num2 = str(random.randint(0, 9))
+                ball += num + num + num2
+                ball = ''.join(sorted(ball))
+                print(ball)
                 if ball not in balls:
                     balls.append(ball)
             return [' '.join(balls), amount]
