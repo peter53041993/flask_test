@@ -323,6 +323,16 @@ class FF4GameContentGenerator:
             content = self.__random_danshi(method)
         elif 'zuxuan' in method.method_name:
             content = self.__random_zuxuan_n(method)
+        elif method.set_name == 'budingwei':
+            content = self.__random_budingwei(method)
+        elif method.method_name == 'baodan':
+            content = self.__random_baodan(method)
+        elif method.method_name == 'hezhi':
+            content = self.__random_hezhi(method)
+        elif method.set_name == 'quwei':
+            content = self.__random_quwei()
+        elif method.method_name == 'kuadu':
+            content = self.__random_kuadu(method)
         else:
             content = None
         return content
@@ -476,9 +486,95 @@ class FF4GameContentGenerator:
         comb_second = len(list(itertools.combinations(ball[1], pick_second)))  # 單號組合數
         return [','.join(ball), comb_first * comb_second]
 
+    def __random_budingwei(self, method: Method) -> [str, int]:
+        if method.method_name == 'yimabudingwei':
+            pick_len = 1
+        elif method.method_name == 'ermabudingwei':
+            pick_len = 2
+        else:
+            pick_len = 3
+        length = random.randint(pick_len, 10)
+        ball = ''
+        while len(ball) < length:
+            num = str(random.randint(0, 9))
+            if num not in ball:
+                ball += num
+        return [','.join(ball), len(list(itertools.combinations(ball, pick_len)))]
 
-ff = FF4LiteTool('dev02', use_proxy=True)
-generator = FF4GameContentGenerator(lotteryID=99111, target_set=['zuxuan'])
+    def __random_baodan(self, method: Method) -> [str, int]:
+        if method.digit == 3:
+            return [str(random.randint(0, 9)), 54]
+        else:
+            return [str(random.randint(0, 9)), 9]
+
+    def __random_hezhi(self, method: Method) -> [str, int]:
+        hezhi_table = {
+            3: {
+                'zhixuan': {
+                    0: 1, 1: 3, 2: 6, 3: 10, 4: 15, 5: 21, 6: 28, 7: 36, 8: 45, 9: 55, 10: 63, 11: 69, 12: 73, 13: 75,
+                    14: 75, 15: 73, 16: 69, 17: 63, 18: 55, 19: 45, 20: 36, 21: 28, 22: 21, 23: 15, 24: 10, 25: 6,
+                    26: 3, 27: 1
+                },
+                'zuxuan': {
+                    1: 1, 2: 2, 3: 2, 4: 4, 5: 5, 6: 6, 7: 8, 8: 10, 9: 11, 10: 13, 11: 14, 12: 14, 13: 15,
+                    14: 15, 15: 14, 16: 14, 17: 13, 18: 11, 19: 10, 20: 8, 21: 6, 22: 5, 23: 4, 24: 2, 25: 2, 26: 1
+                }
+            },
+            2: {
+                'zhixuan': {
+                    0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10,
+                    10: 9, 11: 8, 12: 7, 13: 6, 14: 5, 15: 4, 16: 3, 17: 2, 18: 1
+                },
+                'zuxuan': {
+                    1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 3, 7: 4, 8: 4, 9: 5,
+                    10: 4, 11: 4, 12: 3, 13: 3, 14: 2, 15: 2, 16: 1, 17: 1
+                }
+            }
+        }
+        hezhi_list = hezhi_table[method.digit][method.set_name]
+        length = random.randint(1, len(hezhi_list))
+        balls = []
+        amount = 0
+        while len(balls) < length:
+            rand_hezhi = random.randint(0, len(hezhi_list) - 1)
+            if str(list(hezhi_list.keys())[rand_hezhi]) not in balls:
+                balls.append(str(list(hezhi_list.keys())[rand_hezhi]))
+                amount += list(hezhi_list.values())[rand_hezhi]
+        return [','.join(sorted(balls)), amount]
+
+    def __random_quwei(self) -> [str, int]:
+        length = random.randint(1, 10)
+        ball = ''
+        while len(ball) < length:
+            rand_num = str(random.randint(0, 9))
+            if rand_num not in ball:
+                ball += rand_num
+        return [','.join(ball), len(ball)]
+
+    def __random_kuadu(self, method: Method) -> [str, int]:
+        kuadu_table = {
+            3: {
+                0: 10, 1: 54, 2: 96, 3: 126, 4: 144, 5: 150, 6: 144, 7: 126, 8: 96, 9: 54
+            },
+            2: {
+                0: 10, 1: 18, 2: 16, 3: 14, 4: 12, 5: 10, 6: 8, 7: 6, 8: 4, 9: 2
+            }
+        }
+        kuadu_list = kuadu_table[method.digit]
+        length = random.randint(1, len(kuadu_list))
+        balls = []
+        amount = 0
+        while len(balls) < length:
+            rand_kuadu = random.randint(0, len(kuadu_list) - 1)
+            if str(list(kuadu_list.keys())[rand_kuadu]) not in balls:
+                balls.append(str(list(kuadu_list.keys())[rand_kuadu]))
+                amount += list(kuadu_list.values())[rand_kuadu]
+        print(f'balls: {balls}')
+        return [','.join(sorted(balls)), amount]
+
+
+ff = FF4LiteTool('joy188', use_proxy=False)
+generator = FF4GameContentGenerator(lotteryID=99111)
 for user in ['twen101']:
     ff.login(user, '123qwe')
     ff.bet_orderd_times(lottery_code='jlffc', _generator=generator, trace_times=3, target_amount=-1)
