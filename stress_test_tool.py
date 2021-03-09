@@ -3,6 +3,7 @@ from json import loads, load
 from math import ceil, pow
 from random import randint
 from re import split
+from sys import exit
 
 import requests
 from utils.Config import EnvConfig, UserAgent
@@ -88,8 +89,7 @@ class FF4LiteTool(ApiStressTestTool):
             self.header['Content-Type'] = 'application/json; charset=UTF-8'
         except Exception as e:
             print(e)
-            import sys
-            sys.exit("登入失敗")
+            exit("登入失敗")
 
     def start_bet_stress_test(self, run_times: int = 10000, lottery=None) -> None:
         """
@@ -138,10 +138,19 @@ class FF4LiteTool(ApiStressTestTool):
 
     def bet_orderd_times(self, lottery_code: str, _generator: 'FF4GameContentGenerator', max_bet_one_issue: int,
                          min_bet_per_day: int, target_amount: float = 5000):
+        """
+        依照指定條件進行投注功能
+        :param lottery_code: 彩種代號
+        :param _generator: class FF4GameContentGenerator 物件
+        :param max_bet_one_issue: 單期最大注數
+        :param min_bet_per_day: 一日最小注單數量
+        :param target_amount: 總投注金額
+        :return: None
+        """
         bet_amount = 0
         bet_times = 0
         trace_times = ceil(min_bet_per_day / max_bet_one_issue)
-        self.__get_newest_issue(lottery_code=lottery_code, trace_times=trace_times)
+        self.__get_newest_issue(lottery_code=lottery_code, trace_times=trace_times)  # 取得當前最新的獎期
         methods = _generator.methods
         betted_method_name = []
         while 0 <= bet_amount < target_amount:
@@ -154,15 +163,14 @@ class FF4LiteTool(ApiStressTestTool):
                 bet_content = _generator.get_bet_content(method=rand_method, issues=self.newest_issue)
                 if bet_content is not None:
                     print(f'開始投注: {rand_method.title}')
-                    # 若預期的投注小於  目標投注金額 / 單期投注注數
+                    # 若預期的投注小於  (目標投注金額 - 已投注金額) / 剩餘的單期投注注單數量
                     average_bet_amount = (target_amount - bet_amount) / (max_bet_one_issue - bet_times)
                     if bet_content['amount'] < average_bet_amount:
                         multiple = ceil(average_bet_amount / bet_content['amount'])
-                        print(f'multiple = {multiple}')
-                        multiple = multiple if multiple < max_mul else max_mul
-                        for index in range(0, len(bet_content['orders'])):
+                        multiple = multiple if multiple < max_mul else max_mul  # 倍數不可大於玩法限制
+                        for index in range(0, len(bet_content['orders'])):  # 修改投注內容內每一期的倍數
                             bet_content['orders'][index]['multiple'] = multiple
-                        bet_content['amount'] *= multiple
+                        bet_content['amount'] *= multiple  # 投注金額調整
                         print(f'因預期投注最低金額為{target_amount}，本期最多投注{max_bet_one_issue}筆\n'
                               f'已提升追號倍數至{multiple}倍，總投注金額為{bet_content["amount"]}')
                     self.__check_issue_time()
@@ -171,8 +179,12 @@ class FF4LiteTool(ApiStressTestTool):
                                           headers=self.header, json=bet_content, verify=False)
                     bet_amount += bet_content['amount']
                     bet_times += 1
-                    print(f'投注結果:{loads(r.content)["msg"]}\n'
-                          f'當前已投注{bet_times}注，總金額為{bet_amount}')
+                    try:  # 如果順利
+                        print(f'投注結果:{loads(r.content)["msg"]}\n'
+                              f'當前已投注{bet_times}注，總金額為{bet_amount}')
+                    except:  # 如果不順利
+                        print(f'投注失敗')
+                        print(f'詳細問題請見封包返還內容：\n{r.content}')
                     betted_method_name.append(rand_method.title)
         # for method in _generator.methods:
         #     print(f'Start bet method: {method.title}')
@@ -187,6 +199,12 @@ class FF4LiteTool(ApiStressTestTool):
         #     print(f'Done.')
 
     def __is_method_enable(self, lottery_code: str, method_name: str):
+        """
+        驗證當前玩法是否可用
+        :param lottery_code: 彩種代號
+        :param method_name: 玩法名稱
+        :return: 該玩法最大投注倍數，若不可用則返還 False
+        """
         r = self.session.get(self.env_data.get_em_url() + f'/gameBet/{lottery_code}/dynamicConfig',
                              headers=self.header, verify=False)
         try:
@@ -201,8 +219,11 @@ class FF4LiteTool(ApiStressTestTool):
         self.content = ''
         target_api = self.env_data.get_em_url() + f'/gameBet/{lottery_code}/dynamicConfig'
         response = self.session.post(target_api, headers=self.header, data=self.content, verify=False)
-        self.newest_issue = response.json()['data']['gamenumbers'][:trace_times:]
-        self.now_stop_time = response.json()['data']['nowstoptime']
+        try:
+            self.newest_issue = response.json()['data']['gamenumbers'][:trace_times:]
+            self.now_stop_time = response.json()['data']['nowstoptime']
+        except:
+            print(f'取得獎期失敗，詳細見封包返還數據\n{response.content}')
 
     def __check_issue_time(self):
         """
@@ -328,7 +349,7 @@ class FF4GameContentGenerator:
             )
         return {
             "gameType": method.lottery,
-            "isTrace": 1,
+            "isTrace": 0 if len(issues) == 1 else 1,
             "traceWinStop": 0,
             "traceStopValue": -1,
             "balls": [
@@ -614,23 +635,63 @@ class FF4GameContentGenerator:
 
 
 lottery = {
-    99111: 'jlffc'
+    99111: 'jlffc',
+    99101: 'cqssc',
+    99105: 'hljssc'
 }
 
-input_env = input('投注環境: 1(Joy188) / 2(Dev02)\n')
-input_lottery = input('投注ID: \n Ex: 99111(吉利分分彩\n')
-input_max_bet_one_issue = input('每期最多投注單數:\n')
-input_min_bet_per_day = input('最低每日投注注數: \n※：如果大於每期上限，將以追號（追中不停）進行投注\n')
+input_env = input('投注環境:\n>> 1(Joy188)\n>> 2(Joy188 合營)\n>> 3(Dev02)\n>> 4(Dev02 合營)\n')
+if input_env == '1':
+    env = 'joy188'
+elif input_env == '2':
+    env = 'joy188.195353'
+elif input_env =='3':
+    env = 'dev02'
+elif input_env == '4':
+    env = 'fh82dev02'
+else:
+    input('環境輸入錯誤\n程式終止')
+    exit()
+
+try:
+    input_tip = ''
+    for k, v in lottery.items():
+        input_tip += f'>> {k}({v})\n'
+    input_lottery = input(f'投注ID:\n{input_tip}')
+    if input_lottery != '99111':
+        input('當前僅支援 99111 吉利分分彩')
+        exit()
+except:
+    pass
+
+
+try:
+    input_max_bet_one_issue = input('每期最多投注注數:\n')
+    int(input_max_bet_one_issue)
+except:
+    input('輸入參數有誤')
+    exit()
+try:
+    input_min_bet_per_day = input('最低每日投注注數: \n※：如果大於每期上限，將以追號（追中不停）進行投注\n')
+    int(input_min_bet_per_day)
+except:
+    input('輸入參數有誤')
+    exit()
 min_trace = ceil(int(input_min_bet_per_day) / int(input_max_bet_one_issue))
 print(f'單期投注{input_max_bet_one_issue}筆注單，單日投注{input_min_bet_per_day}注，將追號{min_trace}期')
-input_target_amount = input('輸入目標投注金額: (整數)\n')
+try:
+    input_target_amount = input('輸入目標投注金額: (整數)\n')
+    int(input_target_amount)
+except:
+    input('輸入參數有誤')
+    exit()
 input_user_name = input('輸入投注帳號，多帳號以 , 或空格區隔:\n')
 
-env = 'joy188' if input_env in ['1', 'joy188', 'Joy188'] else 'dev02'
-ff = FF4LiteTool(env, use_proxy=False)
+
+ff = FF4LiteTool(env, use_proxy=True)
 generator = FF4GameContentGenerator(lotteryID=int(input_lottery))
 for user in split(',|_| |,', input_user_name):
-    if env == 'dev02':
+    if env in ['dev02', 'fh82dev02']:
         ff.login(user, '123qwe')
     else:
         ff.login(user, 'amberrd')
@@ -638,8 +699,9 @@ for user in split(',|_| |,', input_user_name):
                         max_bet_one_issue=int(input_max_bet_one_issue), min_bet_per_day=int(input_min_bet_per_day),
                         target_amount=int(input_target_amount))
 input('自動投注結束')
-    # ff.start_bet_stress_test(run_times=5, lottery='cqssc')  # 單一彩種單式連續投注
-    # ff.start_api_stress_test(run_times=100, api=ff.env_data.get_em_url() + '/gameUserCenter/queryOrders', api_content='')
 
-    # ffgcg = FF4GameContentGenerator(99111)
-    # print(ffgcg.get_bet_content(ffgcg.get_method('后二组选组选单式'), [{'number': '123', 'issueCode': '4123'}]))
+# ff.start_bet_stress_test(run_times=5, lottery='cqssc')  # 單一彩種單式連續投注
+# ff.start_api_stress_test(run_times=100, api=ff.env_data.get_em_url() + '/gameUserCenter/queryOrders', api_content='')
+
+# ffgcg = FF4GameContentGenerator(99111)
+# print(ffgcg.get_bet_content(ffgcg.get_method('后二组选组选单式'), [{'number': '123', 'issueCode': '4123'}]))
