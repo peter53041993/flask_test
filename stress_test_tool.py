@@ -4,6 +4,7 @@ from math import ceil, pow
 from random import randint
 from re import split
 from sys import exit
+from time import sleep
 
 import requests
 from utils.Config import EnvConfig, UserAgent
@@ -136,67 +137,113 @@ class FF4LiteTool(ApiStressTestTool):
         # print(f'index: {index}, cost time: {timeit.default_timer() - timer}')
         return None  # r.content
 
-    def bet_orderd_times(self, lottery_code: str, _generator: 'FF4GameContentGenerator', max_bet_one_issue: int,
-                         min_bet_per_day: int, target_amount: float = 5000):
+    def start_auto_bet_tool_trace(self, _lottery_code: str, _generator: 'FF4GameContentGenerator',
+                                  _max_bet_one_issue: int, _min_bet_per_day: int, _target_amount: float):
         """
         依照指定條件進行投注功能
-        :param lottery_code: 彩種代號
+        :param _lottery_code: 彩種代號
         :param _generator: class FF4GameContentGenerator 物件
-        :param max_bet_one_issue: 單期最大注數
-        :param min_bet_per_day: 一日最小注單數量
-        :param target_amount: 總投注金額
+        :param _max_bet_one_issue: 單期最大注數
+        :param _min_bet_per_day: 一日最小注單數量
+        :param _target_amount: 總投注金額
         :return: None
         """
         bet_amount = 0
         bet_times = 0
-        trace_times = ceil(min_bet_per_day / max_bet_one_issue)
-        self.__get_newest_issue(lottery_code=lottery_code, trace_times=trace_times)  # 取得當前最新的獎期
+        trace_times = ceil(_min_bet_per_day / _max_bet_one_issue)  # 計算最低需投注期數
+        self.__get_newest_issue(lottery_code=_lottery_code, trace_times=trace_times)  # 取得當前最新的獎期
         methods = _generator.methods
-        betted_method_name = []
-        while 0 <= bet_amount < target_amount:
+        while 0 <= bet_amount < _target_amount:
             rand_method = methods[randint(0, len(methods) - 1)]
-            if rand_method.title not in betted_method_name:
-                full_game_name = f'{rand_method.group_name}.{rand_method.set_name}.{rand_method.method_name}'
-                max_mul = self.__is_method_enable(lottery_code=lottery_code, method_name=full_game_name)
-                if not max_mul:
-                    continue
-                bet_content = _generator.get_bet_content(method=rand_method, issues=self.newest_issue)
-                if bet_content is not None:
-                    print(f'開始投注: {rand_method.title}')
-                    # 若預期的投注小於  (目標投注金額 - 已投注金額) / 剩餘的單期投注注單數量
-                    average_bet_amount = (target_amount - bet_amount) / (max_bet_one_issue - bet_times)
-                    if bet_content['amount'] < average_bet_amount:
-                        multiple = ceil(average_bet_amount / bet_content['amount'])
-                        multiple = multiple if multiple < max_mul else max_mul  # 倍數不可大於玩法限制
-                        for index in range(0, len(bet_content['orders'])):  # 修改投注內容內每一期的倍數
-                            bet_content['orders'][index]['multiple'] = multiple
-                        bet_content['amount'] *= multiple  # 投注金額調整
-                        print(f'因預期投注最低金額為{target_amount}，本期最多投注{max_bet_one_issue}筆\n'
-                              f'已提升追號倍數至{multiple}倍，總投注金額為{bet_content["amount"]}')
-                    self.__check_issue_time()
-                    print(f'生成注單內容: {bet_content}')
-                    r = self.session.post(self.env_data.get_em_url() + f'/gameBet/{lottery_code}/submit',
-                                          headers=self.header, json=bet_content, verify=False)
-                    bet_amount += bet_content['amount']
-                    bet_times += 1
-                    try:  # 如果順利
-                        print(f'投注結果:{loads(r.content)["msg"]}\n'
-                              f'當前已投注{bet_times}注，總金額為{bet_amount}')
-                    except:  # 如果不順利
-                        print(f'投注失敗')
-                        print(f'詳細問題請見封包返還內容：\n{r.content}')
-                    betted_method_name.append(rand_method.title)
-        # for method in _generator.methods:
-        #     print(f'Start bet method: {method.title}')
-        #     self.__check_issue_time()
-        #     if 0 < target_amount < bet_amount:
-        #         break
-        #     bet_content = _generator.get_bet_content(method=method, issues=self.newest_issue)
-        #     if bet_content is not None:
-        #         bet_amount += bet_content['amount']
-        #         r = self.session.post(self.env_data.get_em_url() + f'/gameBet/{lottery_code}/submit',
-        #                               headers=self.header, json=bet_content, verify=False)
-        #     print(f'Done.')
+            full_game_name = f'{rand_method.group_name}.{rand_method.set_name}.{rand_method.method_name}'
+            max_mul = self.__is_method_enable(lottery_code=_lottery_code, method_name=full_game_name)
+            if not max_mul:
+                continue
+            bet_content = _generator.get_bet_content(method=rand_method, issues=self.newest_issue)
+            if bet_content is not None:
+                print(f'開始投注: {rand_method.title}')
+                # 若預期的投注小於  (目標投注金額 - 已投注金額) / 剩餘的單期投注注單數量
+                average_bet_amount = (_target_amount - bet_amount) / (_max_bet_one_issue - bet_times)
+                if bet_content['amount'] < average_bet_amount:
+                    multiple = ceil(average_bet_amount / bet_content['amount'])
+                    multiple = multiple if multiple < max_mul else max_mul  # 倍數不可大於玩法限制
+                    for index in range(0, len(bet_content['orders'])):  # 修改投注內容內每一期的倍數
+                        bet_content['orders'][index]['multiple'] = multiple
+                    bet_content['amount'] *= multiple  # 投注金額調整
+                    print(f'因預期投注最低金額為{_target_amount}，本期最多投注{_max_bet_one_issue}筆\n'
+                          f'已提升追號倍數至{multiple}倍，總投注金額為{bet_content["amount"]}')
+                self.__check_issue_time()
+                print(f'生成注單內容: {bet_content}')
+                r = self.session.post(self.env_data.get_em_url() + f'/gameBet/{_lottery_code}/submit',
+                                      headers=self.header, json=bet_content, verify=False)
+                bet_amount += bet_content['amount']
+                bet_times += 1
+                try:  # 如果順利
+                    print(f'投注結果:{loads(r.content)["msg"]}\n'
+                          f'當前已投注{bet_times}注，總金額為{bet_amount}')
+                except:  # 如果不順利
+                    print(f'投注失敗')
+                    print(f'詳細問題請見封包返還內容：\n{r.content}')
+                used_method_name.append(rand_method.title)
+
+    def start_auto_bet_tool_single(self, _lottery_code: str, _generator: 'FF4GameContentGenerator',
+                                   _max_bet_one_issue: int, _min_bet_per_day: int, _target_amount: float):
+        """
+        依照指定條件進行投注功能
+        :param _lottery_code: 彩種代號
+        :param _generator: class FF4GameContentGenerator 物件
+        :param _max_bet_one_issue: 單期最大注數
+        :param _min_bet_per_day: 一日最小注單數量
+        :param _target_amount: 總投注金額
+        :return: None
+        """
+        total_amount = 0
+        total_issue_times = 0
+        current_bet_times = 0
+
+        self.__get_newest_issue(lottery_code=_lottery_code)  # 取得當前最新的獎期 (1期)
+        methods = _generator.methods
+        while 0 <= total_amount < _target_amount or total_issue_times < _min_bet_per_day:  # 當尚未達到投注金額或次數
+            rand_method = methods[randint(0, len(methods) - 1)]
+            current_issue = self.newest_issue
+            full_game_name = f'{rand_method.group_name}.{rand_method.set_name}.{rand_method.method_name}'
+            max_mul = self.__is_method_enable(lottery_code=_lottery_code, method_name=full_game_name)
+            if not max_mul:  # 若彩種未開放
+                continue
+            bet_content = _generator.get_bet_content(method=rand_method, issues=self.newest_issue)
+            if bet_content is not None:
+                print(f'當前期數：{current_issue[0]["number"]}, 開始投注: {rand_method.title}')
+                # 若預期的投注小於  (目標投注金額 - 已投注金額) / 剩餘的單期投注注單數量
+                average_bet_amount = (_target_amount - total_amount) / (_min_bet_per_day - total_issue_times)
+                if bet_content['amount'] < average_bet_amount:
+                    multiple = ceil(average_bet_amount / bet_content['amount'])
+                    multiple = multiple if multiple < max_mul else max_mul  # 倍數不可大於玩法限制
+                    for index in range(0, len(bet_content['orders'])):  # 修改投注內容內每一個玩法的倍數
+                        bet_content['balls'][index]['multiple'] = multiple
+                    bet_content['amount'] *= multiple  # 投注金額調整
+
+                    print(f'因預期投注最低金額為{_target_amount}，本日預計再投注{_min_bet_per_day - total_issue_times}筆\n'
+                          f'已提升倍數至{multiple}倍，總投注金額為{bet_content["amount"]}')
+
+                print(f'生成注單內容: {bet_content}')
+                r = self.session.post(self.env_data.get_em_url() + f'/gameBet/{_lottery_code}/submit',
+                                      headers=self.header, json=bet_content, verify=False)
+                total_amount += bet_content['amount']
+                total_issue_times += 1
+                try:  # 如果順利
+                    print(f'投注結果:{loads(r.content)["msg"]}\n'
+                          f'當前已投注{total_issue_times}注，總金額為{total_amount}')
+                except:  # 如果不順利
+                    print(f'投注失敗')
+                    print(f'詳細問題請見封包返還內容：\n{r.content}')
+                used_method_name.append(rand_method.title)
+                current_bet_times += 1
+
+            while current_issue == self.newest_issue and current_bet_times == _max_bet_one_issue:
+                sleep(20)
+                self.__get_newest_issue(lottery_code=_lottery_code)
+                if current_issue != self.newest_issue:
+                    current_bet_times = 0
 
     def __is_method_enable(self, lottery_code: str, method_name: str):
         """
@@ -230,12 +277,11 @@ class FF4LiteTool(ApiStressTestTool):
         投注壓測用，驗證當前獎期是否已過期，若過期則重新取得
         """
         from datetime import datetime
-        import time
         _format = '%Y/%m/%d %H:%M:%S'
         _issue_end_time = datetime.strptime(self.now_stop_time, _format)
         while datetime.now() > _issue_end_time:
             self.__get_newest_issue()
-            time.sleep(3)
+            sleep(3)
 
     def __get_bet_content(self, ball_num: int = 0):
         """
@@ -337,6 +383,7 @@ class FF4GameContentGenerator:
                                             target_set=target_set, target_method=target_method)
 
     def get_bet_content(self, method: Method, issues: list, multiple: int = 1):
+        print(f'get_bet_content issue:{issues}')
         random_ball = self.__get_random_method_ball(method)
         if random_ball is None:
             return None
@@ -640,64 +687,94 @@ lottery = {
     99105: 'hljssc'
 }
 
-input_env = input('投注環境:\n>> 1(Joy188)\n>> 2(Joy188 合營)\n>> 3(Dev02)\n>> 4(Dev02 合營)\n')
-if input_env == '1':
-    env = 'joy188'
-elif input_env == '2':
-    env = 'joy188.195353'
-elif input_env =='3':
-    env = 'dev02'
-elif input_env == '4':
-    env = 'fh82dev02'
-else:
-    input('環境輸入錯誤\n程式終止')
-    exit()
+while True:
+    try:
+        input_env = input('投注環境:\n>> 1(Joy188)\n>> 2(Joy188 合營)\n>> 3(Dev02)\n>> 4(Dev02 合營)\n')
+        if input_env == '1':
+            env = 'joy188'
+            break
+        elif input_env == '2':
+            env = 'joy188.195353'
+            break
+        elif input_env == '3':
+            env = 'dev02'
+            break
+        elif input_env == '4':
+            env = 'fh82dev02'
+            break
+    except:
+        print('環境輸入錯誤，請重新輸入\n')
 
-try:
-    input_tip = ''
-    for k, v in lottery.items():
-        input_tip += f'>> {k}({v})\n'
-    input_lottery = input(f'投注ID:\n{input_tip}')
-    if input_lottery != '99111':
-        input('當前僅支援 99111 吉利分分彩')
-        exit()
-except:
-    pass
+while True:
+    try:
+        input_tip = ''
+        for k, v in lottery.items():
+            input_tip += f'>> {k}({v})\n'
+        input_lottery = int(input(f'投注ID:\n{input_tip}'))
+        if input_lottery not in lottery.keys():
+            print('不支援的彩種，請重新輸入')
+        else:
+            break
+    except:
+        pass
 
+while True:
+    try:
+        max_bet_one_issue = int(input('每期最多投注注數:\n'))
+        break
+    except ValueError:
+        print('參數錯誤，請輸入正整數')
 
-try:
-    input_max_bet_one_issue = input('每期最多投注注數:\n')
-    int(input_max_bet_one_issue)
-except:
-    input('輸入參數有誤')
-    exit()
-try:
-    input_min_bet_per_day = input('最低每日投注注數: \n※：如果大於每期上限，將以追號（追中不停）進行投注\n')
-    int(input_min_bet_per_day)
-except:
-    input('輸入參數有誤')
-    exit()
-min_trace = ceil(int(input_min_bet_per_day) / int(input_max_bet_one_issue))
-print(f'單期投注{input_max_bet_one_issue}筆注單，單日投注{input_min_bet_per_day}注，將追號{min_trace}期')
-try:
-    input_target_amount = input('輸入目標投注金額: (整數)\n')
-    int(input_target_amount)
-except:
-    input('輸入參數有誤')
-    exit()
-input_user_name = input('輸入投注帳號，多帳號以 , 或空格區隔:\n')
+while True:
+    try:
+        min_bet_per_day = int(input('最低每日投注注數: \n'))
+        break
+    except:
+        print('參數有誤，請重新輸入')
 
+while True:
+    try:
+        tip = '是否追號？\n' \
+              '>> 0 （不追號，程式會持續運行並於跨期後持續投注到目標注數與金額　※：每期隨機投注號）\n' \
+              '>> 1 （追號，計算可達需求的追號單並一次性投注　※：每期固定投注號）'
+        is_trace = int(input(tip))
+        if is_trace in [0, 1]:
+            is_trace = True if is_trace == 1 else False
+            break
+        min_trace = ceil(min_bet_per_day / max_bet_one_issue)
+        print(f'單期投注{max_bet_one_issue}筆注單，單日投注{min_bet_per_day}注，將追號{min_trace}期')
+    except:
+        print('參數有誤，請重新輸入')
+
+while True:
+    try:
+        target_amount = int(input('輸入目標投注金額: (整數)\n'))
+        break
+    except:
+        print('輸入金額有誤，請重新輸入')
+
+while True:
+    try:
+        user_names = split(',|_| |,', input('輸入投注帳號，多帳號以 , 或空格區隔:\n'))
+        break
+    except:
+        print('輸入用戶名有誤，請重新輸入')
 
 ff = FF4LiteTool(env, use_proxy=True)
 generator = FF4GameContentGenerator(lotteryID=int(input_lottery))
-for user in split(',|_| |,', input_user_name):
+
+for user in user_names:
     if env in ['dev02', 'fh82dev02']:
         ff.login(user, '123qwe')
     else:
         ff.login(user, 'amberrd')
-    ff.bet_orderd_times(lottery_code=lottery[int(input_lottery)], _generator=generator,
-                        max_bet_one_issue=int(input_max_bet_one_issue), min_bet_per_day=int(input_min_bet_per_day),
-                        target_amount=int(input_target_amount))
+    # ff.start_auto_bet_tool_trace(_lottery_code=lottery[int(input_lottery)], _generator=generator,
+    #                              _max_bet_one_issue=max_bet_one_issue, _min_bet_per_day=min_bet_per_day,
+    #                              _target_amount=target_amount)
+    ff.start_auto_bet_tool_single(_lottery_code=lottery[int(input_lottery)], _generator=generator,
+                                  _max_bet_one_issue=max_bet_one_issue, _min_bet_per_day=min_bet_per_day,
+                                  _target_amount=target_amount)
+
 input('自動投注結束')
 
 # ff.start_bet_stress_test(run_times=5, lottery='cqssc')  # 單一彩種單式連續投注
