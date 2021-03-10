@@ -184,7 +184,6 @@ class FF4LiteTool(ApiStressTestTool):
                 except:  # 如果不順利
                     print(f'投注失敗')
                     print(f'詳細問題請見封包返還內容：\n{r.content}')
-                used_method_name.append(rand_method.title)
 
     def start_auto_bet_tool_single(self, _lottery_code: str, _generator: 'FF4GameContentGenerator',
                                    _max_bet_one_issue: int, _min_bet_per_day: int, _target_amount: float):
@@ -236,7 +235,6 @@ class FF4LiteTool(ApiStressTestTool):
                 except:  # 如果不順利
                     print(f'投注失敗')
                     print(f'詳細問題請見封包返還內容：\n{r.content}')
-                used_method_name.append(rand_method.title)
                 current_bet_times += 1
 
             while current_issue == self.newest_issue and current_bet_times == _max_bet_one_issue:
@@ -443,6 +441,8 @@ class FF4GameContentGenerator:
             content = self.__random_quwei()
         elif method.method_name == 'kuadu':
             content = self.__random_kuadu(method)
+        elif method.group_name == 'daxiaodanshuang':
+            content = self.__random_daxiaodanshuang(method)
         else:
             content = None
         return content
@@ -679,6 +679,24 @@ class FF4GameContentGenerator:
                 balls.append(str(list(kuadu_list.keys())[rand_kuadu]))
                 amount += list(kuadu_list.values())[rand_kuadu]
         return [','.join(sorted(balls)), amount]
+
+    def __random_daxiaodanshuang(self, method: Method) -> [str, int]:
+        if method.method_name == 'fushi':  # for PK10系列
+            return None
+        else:
+            num_pool = ['大', '小', '单', '双']
+
+            balls = []
+            for index in range(0, method.digit):
+                ball = ''
+                length = randint[1, 4]
+                while len(ball) < length:
+                    num = num_pool[randint(0, 3)]
+                    if num not in ball:
+                        ball[index] += num
+                balls.append('|'.join(ball))
+            return [','.join(balls), ]
+        pass
 
 
 lottery = {
