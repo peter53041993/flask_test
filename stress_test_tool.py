@@ -778,14 +778,21 @@ while True:
     except:
         print('輸入用戶名有誤，請重新輸入')
 
-ff = FF4LiteTool(env, use_proxy=True)
-generator = FF4GameContentGenerator(lotteryID=int(input_lottery))
+while True:
+    try:
+        custom_password = input('輸入密碼:\n※：輸入空值則用預設密碼（Dev02:123qwe, Joy188:amberrd）\n')
+        break
+    except:
+        print('輸入密碼有誤，請重新輸入')
+
+ff = FF4LiteTool(env, use_proxy=False)
+generator = FF4GameContentGenerator(lotteryID=int(input_lottery), target_group=['daxiaodanshuang'])
 
 for user in user_names:
     if env in ['dev02', 'fh82dev02']:
-        ff.login(user, '123qwe')
+        ff.login(user, custom_password if custom_password != '' else '123qwe')
     else:
-        ff.login(user, 'amberrd')
+        ff.login(user, custom_password if custom_password != '' else 'amberrd')
     # ff.start_auto_bet_tool_trace(_lottery_code=lottery[int(input_lottery)], _generator=generator,
     #                              _max_bet_one_issue=max_bet_one_issue, _min_bet_per_day=min_bet_per_day,
     #                              _target_amount=target_amount)
