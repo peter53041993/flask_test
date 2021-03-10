@@ -210,6 +210,7 @@ class FF4LiteTool(ApiStressTestTool):
             if not max_mul:  # 若彩種未開放
                 continue
             bet_content = _generator.get_bet_content(method=rand_method, issues=self.newest_issue)
+            print(f'methods:{list(methods)}, bet_content: {bet_content}')
             if bet_content is not None:
                 print(f'當前期數：{current_issue[0]["number"]}, 開始投注: {rand_method.title}')
                 # 若預期的投注小於  (目標投注金額 - 已投注金額) / 剩餘的單期投注注單數量
@@ -335,11 +336,11 @@ class Method:
             self.digit = 5
         elif group_name in ['sixing']:
             self.digit = 4
-        elif group_name in ['qiansan', 'zhongsan', 'housan']:
+        elif group_name in ['qiansan', 'zhongsan', 'housan'] or method_name in ['houyi']:
             self.digit = 3
-        elif group_name in ['qianer', 'houer']:
+        elif group_name in ['qianer', 'houer'] or method_name in ['qianer', 'houer']:
             self.digit = 2
-        elif group_name in ['yixing']:
+        elif group_name in ['yixing'] or method_name in ['qianyi', 'houyi', 'zonghe']:
             self.digit = 1
         else:
             self.digit = None
@@ -375,13 +376,23 @@ class Method:
 
 
 class FF4GameContentGenerator:
-    def __init__(self, lotteryID: int, target_group: list = None, target_set: list = None, target_method: list = None):
-        self.lottery_id = lotteryID
+    def __init__(self, _lottery_id: int, env_id: int, _user: str,
+                 target_group: list = None, target_set: list = None, target_method: list = None):
+        """
+
+        :param _lottery_id:
+        :param target_group:
+        :param target_set:
+        :param target_method:
+        :param env_id:
+        """
+        self.lottery_id = _lottery_id
+        self.env_id = env_id
+        self._user = _user
         self.methods = Method.get_all_games(lottery_id=self.lottery_id, target_group=target_group,
                                             target_set=target_set, target_method=target_method)
 
     def get_bet_content(self, method: Method, issues: list, multiple: int = 1):
-        print(f'get_bet_content issue:{issues}')
         random_ball = self.__get_random_method_ball(method)
         if random_ball is None:
             return None
@@ -425,7 +436,13 @@ class FF4GameContentGenerator:
         :param method:
         :return:
         """
-        if method.method_name in ["fushi"]:
+        if method.group_name == 'daxiaodanshuang':
+            content = self.__random_daxiaodanshuang(method)
+        elif method.group_name == 'longhu':
+            content = self.__random_longhu(method)
+        elif method.group_name == 'shuangmienpan':
+            content = self.__random_shuangmienpan(method)
+        elif method.method_name in ["fushi"]:
             content = self.__random_fushi(method)
         elif method.method_name in ['danshi', 'zuliudanshi', 'zusandanshi', 'hunhezuxuan']:
             content = self.__random_danshi(method)
@@ -441,8 +458,6 @@ class FF4GameContentGenerator:
             content = self.__random_quwei()
         elif method.method_name == 'kuadu':
             content = self.__random_kuadu(method)
-        elif method.group_name == 'daxiaodanshuang':
-            content = self.__random_daxiaodanshuang(method)
         else:
             content = None
         return content
@@ -681,23 +696,72 @@ class FF4GameContentGenerator:
         return [','.join(sorted(balls)), amount]
 
     def __random_daxiaodanshuang(self, method: Method) -> [str, int]:
+        daxiao_pool = ['大', '小', '单', '双']
         if method.method_name == 'fushi':  # for PK10系列
-            return None
+            pk10_pool = ['冠军', '亚军', '季军', '第四名', '第五名', '第六名', '第七名', '第八名', '第九名', '第十名']
+            random_fushi = randint(0, len(pk10_pool) - 1)
+            random_daxiao = randint(0, len(daxiao_pool) - 1)
+            return [random_fushi + random_daxiao, 1]
         else:
-            num_pool = ['大', '小', '单', '双']
-
+            bet_amount = 1  # 投注注數
             balls = []
             for index in range(0, method.digit):
                 ball = ''
-                length = randint[1, 4]
+                length = randint(1, 4)
+                bet_amount *= length  # 注數計算
                 while len(ball) < length:
-                    num = num_pool[randint(0, 3)]
-                    if num not in ball:
-                        ball[index] += num
+                    random_daxiao = daxiao_pool[randint(0, 3)]
+                    if random_daxiao not in ball:
+                        ball += random_daxiao
                 balls.append('|'.join(ball))
-            return [','.join(balls), ]
-        pass
+            return [','.join(balls), bet_amount]
 
+    def __random_longhu(self, method: Method) -> [str, int]:
+        print(f'method: {method}')
+        longhu_pool = ['龙', '虎', '和']
+        bet_amount = 0
+        if method.set_name == 'lh':
+            pk10_pool = ['冠军', '亚军', '季军', '第四名', '第五名', '第六名', '第七名', '第八名', '第九名', '第十名']
+            pk10_pool = ['冠军', '亚军', '季军', '第四名', '第五名', '第六名', '第七名', '第八名', '第九名', '第十名']
+            random_fushi = randint(0, len(pk10_pool) - 1)
+            random_daxiao = randint(0, len(longhu_pool) - 1)
+            return [random_fushi + random_daxiao, 1]
+        else:  # method.st_name == 'longhu'
+            balls = []
+            for _ in range(0, 10):
+                ball = ''
+                length = randint(0, 3)
+                while len(ball) < length:
+                    random_longhu = longhu_pool[randint(0, 2)]
+                    if random_longhu not in ball:
+                        ball += random_longhu
+                if length == 0:
+                    ball = '-'
+                balls.append('|'.join(ball))
+                bet_amount += length
+            print(f'balls: {list(balls)}')
+            return [','.join(balls), bet_amount]
+
+    def __random_shuangmienpan(self, method: Method) -> [str, int]:
+        num_pool = ['龙', '虎', '和', '大', '小', '单', '双']
+        if method.set_name == 'zonghe':
+            random_num = num_pool[randint(0, len(num_pool) - 1)]
+            return [random_num, 1]
+        elif method.set_name == 'shiuanma':
+            ball_pool = ['第一球', '第二球', '第三球', '第四球', '第五球']
+            random_ball = ball_pool[randint(0, len(ball_pool) - 1)]
+            for digit in range(0, 9):
+                num_pool.append(str(digit))
+            random_num = num_pool[randint(0, len(num_pool) - 1)]
+            return [random_ball + random_num, 1]
+        else:
+            ball_pool = ['豹子', '顺子', '对子', '半顺', '杂六']
+            random_ball = ball_pool[randint(0, len(ball_pool) - 1)]
+            from utils.Connection import OracleConnection
+            conn = OracleConnection(self.env_id)
+            bonus = conn.select_bonus(lottery_id, '', self._user)
+            print(bonus)
+            return [random_ball, 1]
 
 lottery = {
     99111: 'jlffc',
@@ -728,8 +792,8 @@ while True:
         input_tip = ''
         for k, v in lottery.items():
             input_tip += f'>> {k}({v})\n'
-        input_lottery = int(input(f'投注ID:\n{input_tip}'))
-        if input_lottery not in lottery.keys():
+        lottery_id = int(input(f'投注ID:\n{input_tip}'))
+        if lottery_id not in lottery.keys():
             print('不支援的彩種，請重新輸入')
         else:
             break
@@ -752,6 +816,13 @@ while True:
 
 while True:
     try:
+        target_amount = int(input('輸入目標投注金額: (整數)\n'))
+        break
+    except:
+        print('輸入金額有誤，請重新輸入')
+
+while True:
+    try:
         tip = '是否追號？\n' \
               '>> 0 （不追號，程式會持續運行並於跨期後持續投注到目標注數與金額　※：每期隨機投注號）\n' \
               '>> 1 （追號，計算可達需求的追號單並一次性投注　※：每期固定投注號）'
@@ -763,13 +834,6 @@ while True:
         print(f'單期投注{max_bet_one_issue}筆注單，單日投注{min_bet_per_day}注，將追號{min_trace}期')
     except:
         print('參數有誤，請重新輸入')
-
-while True:
-    try:
-        target_amount = int(input('輸入目標投注金額: (整數)\n'))
-        break
-    except:
-        print('輸入金額有誤，請重新輸入')
 
 while True:
     try:
@@ -785,10 +849,11 @@ while True:
     except:
         print('輸入密碼有誤，請重新輸入')
 
-ff = FF4LiteTool(env, use_proxy=False)
-generator = FF4GameContentGenerator(lotteryID=int(input_lottery), target_group=['daxiaodanshuang'])
+ff = FF4LiteTool(env, use_proxy=True)
 
 for user in user_names:
+    generator = FF4GameContentGenerator(_lottery_id=lottery_id, target_method=['baozi'],
+                                        env_id=ff.env_data.get_env_id(), _user=user)
     if env in ['dev02', 'fh82dev02']:
         ff.login(user, custom_password if custom_password != '' else '123qwe')
     else:
@@ -796,7 +861,7 @@ for user in user_names:
     # ff.start_auto_bet_tool_trace(_lottery_code=lottery[int(input_lottery)], _generator=generator,
     #                              _max_bet_one_issue=max_bet_one_issue, _min_bet_per_day=min_bet_per_day,
     #                              _target_amount=target_amount)
-    ff.start_auto_bet_tool_single(_lottery_code=lottery[int(input_lottery)], _generator=generator,
+    ff.start_auto_bet_tool_single(_lottery_code=lottery[int(lottery_id)], _generator=generator,
                                   _max_bet_one_issue=max_bet_one_issue, _min_bet_per_day=min_bet_per_day,
                                   _target_amount=target_amount)
 
