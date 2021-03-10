@@ -849,7 +849,7 @@ while True:
     except:
         print('輸入密碼有誤，請重新輸入')
 
-ff = FF4LiteTool(env, use_proxy=True)
+ff = FF4LiteTool(env, use_proxy=False)
 
 for user in user_names:
     generator = FF4GameContentGenerator(_lottery_id=lottery_id, target_method=['baozi'],
