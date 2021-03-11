@@ -541,7 +541,7 @@ class FF4GameContentGenerator:
                 random_num = str(randint(0, 9))
                 if random_num not in ball:
                     ball += random_num
-            return [','.join(ball), combinations(ball, 3)]
+            return [','.join(ball), len(list(combinations(ball, 3)))]
 
     def __random_115_series(self, method: Method) -> [str, int]:
         min_length_pool = {'xuanyi': 1, 'xuaner': 2, 'xuansan': 3, 'xuansi': 4, 'xuanwu': 5,
