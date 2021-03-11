@@ -210,7 +210,6 @@ class FF4LiteTool(ApiStressTestTool):
             if not max_mul:  # 若彩種未開放
                 continue
             bet_content = _generator.get_bet_content(method=rand_method, issues=self.newest_issue)
-            print(f'methods:{list(methods)}, bet_content: {bet_content}')
             if bet_content is not None:
                 print(f'當前期數：{current_issue[0]["number"]}, 開始投注: {rand_method.title}')
                 # 若預期的投注小於  (目標投注金額 - 已投注金額) / 剩餘的單期投注注單數量
@@ -401,18 +400,20 @@ while True:
 ff = FF4LiteTool(env, use_proxy=False)
 
 for user in user_names:
-    generator = FF4GameContentGenerator(_lottery_id=lottery_id, target_method=['baozi'],
-                                        env_id=ff.env_data.get_env_id(), _user=user)
+    generator = FF4GameContentGenerator(lottery_id=lottery_id,
+                                        env_id=ff.env_data.get_env_id(), user_name=user)
     if env in ['dev02', 'fh82dev02']:
         ff.login(user, custom_password if custom_password != '' else '123qwe')
     else:
         ff.login(user, custom_password if custom_password != '' else 'amberrd')
-    # ff.start_auto_bet_tool_trace(_lottery_code=lottery[int(input_lottery)], _generator=generator,
-    #                              _max_bet_one_issue=max_bet_one_issue, _min_bet_per_day=min_bet_per_day,
-    #                              _target_amount=target_amount)
-    ff.start_auto_bet_tool_single(_lottery_code=lottery[int(lottery_id)], _generator=generator,
-                                  _max_bet_one_issue=max_bet_one_issue, _min_bet_per_day=min_bet_per_day,
-                                  _target_amount=target_amount)
+    if is_trace:
+        ff.start_auto_bet_tool_trace(_lottery_code=lottery[lottery_id], _generator=generator,
+                                     _max_bet_one_issue=max_bet_one_issue, _min_bet_per_day=min_bet_per_day,
+                                     _target_amount=target_amount)
+    else:
+        ff.start_auto_bet_tool_single(_lottery_code=lottery[lottery_id], _generator=generator,
+                                      _max_bet_one_issue=max_bet_one_issue, _min_bet_per_day=min_bet_per_day,
+                                      _target_amount=target_amount)
 
 input('自動投注結束')
 

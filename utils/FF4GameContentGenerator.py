@@ -3,20 +3,21 @@ from json import load
 from math import pow
 from random import randint
 
+
 class Method:
-    def __init__(self, lottery: int, group_name: str, set_name: str, method_name: str, title: str):
-        self.lottery = lottery
+    def __init__(self, lottery_id: int, group_name: str, set_name: str, method_name: str, title: str):
+        self.lottery_id = lottery_id
         self.group_name = group_name
         self.set_name = set_name
         self.method_name = method_name
         self.title = title
-        if group_name in ['yixing']:  # 一星
+        if group_name in ['yixing', 'yixing_2000']:  # 一星
             self.offset = 4
-        elif group_name in ['houer']:  # 後二
+        elif group_name in ['houer', 'houer_2000']:  # 後二
             self.offset = 3
-        elif group_name in ['housan']:  # 後三
+        elif group_name in ['housan', 'housan_2000']:  # 後三
             self.offset = 2
-        elif group_name in ['sixing', 'zhongsan']:  # 四星 中三
+        elif group_name in ['sixing', 'zhongsan', 'sixing_2000', 'zhongsan_2000']:  # 四星 中三
             self.offset = 1
         elif group_name in ['wuxing', 'qianer', 'qiansan', 'qiansi']:  # 五星 前二 前三
             self.offset = 0
@@ -27,16 +28,22 @@ class Method:
             self.digit = 10
         elif group_name in ['wuxing']:
             self.digit = 5
-        elif group_name in ['sixing']:
+        elif group_name in ['sixing', 'sixing_2000']:
             self.digit = 4
-        elif group_name in ['qiansan', 'zhongsan', 'housan'] or method_name in ['houyi']:
+        elif group_name in ['qiansan', 'zhongsan', 'zhongsan_2000', 'housan', 'housan_2000'] or method_name in [
+            'houyi']:
             self.digit = 3
-        elif group_name in ['qianer', 'houer'] or method_name in ['qianer', 'houer']:
+        elif group_name in ['qianer', 'houer', 'houer_2000'] or method_name in ['qianer', 'houer']:
             self.digit = 2
-        elif group_name in ['yixing'] or method_name in ['qianyi', 'houyi', 'zonghe']:
+        elif group_name in ['yixing', 'yixing_2000'] or method_name in ['qianyi', 'houyi', 'zonghe']:
             self.digit = 1
         else:
             self.digit = None
+
+    def output_detail(self):
+        print(f'lottery: {self.lottery_id}')
+        print(f'title: {self.title}')
+        print(f'name: {self.group_name}.{self.set_name}.{self.method_name}')
 
     @staticmethod
     def get_all_games(lottery_id: int = None, target_group: list = None, target_set: list = None,
@@ -81,24 +88,25 @@ class Method:
 
 
 class FF4GameContentGenerator:
-    def __init__(self, _lottery_id: int, env_id: int, _user: str,
+    def __init__(self, lottery_id: int, env_id: int, user_name: str,
                  target_group: list = None, target_set: list = None, target_method: list = None):
         """
-
-        :param _lottery_id:
-        :param target_group:
-        :param target_set:
-        :param target_method:
-        :param env_id:
-        """
-        self.lottery_id = _lottery_id
+        :param lottery_id: 玩法ID, 為空時返還全部
+        :param target_group: 指定玩法群, 為空時返還全部
+        :param target_set: 指定玩法組, 為空時返還全部
+        :param target_method: 指定方法, 為空時返還全部
+        :param env_id: 雙面盤用，用來抓取用戶返點並計算遊戲獎金
+        :param user_name:  雙面盤用，用來抓取用戶返點並計算遊戲獎金
+            """
+        self.lottery_id = lottery_id
         self.env_id = env_id
-        self._user = _user
+        self._user = user_name
         self.methods = Method.get_all_games(lottery_id=self.lottery_id, target_group=target_group,
                                             target_set=target_set, target_method=target_method)
 
     def get_bet_content(self, method: Method, issues: list, multiple: int = 1):
         random_ball = self.__get_random_method_ball(method)
+        print(f'get_bet_content: {random_ball}')
         if random_ball is None:
             return None
         orders = []
@@ -109,7 +117,7 @@ class FF4GameContentGenerator:
                  "multiple": multiple}
             )
         return {
-            "gameType": method.lottery,
+            "gameType": method.lottery_id,
             "isTrace": 0 if len(issues) == 1 else 1,
             "traceWinStop": 0,
             "traceStopValue": -1,
@@ -138,9 +146,25 @@ class FF4GameContentGenerator:
     def get_all_ignore_games(self):
         index = 1
         for method in self.methods:
-            random_ball = self.__get_random_method_ball(method)
+            try:
+                random_ball = self.__get_random_method_ball(method)
+            except Exception as e:
+                error_class = e.__class__.__name__  # 取得錯誤類型
+                detail = e.args[0]  # 取得詳細內容
+                import sys
+                cl, exc, tb = sys.exc_info()  # 取得Call Stack
+                import traceback
+                lastCallStack = traceback.extract_tb(tb)[-1]  # 取得Call Stack的最後一筆資料
+                fileName = lastCallStack[0]  # 取得發生的檔案名稱
+                lineNum = lastCallStack[1]  # 取得發生的行號
+                funcName = lastCallStack[2]  # 取得發生的函數名稱
+                errMsg = "File \"{}\", line {}, in {}: [{}] {}".format(fileName, lineNum, funcName, error_class, detail)
+                print(errMsg)
+                method.output_detail()
             if random_ball is None:
-                print(f'{index}: {method.title}, {method.group_name}.{method.set_name}.{method.method_name}')
+                print(f'\nindex: {index}')
+                method.output_detail()
+                index += 1
 
     def __get_random_method_ball(self, method: Method) -> [str, int]:
         """
@@ -148,16 +172,24 @@ class FF4GameContentGenerator:
         :param method:
         :return:
         """
-        if method.group_name == 'daxiaodanshuang':
+        print(f'__get_random_method_ball: ')
+        method.output_detail()
+        if method.lottery_id in [99301, 99302, 99303, 99304, 99305, 99306]:
+            content = self.__random_115_series(method)
+        elif method.group_name == 'daxiaodanshuang':  # 大小單雙
             content = self.__random_daxiaodanshuang(method)
-        elif method.group_name == 'longhu':
+        elif method.group_name == 'longhu':  # 龍虎
             content = self.__random_longhu(method)
-        elif method.group_name == 'shuangmienpan':
+        elif method.group_name == 'shuangmienpan':  # 雙面盤
             content = self.__random_shuangmienpan(method)
+        elif method.set_name in ['putongwanfa', 'panmian']:  # 快樂彩系列
+            content = self.__random_klc_series(method)
         elif method.method_name in ["fushi"]:
             content = self.__random_fushi(method)
         elif method.method_name in ['danshi', 'zuliudanshi', 'zusandanshi', 'hunhezuxuan']:
             content = self.__random_danshi(method)
+        elif method.method_name in ['zusan', 'zuliu']:
+            content = self.__random_zusanzuliu(method)
         elif 'zuxuan' in method.method_name:
             content = self.__random_zuxuan_n(method)
         elif method.set_name == 'budingwei':
@@ -431,7 +463,6 @@ class FF4GameContentGenerator:
             return [','.join(balls), bet_amount]
 
     def __random_longhu(self, method: Method) -> [str, int]:
-        print(f'method: {method}')
         longhu_pool = ['龙', '虎', '和']
         bet_amount = 0
         if method.set_name == 'lh':
@@ -453,7 +484,6 @@ class FF4GameContentGenerator:
                     ball = '-'
                 balls.append('|'.join(ball))
                 bet_amount += length
-            print(f'balls: {list(balls)}')
             return [','.join(balls), bet_amount]
 
     def __random_shuangmienpan(self, method: Method) -> [str, int]:
@@ -495,3 +525,62 @@ class FF4GameContentGenerator:
             return None
         else:  # method.group_name == 'caipaiwei':
             return None
+
+    def __random_zusanzuliu(self, method: Method) -> [str, int]:
+        ball = ''
+        if method.method_name == 'zusan':
+            length = randint(2, 10)
+            while len(ball) < length:
+                random_num = str(randint(0, 9))
+                if random_num not in ball:
+                    ball += random_num
+            return [','.join(ball), len(ball) * (len(ball) - 1)]
+        elif method.method_name == 'zuliu':
+            length = randint(3, 10)
+            while len(ball) < length:
+                random_num = str(randint(0, 9))
+                if random_num not in ball:
+                    ball += random_num
+            return [','.join(ball), combinations(ball, 3)]
+
+    def __random_115_series(self, method: Method) -> [str, int]:
+        min_length_pool = {'xuanyi': 1, 'xuaner': 2, 'xuansan': 3, 'xuansi': 4, 'xuanwu': 5,
+                      'xuanliu': 6, 'xuanqi': 7, 'xuanba': 8, 'quwei': 1}
+        min_length = min_length_pool[method.group_name]
+        ball_pool = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        balls = []
+
+        if method.set_name == 'normal':  # 趣味 猜中位 定單雙
+            if method.method_name == 'caizhongwei':
+                ball_pool = [3, 4, 5, 6, 7, 8, 9]
+            else:  # method.method_name =   = 'dingdanshuang':
+                ball_pool = ['5单0双', '4单1双', '3单2双', '2单3双', '1单4双', '0单5双']
+        if method.set_name == 'normal' or method.method_name in ['caizhongwei', 'fushi']:  # 前三一碼/前一不定
+            length = randint(min_length, len(ball_pool) - 1)
+            while len(balls) < length:
+                random_num = str(randint(0, len(ball_pool) - 1)).zfill(2)
+                if random_num not in balls:
+                    balls.append(random_num)
+            return [','.join(balls), combinations(balls, min_length)]
+
+        # if method.method_name == 'danshi':
+        #     min_length = randint(1, combinations(len(ball_pool), min_length_pool))  # 單式長度範圍1~全餐
+        #     while len(balls) < min_length:
+        #         ball = []
+        #         while len(ball) < min_length:
+        #             random_num = ball_pool[randint(0, len(ball_pool) - 1)]
+        #             if random_num not in ball:
+        #                 ball.append(random_num)
+        #         if ' '.join(sorted(ball)) not in balls:
+        #             balls.append(ball)
+
+
+
+
+    def __random_klc_series(self, method: Method) -> [str, int]:
+        return None
+
+
+# ff = FF4GameContentGenerator(lottery_id=None, env_id=None, user_name=None)
+#
+# ff.get_all_ignore_games()
