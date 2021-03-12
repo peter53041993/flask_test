@@ -172,8 +172,6 @@ class FF4GameContentGenerator:
         :param method:
         :return:
         """
-        print(f'__get_random_method_ball: ')
-        method.output_detail()
         if method.lottery_id in [99301, 99302, 99303, 99304, 99305, 99306]:
             content = self.__random_115_series(method)
         elif method.group_name == 'daxiaodanshuang':  # 大小單雙
@@ -545,41 +543,86 @@ class FF4GameContentGenerator:
 
     def __random_115_series(self, method: Method) -> [str, int]:
         min_length_pool = {'xuanyi': 1, 'xuaner': 2, 'xuansan': 3, 'xuansi': 4, 'xuanwu': 5,
-                      'xuanliu': 6, 'xuanqi': 7, 'xuanba': 8, 'quwei': 1}
+                           'xuanliu': 6, 'xuanqi': 7, 'xuanba': 8, 'quwei': 1}
         min_length = min_length_pool[method.group_name]
-        ball_pool = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-        balls = []
+        ball_pool = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]  # 通用的號碼池
+        balls = []  # 最後的投注內容
+        delimiter = ','  # 通用分隔符
+
+        if method.set_name == 'dingweidan' or method.method_name == 'zhixuanfushi':
+            if method.method_name in ['qianerzhixuan', 'dantuo']:
+                digits = 2  # 位數數量 (01,02)
+            else:
+                digits = 3  # 位數數量 (01,02,03)
+            bet_amount = 1
+            selected = []
+            for _ in range(0, digits):  # 運行N次
+                ball = []
+                print(f'selected:{selected}, digits:{digits}')
+                target_length = randint(1, len(ball_pool) - len(selected) - digits + 1)
+                while len(ball) < target_length:
+                    random_num = str(ball_pool[randint(0, len(ball_pool) - 1)]).zfill(2)
+                    if random_num not in selected:
+                        selected.append(random_num)
+                        ball.append(random_num)
+                balls.append(' '.join(ball))
+                bet_amount *= len(ball)
+            return [','.join(balls), bet_amount]
+
+        if method.method_name in ['dantuo', 'renxuandantuo', 'zuxuandantuo']:
+            bet_amount = 1
+            selected = []
+            for index in range(0, 2):  # 運行2次
+                ball = []
+                if index == 0:
+                    target_length = randint(1, min_length - 1)
+                else:
+                    target_length = randint(min_length - len(balls[0]), len(ball_pool) - len(selected))
+                while len(ball) < target_length:
+                    random_num = str(ball_pool[randint(0, len(ball_pool) - 1)]).zfill(2)
+                    if random_num not in selected:
+                        selected.append(random_num)
+                        ball.append(random_num)
+                balls.append(ball)  # balls = [['01','02','03'], ['05','06','07']]
+                bet_amount *= len(ball)
+            # 擔碼必選, 因此組合數為: "第二碼"中挑選(最小選號數 - 擔碼數量)個號碼的"組合數"
+            bet_amount = len(list(combinations(balls[1], min_length - len(balls[0]))))
+            # 為了符合擔拖格式調整balls[0]內容
+            balls[0] = '[胆' + ','.join(balls[0]) + ']'
+            balls[1] = ','.join(balls[1])
+            return ['  '.join(balls), bet_amount]
 
         if method.set_name == 'normal':  # 趣味 猜中位 定單雙
             if method.method_name == 'caizhongwei':
-                ball_pool = [3, 4, 5, 6, 7, 8, 9]
+                ball_pool = [3, 4, 5, 6, 7, 8, 9]  # 趣味用的號碼池
             else:  # method.method_name =   = 'dingdanshuang':
-                ball_pool = ['5单0双', '4单1双', '3单2双', '2单3双', '1单4双', '0单5双']
+                ball_pool = ['5单0双', '4单1双', '3单2双', '2单3双', '1单4双', '0单5双']  # 定單雙用的號碼池
+                delimiter = '|'  # 定單雙用分隔符
         if method.set_name == 'normal' or method.method_name in ['caizhongwei', 'fushi']:  # 前三一碼/前一不定
             length = randint(min_length, len(ball_pool) - 1)
             while len(balls) < length:
-                random_num = str(randint(0, len(ball_pool) - 1)).zfill(2)
+                random_num = str(ball_pool[randint(0, len(ball_pool) - 1)]).zfill(2)
                 if random_num not in balls:
                     balls.append(random_num)
-            return [','.join(balls), combinations(balls, min_length)]
+            return [delimiter.join(balls), len(list(combinations(balls, min_length)))]
 
-        # if method.method_name == 'danshi':
-        #     min_length = randint(1, combinations(len(ball_pool), min_length_pool))  # 單式長度範圍1~全餐
-        #     while len(balls) < min_length:
-        #         ball = []
-        #         while len(ball) < min_length:
-        #             random_num = ball_pool[randint(0, len(ball_pool) - 1)]
-        #             if random_num not in ball:
-        #                 ball.append(random_num)
-        #         if ' '.join(sorted(ball)) not in balls:
-        #             balls.append(ball)
-
-
-
+        if method.method_name in ['danshi', 'renxuandanshi', 'zhixuandanshi', 'zuxuandanshi']:
+            total_comb = len(list(combinations(ball_pool, min_length)))
+            target_amount = randint(1, total_comb)  # 單式長度範圍1~全餐
+            while len(balls) < target_amount:
+                ball = []
+                while len(ball) < min_length:
+                    random_num = str(ball_pool[randint(0, len(ball_pool) - 1)]).zfill(2)
+                    if random_num not in ball:
+                        ball.append(random_num)
+                ball = ' '.join(sorted(ball))
+                if ball not in balls:
+                    balls.append(ball)
+            return [','.join(balls), len(balls)]
+        print(f'{method.title} not done yet.')
 
     def __random_klc_series(self, method: Method) -> [str, int]:
         return None
-
 
 # ff = FF4GameContentGenerator(lottery_id=None, env_id=None, user_name=None)
 #

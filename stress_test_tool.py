@@ -314,7 +314,8 @@ class FF4LiteTool(ApiStressTestTool):
 lottery = {
     99111: 'jlffc',
     99101: 'cqssc',
-    99105: 'hljssc'
+    99105: 'hljssc',
+    99301: 'sd115'
 }
 
 while True:
