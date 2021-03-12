@@ -556,10 +556,9 @@ class FF4GameContentGenerator:
                 digits = 3  # 位數數量 (01,02,03)
             bet_amount = 1
             selected = []
-            for _ in range(0, digits):  # 運行N次
+            for index in range(1, digits + 1):  # 運行N次
                 ball = []
-                print(f'selected:{selected}, digits:{digits}')
-                target_length = randint(1, len(ball_pool) - len(selected) - digits + 1)
+                target_length = randint(1, len(ball_pool) - len(selected) - digits + index)
                 while len(ball) < target_length:
                     random_num = str(ball_pool[randint(0, len(ball_pool) - 1)]).zfill(2)
                     if random_num not in selected:
