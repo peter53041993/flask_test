@@ -549,8 +549,8 @@ class FF4GameContentGenerator:
         balls = []  # 最後的投注內容
         delimiter = ','  # 通用分隔符
 
-        if method.set_name == 'dingweidan' or method.method_name == 'zhixuanfushi':
-            if method.method_name in ['qianerzhixuan', 'dantuo']:
+        if method.set_name == 'dingweidan' or method.method_name == 'zhixuanfushi':  # 定位膽 / 直選複式
+            if method.method_name == 'dantuo' or method.set_name == 'qianerzhixuan':  # 膽拖 / 前二組選
                 digits = 2  # 位數數量 (01,02)
             else:
                 digits = 3  # 位數數量 (01,02,03)
@@ -565,10 +565,20 @@ class FF4GameContentGenerator:
                         selected.append(random_num)
                         ball.append(random_num)
                 balls.append(' '.join(ball))
-                bet_amount *= len(ball)
-            return [','.join(balls), bet_amount]
+                if method.set_name == 'dingweidan':  # 定位膽注數以加法計算
+                    bet_amount += len(ball)
+                else:  # 其他玩法以乘法組合計算
+                    bet_amount *= len(ball)
+            if method.method_name == 'zhixuanfushi':  # 最後方要補 '-'
+                final_ball = ','.join(balls)
+                for _ in range(0, 5 - min_length):
+                    final_ball += ',-'
+                return [final_ball, bet_amount]
+            else:
 
-        if method.method_name in ['dantuo', 'renxuandantuo', 'zuxuandantuo']:
+                return [','.join(balls), bet_amount]
+
+        if method.method_name in ['dantuo', 'renxuandantuo', 'zuxuandantuo']:  # 處理擔拖
             bet_amount = 1
             selected = []
             for index in range(0, 2):  # 運行2次
@@ -589,7 +599,7 @@ class FF4GameContentGenerator:
             # 為了符合擔拖格式調整balls[0]內容
             balls[0] = '[胆' + ','.join(balls[0]) + ']'
             balls[1] = ','.join(balls[1])
-            return ['  '.join(balls), bet_amount]
+            return ['  '.join(balls), bet_amount]  # 處理擔拖
 
         if method.set_name == 'normal':  # 趣味 猜中位 定單雙
             if method.method_name == 'caizhongwei':
@@ -605,7 +615,7 @@ class FF4GameContentGenerator:
                     balls.append(random_num)
             return [delimiter.join(balls), len(list(combinations(balls, min_length)))]
 
-        if method.method_name in ['danshi', 'renxuandanshi', 'zhixuandanshi', 'zuxuandanshi']:
+        if method.method_name in ['danshi', 'renxuandanshi', 'zhixuandanshi', 'zuxuandanshi']:  # 處理單式
             total_comb = len(list(combinations(ball_pool, min_length)))
             target_amount = randint(1, total_comb)  # 單式長度範圍1~全餐
             while len(balls) < target_amount:
