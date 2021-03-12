@@ -554,7 +554,10 @@ class FF4GameContentGenerator:
                 digits = 2  # 位數數量 (01,02)
             else:
                 digits = 3  # 位數數量 (01,02,03)
-            bet_amount = 1
+            if method.set_name == 'dingweidan':
+                bet_amount = 0
+            else:
+                bet_amount = 1
             selected = []
             for index in range(1, digits + 1):  # 運行N次
                 ball = []
