@@ -809,7 +809,31 @@ def status_style(val):  # 判斷狀態,來顯示顏色屬性 , 給 game_order �
 def get_cookie():  # 存放cookie皆口
     return cookie
 
-
+@app.route('/game_ave',methods=["POST"])# 統計 投注金額/中投筆
+def game_ave():
+    lottery_id = request.form.get('lottery')
+    start_time = request.form.get('start_time')
+    end_time = request.form.get('end_time')
+    envConfig = Config.EnvConfig(request.form.get('env_type'))
+    envid = envConfig.get_env_id()
+    conn = OracleConnection(env_id=envid)
+    now_day = datetime.datetime.now().day  # 當下 日期
+    print(now_day)
+    start_split = start_time.split('-')[-1]
+    end_split = end_time.split('-')[-1]
+    print(type(now_day),start_split ,end_split)
+    key_name = 'GameAve: %s/%s/%s-%s' % (lottery_id, envid, start_time,end_time)  # 0/環境:日期
+    result = RedisConnection.get_key(2, key_name)
+    if result != 'not exist':  # 代表 已經存 到redis過
+        return result
+    game_ave = conn.select_game_ave(lotteryid=lottery_id,start_time=start_time,end_time=end_time)
+    if len(game_ave) == 0:
+        return '空'
+    print(now_day,end_split)
+    if str(now_day) != end_split:# end_time 如果不是 今天日期,代表資料不會在變動 可存REDIS
+        RedisConnection.set_key(key_name, game_ave)
+    return game_ave
+    
 @app.route('/game_result', methods=["GET", "POST"])  # 查詢方案紀錄定單號
 def game_result():
     global game_play_type, game_amount, game_submit, game_point, lottery_name, game_theory, bonus, data, game_award, bet_type_code, len_game
@@ -1007,8 +1031,8 @@ def game_result():
             # test = frame.style.applymap(status_style)#增加狀態顏色 ,這是for jupyter_notebook可以直接使用
             print(frame)
             return frame.to_html()
-
-    return render_template('game_result.html')
+    lottery_dict = FF_Joy188.FF_().lottery_dict
+    return render_template('game_result.html',lottery_dict=lottery_dict)
 
 
 @app.route('/user_active', methods=["POST", "GET"])
@@ -1822,9 +1846,10 @@ def new_Agent():  # 新代理中心
             return '無該用戶'
         now_hour = datetime.datetime.now().hour  # 當下 小時
         now_day = datetime.datetime.now().day  # 當下 日期
-        print(now_day)
-        if str(now_day) == start_time[-1] and str(now_day) == end_time[
-            -1]:  # 開始/結束時間 是今天的話, 需要待now_hour 進去key , 因為當天的 每個小時牌成 都有可能變動
+        start_split = start_time.split('-')[-1]
+        end_split = end_time.split('-')[-1]
+        print(now_day,start_split ,end_split)
+        if str(now_day) == start_split and str(now_day) == end_split:  # 開始/結束時間 是今天的話, 需要待now_hour 進去key , 因為當天的 每個小時牌成 都有可能變動
             print('查詢今天日期')
             key_name = 'NewAgent: %s/%s/%s-%s:%s' % (check_type, user, start_time, end_time, now_hour)
         else:
@@ -1894,7 +1919,6 @@ def Single():  # 單挑
         slip_ = conn.select_game_slip(order_[0]['ID'])
         userid = slip_[0]['USERID']
         issue_code = slip_[0]['ISSUE_CODE']
-        orderid = slip_[0]['ORDERID']
         print(slip_)
         BetTypeCode_list, Totbets_list, Status_list, Amount_list,Bet_list = [], [], [], [],[]
         for index in range(len(slip_)):  # 一張訂單 可能要很多個detail
@@ -1913,7 +1937,7 @@ def Single():  # 單挑
         bet_type_name = conn.select_SingleGame(lotteryid, BetTypeCode_tuple)  # 用 bet_type 數值 對應 找出 中文
         soloNum = conn.select_SingleSolo(lotteryid, BetTypeCode_tuple)  # 查詢該玩法後台設定的 單挑設定
         
-        slipBet = conn.select_SingleBet(orderid)# 查詢 投注內容, 需去重用
+        slipBet = conn.select_SingleBet(userid=userid,lotteryid=lotteryid,issuecode=issue_code)# 查詢 投注內容, 需去重用
         print(slipBet)
         
         bet_dict = {}# 存放 key bet_type_code value 為 去重後的投注組合
@@ -1921,7 +1945,7 @@ def Single():  # 單挑
             new_list = return_Deduplica(BetDetailList=slipBet[bet_type_code],bet_type_code=bet_type_code)
             new_detail = return_NewCount(new_list)
             bet_dict[bet_type_code] = new_detail
-        #print(bet_dict)
+        print(bet_dict)
         
         # print(slipNum,bet_type_name,soloNum)
         bet_type_list = []  # 存放中文名稱
@@ -1941,21 +1965,19 @@ def Single():  # 單挑
 
                 if Status_list[index] == 3:  # 該完法沒中獎 ,不會進單挑
                     solo_status.append("否")
-                    Deduplica_list.append('無需去重')
                 elif soloNum[bet_code][1] == 0:  # 後台該玩法 關閉單挑, 也不進
                     solo_status.append("否")
-                    Deduplica_list.append('無需去重')
                 else:# 這邊是有中獎, 後台也有開放,  差別就是和後台 比較 單條設定值
                     if bet_dict[bet_code][0] <= soloNum[bet_code][0]:  # 當期該玩法 的總注注和slipNUm 小於等於 後台 設定值 就會進單挑
                         solo_status.append("是")
                     else:
                         solo_status.append("否")
-                    Deduplica_list.append(bet_dict[bet_code][0])    
+                Deduplica_list.append(bet_dict[bet_code][0])    
             except IndexError:  # 有可能注單理的玩法,是 後台單挑值沒有的玩法
                 soloNum_list.append('無')
                 soloOpen_list.append('')
-                solo_status.append("玩法沒開放")
-                Deduplica_list.append('無需去重')
+                solo_status.append("否")
+                Deduplica_list.append('')
 
         data = {}
         data["當期玩法'原本'總投注數"] = slipNum_list
@@ -1965,7 +1987,7 @@ def Single():  # 單挑
         data["投注玩法bet_type_code"] = BetTypeCode_list
         data["該玩法注數"] = Totbets_list
         data["當期玩法後台單挑值"] = soloNum_list
-        data["該單後台單挑開關"] = ["開" if i == 1 else "無" if i == "" else "關閉" for i in soloOpen_list]
+        data["該單後台單挑開關"] = ["開" if i == 1 else "無開放" if i == "" else "關閉" for i in soloOpen_list]
         data["是否進入單挑"] = solo_status
         data["玩法是否中獎"] = ["未中獎" if i == 3 else "中獎" for i in Status_list]
         data["該玩法投注金額"] = Amount_list
@@ -1979,15 +2001,20 @@ def Single():  # 單挑
     return render_template('Single.html', lottery_dict=lottery_dict)
 def return_NewCount(list_):# list_ 為所有的組合list  ,該方法 產生新的去重組和
     from collections import Counter
-    if bet_type in ['43']: # 組選系列 用另外種方式 判斷
+    '''
+    if bet_type in ['43','44','45','46','47','48']: # 組選系列 用另外種方式 判斷
         rep_dict = {}
         fir_elen = list_[0]# 先用sort 長度 最長為第一原素 ,後面 元素判斷是否友包含在裡面
         print(fir_elen)
         og_len = ["".join(tuple_) for tuple_ in [i for i in 
-        itertools.combinations(fir_elen,len_play)] ]
+        itertools.combinations(fir_elen,len_play)] ]# 組選 120 的列表組合
         if len(list_) > 1: # 超過長度 2的列表 ,需再將原本list 長度 減1, 減1 因為先從 fir_elen 取出一個
             og_list = len(og_len) +(len(list_)-1)
-        print('原總注數: %s'%og_list)
+            print('原總注數: %s'%og_list)
+        else:# 長度如果只有 1,代表 這期 沒有去重
+            new_len = len(og_len)
+            rep_dict = {'':0}
+            return new_len,rep_dict
         exist_list = []
         for index,ele in enumerate(list_):
             if index == 0:
@@ -2001,6 +2028,9 @@ def return_NewCount(list_):# list_ 為所有的組合list  ,該方法 產生新�
             rep_dict[i] = exist_list.count(i)
         need_cal =  len(exist_list)
         new_len = og_list - need_cal
+    '''
+    if bet_type == '11':#單式
+        return 0,{'':0}
     else:
         og_list = len(list_)
         print('原總注數: %s'%og_list)
@@ -2015,7 +2045,7 @@ def return_NewCount(list_):# list_ 為所有的組合list  ,該方法 產生新�
         if need_cal <0: 
             need_cal = 0
 
-        print ("重複號碼:次數  %s"% rep_dict ) 
+        #print ("重複號碼:次數  %s"% rep_dict ) 
     new_len = og_list - need_cal
     print('需被減去的長度: %s'%need_cal)
     print('去重後的注數: %s'%new_len)
@@ -2061,10 +2091,9 @@ def return_SumP(str_,cal_,play_type,game_type,bet_type):# 和值的 排列組合
     
     #和值key號碼組合為 tuple , 需轉str  存redis才不會有問題
     if game_type == "11":# 11 組選 
-        #combinations_with_replacement   有AB 就不會有 BA元素 可重复 
+            #combinations_with_replacement   有AB 就不會有 BA元素 可重复 
         a = ["".join(tuple_) for tuple_ in [i for i in 
         itertools.combinations_with_replacement(str_,len_play)] ]
-        #存redis才不會有問題
     elif game_type == '10':# 10 直選  
         a = [ "".join(tuple_) for tuple_ in[i for i in 
         itertools.product(str_,repeat=len_play)] ]#所有總類, AB BA 是包含的
@@ -2084,6 +2113,92 @@ def return_SumP(str_,cal_,play_type,game_type,bet_type):# 和值的 排列組合
     print('共 %s 注'%len(new_list))# 
     return new_list
 
+def return_zhuP(bet_type,BetDetailList):# 組選 系列 ,沒有和值
+    new_list = []
+    if bet_type in  ['43','49','51']:  # 43: 組選120系列 49: 組選24 ,因為都是單同號, ['0,1,2,3,4,5,6,7,8,9']
+        len_dict = {'43':5,'49':4,'51':2}#43: 五星組選120 長度5的組合 . 49:四星組選24 , 51: 四星組6(*2211兩個二重號) 
+        BetDetailList = [i.replace(',','') for i in BetDetailList]# , 需用replace 轉成 0123456789
+        for bet_str in BetDetailList:
+            new_list += ["".join(tuple_) for tuple_ in [i for i in itertools.combinations(bet_str,len_dict[bet_type])] ] 
+    else:
+        for bet_detail  in BetDetailList:
+            tes = "".join(bet_detail).split(',')#['01234,'678']
+            if bet_type in ['48','52']:
+                if bet_type == '48':# 48 組選5, 四個重複號 配一個單號
+                    con = 4
+                else:
+                    con = 3# 52 組選4, 三個重複號 配一個單號
+                for q in tes[0]:
+                    for w in tes[1]:
+                        if q == w:
+                            pass
+                        else:
+                            number = ''
+                            for i in range(con):
+                                number += q
+                            number = number + w
+                            new_list.append(number)
+            elif bet_type in ['44','50']:
+                if bet_type == '44':# 組選60  一個二重號 配 3個單位號
+                    con = 3
+                else:
+                    con = 2#50: 組選12 一個二重 配2個單號
+                list_P = ["".join(tuple_) for tuple_ in [i for i in 
+                itertools.combinations(tes[1],con)] ]# 將 元素 2 列出所有 三個元素的組合,在跟 元素 1 去搭配
+                #print(list_P)
+                for q in tes[0]:
+                    for w in list_P:
+                        number = ''
+                        if q in w:
+                            pass
+                        else:
+                            for i in range(2):
+                                number += q
+                            number = number + w
+                            new_list.append(number)
+            elif bet_type == '45':# 組炫30 . 兩個二重號 配一個單號
+                list_P = ["".join(tuple_) for tuple_ in [i for i in 
+                itertools.combinations(tes[0],2)] ]# 拿第一個元素 來拆
+                #print(list_P)
+                for q in tes[1]:#第二個元素 來配 第一個元素的組合
+                    #print(q)
+                    for w in list_P:
+                        number = ''
+                        if q in w:
+                            pass
+                        else:
+                            for i in range(2):
+                                number += w
+                            number = number + q
+                            new_list.append(number)
+            elif bet_type == '46':# 組選20 一個三重號 配兩個單號
+                list_P = ["".join(tuple_) for tuple_ in [i for i in 
+                itertools.combinations(tes[1],2)] ]# 拿第一個元素 來拆
+                for q in tes[0]:
+                    for w in list_P:
+                        number = ''
+                        if q in w:
+                            pass
+                        else:
+                            for i in range(3):
+                                number += q
+                            number = number+w
+                            new_list.append(number)
+            elif bet_type == '47':# 組選10 , 一個三重號 配兩個 二重號
+                for q in tes[0]:
+                    for w in tes[1]:
+                        number = ''
+                        if q == w:
+                            pass
+                        else:
+                            for i in range(2):
+                                number += w
+                            for i in range(3):
+                                number += q
+                            new_list.append(number)                
+    #print(len(new_list))
+    return new_list
+
 def return_Deduplica(BetDetailList,bet_type_code):# bet_type_code 傳  ex: 33_10_33
     global bet_type # return_NewCount 方法會拿來判斷 玩法 
     new_list = []
@@ -2091,6 +2206,7 @@ def return_Deduplica(BetDetailList,bet_type_code):# bet_type_code 傳  ex: 33_10
     play_type = bet_list[0]# 0 為玩法類型(ex:五星)...
     game_type = bet_list[1]#1 為直選/組選...
     bet_type = bet_list[2]#2 為複試/單式/和值...
+    print(bet_type)
     if bet_type == '33':# 33 式和值 ,但還需判斷 是 組選還是直選
         if len(BetDetailList) == 1:# 列表 指有一個元素
             BetDetailList = "".join(BetDetailList).split(',')# ['10,11'] 需轉換成 ['10','11']
@@ -2105,15 +2221,13 @@ def return_Deduplica(BetDetailList,bet_type_code):# bet_type_code 傳  ex: 33_10
             else:
                 bet_str = "".join([str(i) for i in range(int(BetDetailList[index])+1)])
             new_list += return_SumP(str_=bet_str, cal_= int_num,play_type=play_type,game_type=game_type,bet_type=bet_type)
-    
-    elif bet_type in ['43']: # 組選120系列
-        global len_play
-        len_play = 5
-        new_list = [i.replace(',','') for i in BetDetailList]# 原本: ['5,6,7','5,6,7,8']轉乘 ['567', '5678']
-        new_list.sort(key=lambda i :len(i),reverse=True)# 長度長在前,用來 後面 用第一元素來判斷 後面元素是否包含
+    elif bet_type in ['43','44','45','46','47','48','49','50','51','52']:#組選 不是和值系列
+        new_list = return_zhuP(bet_type=bet_type,BetDetailList=BetDetailList)# 組選 不是和值系列 ,然後是有 二/三/四重複號配 單同號/雙重號
     else :
         if bet_type == '10':# 复式
             print('複試系列')
+        elif bet_type == '11':# 單式,需拆出來, 因為 db抓到bet_detail 是路徑
+            return '單式沒有做'
         else:
             print('其他玩法還沒做')
         for bet_detail in BetDetailList:
