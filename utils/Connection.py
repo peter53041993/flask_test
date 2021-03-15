@@ -226,6 +226,30 @@ class OracleConnection:
         # print(domain_url)
         cursor.close()
         return domain_url
+    
+    def select_game_ave(self,lotteryid,start_time,end_time):
+        cursor = self._get_oracle_conn().cursor()
+        sql = "select MIX.* , W/S ave from ( \
+        select ACCOUNT,SUM(submit) S, SUM(win) W ,count(*)orderCount from ( \
+        select u.account account, sum(p.totamount) submit, sum(p.evaluate_win) win ,g.order_code orderCode \
+        from game_order g inner join user_customer u \
+        on g.userid = u.id inner join game_slip p on g.id = p.orderid \
+        where g.lotteryid = %s and g.order_time between to_date('%s 00:00:00','YYYY/MM/DD HH24:MI:SS' ) \
+        and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS' ) \
+        and g.STATUS != 1    group by g.order_code,u.account order by u.account ) \
+        group by ACCOUNT)MIX order by ave desc"%(lotteryid,start_time,end_time)
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        game_ave = defaultdict(list)
+        print(rows)
+        for i in rows:
+            game_ave['用戶名'].append(i[0])
+            game_ave['投注金額'].append(i[1]/10000)
+            game_ave['中獎金額'].append(i[2]/10000)
+            game_ave['投注訂單數量'].append(i[3])
+            game_ave['中投比'].append(int(i[4]*100)/100)
+        cursor.close()
+        return game_ave
 
     def select_game_result(self, result) -> Dict[int, str]:  # 查詢用戶訂單號, 回傳訂單各個資訊
         cursor = self._get_oracle_conn().cursor()
@@ -841,16 +865,17 @@ class OracleConnection:
             result[i[3]].append('%s_%s_%s'%(i[0],i[1],i[2]))
         cursor.close()
         return result
-    def select_SingleBet(self,orderid):# 查詢 投注內容, 用來 單挑去重用
+    def select_SingleBet(self,userid,lotteryid,issuecode):# 查詢 投注內容, 用來 單挑去重用
         cursor = self._get_oracle_conn().cursor()
         sql = "SELECT  slip.bet_type_code,slip.bet_detail FROM game_slip slip \
         INNER JOIN user_customer user_ ON slip.userid = user_.id \
         INNER JOIN game_bettype_status betttype ON slip.bet_type_code = betttype.bet_type_code \
-        AND slip.lotteryid = betttype.lotteryid WHERE slip.orderid = '%s'"%orderid
+        AND slip.lotteryid = betttype.lotteryid WHERE slip.userid = %s and slip.lotteryid = %s and \
+        slip.issue_code = '%s'"%(userid,lotteryid,issuecode)
         cursor.execute(sql)
         rows = cursor.fetchall()
         result = defaultdict(list)
-        #print(sql)
+        print(sql)
         for i in rows:
             result[i[0]].append(i[1])
         cursor.close()
