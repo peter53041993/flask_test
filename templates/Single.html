@@ -55,6 +55,7 @@ p{margin-top: 1%;}
 </script>
 <script type="text/javascript">
     function check(check_type){
+        $("#msg").remove();
         $('#user_detail').empty();//總計算 清空
         if ($('.dataframe').length>0){
                 $('.dataTables_wrapper.no-footer').remove();//已經有了先清空
@@ -133,6 +134,7 @@ p{margin-top: 1%;}
                    // type_data.push({ "title": "My column title" })
                     $('.dataframe').DataTable( {
                     data:  type_data ,
+                    "iDisplayLength": 100 
                     });
                     button_RemoveDisabeld('.submit')
                     $('.sorting_1').attr('onclick',"bet_detail(this)")
@@ -158,32 +160,30 @@ p{margin-top: 1%;}
                 $('.alert').each(function(index){ 
                     $(this).attr('id','alert'+String(index))
                      }) 
-                
-
-
+                len_tr = $('tbody tr').length
             },
             error:function(e){
                 button_RemoveDisabeld('.submit')  
             }
         })
         //後續再去要 去重的玩法,顯示再 小談窗
-        } 
+        }
         }
 </script>
-
 <script>
     function bet_detail(check_type){//點選 bet_type_code 跳出 去重投注號碼
         //var element_ = '#'+check_type.id
         var bet_type_code = check_type.textContent
         var content_ = JSON.stringify(detail_bet[bet_type_code][1])
         var elementt_len = $('#msg').length// 判斷 頁面是否出現 彈窗
+        var check_id = check_type.id
         if (elementt_len == 0) {// 還未出現
-            alert(bet_type_code+'/號碼重複次數',content_);
+            alert_msg(bet_type_code+'/號碼重複次數',content_,'#day',check_id);
         }
         else{//已衝現過的,先清除, 在跳 ,情境就是 點選 其他 bet_type_code
+            $('.alert').css({'background':'white'}) // 因為只會有一個被點選. 所以就統一改成 白色
             $("#msg").remove();
-            $('.con').remove();
-            alert(bet_type_code+'/號碼重複次數',content_);
+            alert_msg(bet_type_code+'/號碼重複次數',content_,'#day',check_id);// 有點關閉 就會去做 clear,沒做不影響
         }
     }
 </script>
