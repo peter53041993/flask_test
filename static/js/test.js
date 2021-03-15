@@ -127,23 +127,25 @@ function PickMeUp(event){
 }
 
 
-function alert(title,e){
+function alert_msg(title,e,element_,check_id){
     // $("body").append("<div id='msg'><span>"+e+"</span></div>");
     var html="";
     //element_ = 'body'
-    	html+="<div class='con'><div id='msg'>";
+    	html+="<div id='msg'>";
     	html+="<div class='info_message'>";
         html+="<button class='close' data-dismiss='modal' id='alertSure'>×</button>"
     	html+="<div class='alertTitle'>"+title+"提示</div>";
     	html+="<span class='detail_message'>"+e+"</span>";
     	//html+="<div id='alertCancel'>取消</div></div></div>"
-    $('.submit').before(html);
-    clearmsg();
+    $(element_).before(html);
+    $('#'+check_id).css({
+        'background': '#ffc107',
+    })
+    clearmsg(check_id);
 }
-function clearmsg(){
+function clearmsg(check_id){
     $('#alertSure').click(function(){
+        $('.alert').css({'background':'white'})
     	$("#msg").remove();
-    	$('.con').remove();
     })
 };
-
