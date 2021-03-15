@@ -62,14 +62,7 @@ h1 {
     border-radius: .7em;
 }
 
-.con{
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,.1);
-    position:relative;
-}
 #msg{
-    top:30%;
     left:35%;
     position: absolute;
 }
@@ -82,14 +75,14 @@ h1 {
     border-color: #893b96
 }
 .detail_message{
-    width:350px;
+    height: 9em;
     text-align:center;
-    overflow: hidden;
     display:inline-block;
-    padding:10px;
+    padding: .75em;
     margin-left:15px;
     color:#001bb1;
     word-break: break-all;
+    overflow: auto;
 }
 #alertSure:hover {
     color: #000000;
@@ -99,3 +92,53 @@ h1 {
     height:30px;
     background: rgb(231 188 239);
 }
+.switch_demo {
+    position: relative;
+    width: 150px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    }
+    .switch_demo-checkbox {display: none;}
+    .switch_demo-label {display: block;overflow: hidden;cursor: pointer;border: 2px solid #999999;border-radius: 20px;}
+    .switch_demo-inner {
+    display: block;
+    width: 200%;
+    margin-left: -100%;
+    transition: margin 0.3s ease-in 0s;
+    }
+    .switch_demo-inner:before,
+    .switch_demo-inner:after {
+    display: block;
+    float: left;
+    width: 50%;
+    height: 30px;
+    padding: 0;
+    line-height: 30px;
+    font-size: 14px;
+    color: white;
+    font-family: Trebuchet, Arial, sans-serif;
+    font-weight: bold;
+    box-sizing: border-box;
+    }
+    .switch_demo-inner:before {content: "統計";padding-left: 10px;background-color: rgb(249 193 26);color: #FFFFFF;}
+    .switch_demo-inner:after {content: "一般查詢";padding-right: 10px;background-color: rgb(234 123 253);color: rgb(255 255 255);text-align: right;}
+    .switch_demo-switch {
+    display: block;
+    width: 18px;
+    margin: 6px;
+    background: #FFFFFF;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 116px;
+    border: 2px solid #999999;
+    border-radius: 20px;
+    transition: all 0.3s ease-in 0s;
+    }
+    .switch_demo-checkbox:checked + .switch_demo-label .switch_demo-inner {
+    margin-left: 0;
+    }
+    .switch_demo-checkbox:checked + .switch_demo-label .switch_demo-switch {
+    right: 0px;
+    }
