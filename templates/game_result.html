@@ -14,11 +14,46 @@
 </style>
 {% endblock %}
 {% block script %}
+<link rel="stylesheet" href="{{ url_for('static', filename='node_modules/pickmeup/css/pickmeup.css') }}">
+<script src="{{ url_for('static',filename='node_modules/pickmeup/js/pickmeup.js') }}"></script>
+<script>
+    
+    $(document).ready(function(){
+        check_type = 'ave'
+    
+        $('.normal_type').css('display','none')
+        $('#switch_demo').change(function(){
+            $('#game_detail').empty();//總計算 清空
+
+            
+            if ($('#switch_demo').prop('checked')== false){// 切道一班
+                $('.dataTables_wrapper.no-footer').css('display','none')//隱藏
+                check_type = 'normal' 
+                $('.normal_type').css('display','block')
+                $('#submit').attr('onclick',"check()")
+            }
+            else{ //切道 統計
+                $('.dataTables_wrapper.no-footer').removeAttr('style')
+                check_type = 'ave'
+                $('.normal_type').css('display','none')
+                $('#submit').attr('onclick',"check2()")
+            }
+        })
+        var last_month = new Date().getMonth()//上個月 分紅用
+            var today_month =  new Date().getMonth()+1//當前月份
+            var today_day =  new Date().getDate()// -1 用意 ,統計日期 最新 為昨日
+            var cur_year = new Date().getFullYear()//今年
+            //var ben_today = document.getElementById('day_day').getElementsByTagName('option')[today_day].selected= true//日工資 日期預設
+            $('.start_time').val(cur_year+'-'+today_month+'-'+today_day)
+            $('.end_time').val(cur_year+'-'+today_month+'-'+today_day)
+    });
+
+</script>
     <script type="text/javascript">
         var game_detail="";
         function check(){
             if ($('.dataframe').length>0){
-                $('.dataframe').remove();
+                $('.dataframe').remove();//沒有用jquery datatable套件
             }
             if($("#game_code").val() =="" && $("#game_type").val()=="" ){//判斷倆著皆不能輸入
                 alert("請選擇單一輸入框");
@@ -73,7 +108,67 @@
                 })
             }
         }
+        function check2(){
+            $('#game_detail').empty();//總計算 清空
+            if ($('.dataframe').length>0){
+                $('.dataTables_wrapper.no-footer').remove();//已經有了先清空;
+            }
+            button_disabled('#submit')
+            myajax  = $.ajax({ 
+                url:"/game_ave",
+                type:"POST",
+                //dataType: "json",
+                headers:{
+                        Accept:"application/json; charset=utf-8"
+                    },
+                data: form_trim("#form1"),
+                success:function(data){
+                    if (data=='空'){
+                        $('#game_detail').append('無投注紀錄')
+                        button_RemoveDisabeld('#submit')
+                        return false;
+                    //location.reload()  
+                }
+                else{
+                    console.log(data)
+                    var type_data = []
+                    var key_name = Object.keys(data)
+                    var len_data = data[key_name[0]].length//動態取得 data 第一個key 名稱的長度
+                    var tabel_text = "<table border='1' class='dataframe'><thead><tr style='text-align: right;'>"
+                    for (i=0;i<len_data;i++){// 動態把 key取出後, loop增加 th 方式
+                        a = [],b ={}// a存放key 名稱, b存放 有直的key,後面check_type.id=='GP' 使用
+                        $.each( key_name, function( key, value ) { // jey 為索引, value 為 data的key名稱
+                            if (i==0){ 
+                                var newTh = "<th>"+ value +"</th>";
+                                //newTh.innerHTML = value
+                                tabel_text = tabel_text + newTh
+                                //$('.dataframe').append(newTh)
+                            }
+                            data_ = (value.indexOf('輸贏')> 0 ) ?  parseFloat(data[value][i]).toFixed(2) : data_ = data[value][i]// 不需要每個欄位都做  parseFloat ,否則會有 NAN發生
+                            a.push(data_)
+                        });
+                        type_data.push(a)// 陣列包陣列 ex: [[123],[456]]
+
+                    }
+                    tabel_text = tabel_text + "</tr></thead><tbody><tr><th></th></tr></tbody></table>"
+                    $('#game_detail').after(tabel_text)
+                    $('.dataframe').DataTable( {
+                    data:  type_data ,
+                    "iDisplayLength": 100 
+                    });
+                    button_RemoveDisabeld('#submit')
+                }
+                }
+            })
+        }
     </script>
+    <script>
+        $(function(){
+            $(document).click(function(e){
+                PickMeUp(e)
+            })
+        })
+        </script>
 {% endblock %}
 {% block header %}玩法/遊戲單號{% endblock %}
 {% block main %}
@@ -83,14 +178,41 @@
             <option value="dev02">dev02</option>
             <option value="joy188">joy188</option>
         </select>
-        <div id='memo'>半年內資料</div>
-        <br>
-        請輸入遊戲單號<input type="text" id="game_code" name="game_code"
-            size="20">
-        </br>    
-        請輸入遊戲玩法<input type="text" id="game_type" name="game_type"
-            size="20" placeholder="請輸入簡體" >
-        <p><input type="button" onclick="check()"id=submit value="查詢" title="最近一個月內"></p>
+        <label>彩種</label>
+    <select name='lottery'>
+        {% for lottery in lottery_dict %}
+        <option value={{lottery_dict[lottery][1]}}>{{lottery_dict[lottery][0]}}</option>
+        {% endfor %}
+    </select>
+    <li>
+        <label for="start_time">開始時間
+        <input type="text" class="start_time" name="start_time"></label>
+        <label for="end_time">結束時間
+        <input type="text" class="end_time"  name="end_time"></label>
+    </li>
+    <div class="example"></div>
+    
+    <div class="center">
+        <div class="switch_demo">
+        <input type="checkbox" name="switch_demo" class="switch_demo-checkbox" id="switch_demo" checked>
+        <label class="switch_demo-label" for="switch_demo">
+        <span class="switch_demo-inner"></span>
+        <span class="switch_demo-switch"></span>
+        </label>
+        </div>
+        </div>
+    <div class= "normal_type">       
+        <label for="game_code">請輸入遊戲單號
+            <input type="text" id="game_code" name="game_code"
+                size="20">
+        </label>
+        <li>
+        <label for="game_type">請輸入遊戲玩法
+            <input type="text" id="game_type" name="game_type"
+                size="20" placeholder="請輸入簡體" ></li>
+            </label>
+    </div>
+            <p><input type="button" onclick="check2()"id=submit value="查詢" title="最近一個月內"></p>
     </form>
     <div id='game_detail'>
     </div> 
