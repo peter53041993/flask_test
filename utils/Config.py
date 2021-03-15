@@ -1,6 +1,6 @@
-import pathlib
-import random
-import time
+from pathlib import Path
+from random import randint
+from time import time
 from typing import Dict
 
 from selenium.webdriver.chrome.options import Options
@@ -9,7 +9,7 @@ from enum import Enum
 
 from utils.Connection import OracleConnection
 
-project_path = str(pathlib.Path(__file__).parent.parent.absolute())  # 專案路徑
+project_path = str(Path(__file__).parent.parent.absolute())  # 專案路徑
 # project_path = os.path.abspath('.')  # 專案路徑
 chromeDriver_Path = project_path + r'\Drivers\chromedriver_85.exe'  # ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
 curl_path = project_path + r'\utils\curl.exe'  # ChromeDriver 取用路徑 (若環境參數無法獲取時取用)
@@ -261,7 +261,7 @@ class EnvConfigApp(EnvConfig):
 
 
 def random_mul(num):  # 生成random數, NUM參數為範圍
-    return random.randint(1, num)
+    return randint(1, num)
 
 
 def play_type():  # 隨機生成  group .  五星,四星.....
@@ -272,9 +272,9 @@ def play_type():  # 隨機生成  group .  五星,四星.....
 
 def func_time(func):  # 案例時間
     def wrapper(*args):
-        start_ = time.time()
+        start_ = time()
         func(*args)
-        end_ = time.time() - start_
+        end_ = time() - start_
         print(f"用時: {end_}秒")
 
     return wrapper
