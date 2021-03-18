@@ -9,7 +9,7 @@ from selenium import webdriver
 class GameBox():
     def __init__(self, clientId='', username='', app_Id='', member_Id='', password='', amount='10', bill_No='',
                  api_key='', api_url='',
-                 supplier_type='', update_type=1):  # update_type 1唯修改, 0唯刪除
+                 supplier_type='', update_type=1,game_id = '331'):  # update_type 1唯修改, 0唯刪除
         self.data_type = {
             "token": ['管理/獲取令牌',
                       "/oauth/token?client_id=admin&client_secret=gameBox-2020-08-11*admin&username=admin&password=gameBox-2020-08-11*admin&grant_type=password&scope=all"
@@ -32,119 +32,215 @@ class GameBox():
                                       "/admin/client/updateSupplierAccount?appId=%s&type=%s" % (app_Id, update_type), {
                                           "apiKey": api_key, "apiUrl": api_url, "password": "qwe123",
                                           "username": clientId, "supplierType": supplier_type}],
-            "signUp":["客戶/註冊",
+                "signUp":["客戶/註冊",
                 "/api/member/signUp?agent_name=%s"%clientId,[
-                {"member": {"currencyName": "CNY", "password": password, "username": username, "winLimit": 0 },"oddType": "A" },
-                {"member": {"currencyName": "UUS", "maxtransfer": 1000,"mintransfer": 1,"payRadioType": "2",
-                    "username": "%s_test"%username}},
-                {"member": {"currencyName": "CNY", "username": username },"oddType": "260301,260302" },
-                {"member": {"password": password,"username": username}},
-                {"member": {"password": 'q'+password.upper(),"username": username}},
-                {"lang": "cs","member": {"password": password, "username": username},"oddType":"4440"},
-                {"member": {"currencyName": "CNY", "username": username }},
-                {"agentLogin": "amberdev","member": {"username": username}}]
+                {"0":{"member": {"currencyName": "CNY", "password": password, "username": username, "winLimit": 0 },"oddType": "A" }},
+                {"1":{"member": {"currencyName": "UUS", "maxtransfer": 1000,"mintransfer": 1,"payRadioType": "2","username": "%s_test"%username}}},
+                {"2":{"member": {"currencyName": "CNY", "username": username },"oddType": "260301,260302" }},
+                {"3":{"member": {"password": password,"username": username}}},
+                {"4":{"member": {"password": 'q'+password.upper(),"username": username}}},
+                {"5":{"lang": "cs","member": {"password": password, "username": username},"oddType":"4440"}},
+                {"6":{"member": {"currencyName": "CNY", "username": username }}},
+                {"7":{"agentLogin": "amberdev","member": {"username": username}}},
+                {"8":{"member": {"username": username}}},
+                {"9":{"member": { "currencyName": "CNY","password": password, "username": username }}},
+                {"10":{"member": {"password": password,"username": username}}},
+                {"11":{"agentLogin": "xosouat","member": {"username": username}}},
+                {"12":{"member": {"username": username}}},
+                {"13":{"member": {"username": username}}},
+                {"14":{"ipAddress": "61.220.138.45","member": {"amount": amount,"username": username }}},
+                {"15":{"birthDate": "1994-07-01","country": "china","email": "%s@asd.com"%username,"lang": "cs","member": {"username": username}}},
+                {"16":{"member": {"username": username}}},
+                {"17":{"member": {"username":username,"password":password,"user":username}}},
+                {"18":{"agentLogin":"vb_xoso","member": {"username": username}}},
+                {"19":{"agentLogin": "XVN","birthDate": "1990-01-01","country": "CN","lang":"cs","registrationDate":"2020-02-02","member": {"username":"XVN"+username,"user": username}}}]
                 ],
-            "login":["客戶/登入",
+                "login":["客戶/登入",
                 "/api/member/login?agent_name=%s"%clientId,[
-                {"lang": "CNY","member": {"password": password, "username": username}},
-                {"member": {"username":"%s_test"%username}},
-                {"member": {"username":username}},
-                {"lang": "cs","member": {"password": password, "username": username}},
-                {"lang": "cs","type":"LC","member": {"password": 'q'+password.upper(), "username": username}},
-                {"deviceId": "1","lang": "cs","member": {"password": password,"username": username},
-                "oddType": "4445","backUrl":"https://www.baidu.com"},
-                {"lang":"cs","member": {"username": username}},
-                {"deviceId": "1","lang":"cs","backUrl":"http:///www.baidu.com","agentLogin": "amberdev","member": {"username": username}}]
+                {"0":{"lang": "CNY","member": {"password": password, "username": username}}},
+                {"1":{"member": {"username":"%s_test"%username}}},
+                {"2":{"member": {"username":username}}},
+                {"3":{"lang": "cs","member": {"password": password, "username": username}}},
+                {"4":{"lang": "cs","type":"LC","member": {"password": 'q'+password.upper(), "username": username}}},
+                {"5":{"deviceId": "1","lang": "cs","member": {"password": password,"username": username},
+                "oddType": "4445","backUrl":"https://www.baidu.com"}},
+                {"6":{"lang":"cs","member": {"username": username}}},
+                {"7":{"deviceId": "1","lang":"cs","backUrl":"http:///www.baidu.com","agentLogin": "amberdev","member": {"username": username}}},
+                {"8":{"member": {"username": username}}},
+                {"9":{"ipAddress":"192.168.1.1","lang":"cs","deviceId":"1","member": {"password": password,"username": username}}},
+                {"10":{"member": {"password": password,"username": username}}},
+                {"11":{"lang":"cs","member": {"username": username}}},
+                {"12":{"lang":"cs","member": {"username": username}}},
+                {"13":{"member": {"username": username}}},
+                {"14":{"ipAddress": "61.220.138.45","member": {"amount": amount,"username": username }}},
+                {"15":{"deviceId": "1","member": {"username": username}}},
+                {"16":{"member": {"username": username}}},
+                {"17":{"lang": "CNY","member": {"password": password, "username": username}}},
+                {"18":{"agentLogin":"vb_xoso","gameId":game_id,"lang": "en","deviceId": "1","backUrl": "null","cashierURL":"null","member": {"username": username}}},
+                {"19":{"deviceId":"1","lang":"cs","gameId":game_id,"member": {"username": "XVN"+username}}}]
                 ],
-            "freeLogin":["客戶/試玩登入",
-                "/api/member/freeLogin?agent_name=%s"%clientId,[{"lang": "cs"},{},{},{},{},
-                {"backUrl": "https://www.baidu.com","deviceId": "1","lang": "cs"},
-                {"lang": "cs"},
-                {"deviceId": "4","lang":"cs","backUrl":"http:///www.baidu.com"}]
+                "freeLogin":["客戶/試玩登入",
+                "/api/member/freeLogin?agent_name=%s"%clientId,[
+                {"0":{"lang": "cs"}},{"1":{}},{"2":{}},{"3":{}},{"4":{}},
+                {"5":{"backUrl": "https://www.baidu.com","deviceId": "1","lang": "cs"}},
+                {"6":{"lang": "cs"}},
+                {"7":{"deviceId": "4","lang":"cs","backUrl":"http:///www.baidu.com"}},
+                {"8":{}},{"9":{}},{"10":{}},
+                {"11":{"lang": "cs"}},
+                {"12":{}},{"13":{}},{"14":{}},{"15":{}},{"16":{}},{"17":{}},{"18":{}},{"19":{}}]
                 ],
-            "update":["客戶/修改会员信息","/api/member/update?agent_name=%s"%clientId,[
-                {"member": {"status": 1, "winLimit": 0,"password": password, "username":username }}, 
-                {"member":{"maxtransfer": 1000,"mintransfer": 1,"payRadioType": "2","username": "%s_test"%username}},
-                {},
-                {"member": {"password": password,"username": username}},
-                {"member": {"password": 'q'+password.upper(),"oldPw": 'q'+password.upper(),"username": username}},
-                {"member": {"password": password,"username": username}},
-                {},
-                {}]
+                "update":["客戶/修改会员信息","/api/member/update?agent_name=%s"%clientId,[
+                {"0":{"member": {"status": 1, "winLimit": 0,"password": password, "username":username }}}, 
+                {"1":{"member":{"maxtransfer": 1000,"mintransfer": 1,"payRadioType": "2","username": "%s_test"%username}}},
+                {"2":{}},
+                {"3":{"member": {"password": password,"username": username}}},
+                {"4":{"member": {"password": 'q'+password.upper(),"oldPw": 'q'+password.upper(),"username": username}}},
+                {"5":{"member": {"password": password,"username": username}}},
+                {"6":{}},{"7":{}},{"8":{}},
+                {"9":{"member": {"password": password,"username": username}}},
+                {"10":{}},
+                {"11":{}},
+                {"12":{}},
+                {"13":{}},
+                {"14":{}},
+                {"15":{}},
+                {"16":{}},
+                {"17":{}},{"18":{}},{"19":{}}]
                 ],
-            "balance":['客戶/获取会员余额接口',
-                "/api/member/balance?agent_name=%s"%clientId,
-                [{"member": {"username": username,}},
-                {"member": {"username": "%s_test"%username}},
-                {"member": {"username": username,}},
-                {"member": {"username": username,}},
-                {"member": {"username": username,"password": 'q'+password.upper()}},
-                {"member": {"username": username,}},
-                {"member": {"username": username,}},
-                {"agentLogin": "amberdev","member": {"username": username}}]
+                "balance":['客戶/获取会员余额接口',
+                "/api/member/balance?agent_name=%s"%clientId,[
+                {"0":{"member": {"username": username,}}},
+                {"1":{"member": {"username": "%s_test"%username}}},
+                {"2":{"member": {"username": username,}}},
+                {"3":{"member": {"username": username,}}},
+                {"4":{"member": {"username": username,"password": 'q'+password.upper()}}},
+                {"5":{"member": {"username": username,}}},
+                {"6":{"member": {"username": username,}}},
+                {"7":{"agentLogin": "amberdev","member": {"username": username}}},
+                {"8":{"member": {"username": username}}},
+                {"9":{"member": {"username": username}}},
+                {"10":{"member": {"username": username}}},
+                {"11":{"agentLogin": "xosouat","member": {"username": username}}},
+                {"12":{"member": {"username": username}}},
+                {"13":{"member": {"username": username,}}},
+                {"14":{"member": {"username": username,}}},
+                {"15":{"member": {"username": username,}}},
+                {"16":{"member": {"username": username,}}},
+                {"17":{"member": {"username": username,}}},
+                {"18":{"agentLogin": "vb_xoso","member": {"username": username}}},
+                {"19":{"member": {"username": "XVN"+username}}}]
                 ],
-            "transfer":["客戶/会员存取款接口",
-                "/api/member/transfer?agent_name=%s"%clientId,
-                [{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}},
-                {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"currencyName": "UUS","username": "%s_test"%username}},
-                {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount,"username": username,}},
-                {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}},
-                {"billNo": '%s'%random.randint(1,1000000000),"member": 
-                {"amount":amount ,"password": 'q'+password.upper(),"username": username,}},
-                {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}},
-                {"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}},
-                {"billNo": '%s'%random.randint(1,1000000000),"agentLogin": "amberdev","member": {"amount":amount,"username": username}}]
+                "transfer":["客戶/会员存取款接口",
+                "/api/member/transfer?agent_name=%s"%clientId,[
+                {"0":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}},
+                {"1":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"currencyName": "UUS","username": "%s_test"%username}}},
+                {"2":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount,"username": username,}}},
+                {"3":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}},
+                {"4":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"password": 'q'+password.upper(),"username": username,}}},
+                {"5":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}},
+                {"6":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}},
+                {"7":{"billNo": '%s'%random.randint(1,1000000000),"agentLogin": "amberdev","member": {"amount":amount,"username": username}}},
+                {"8":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}},
+                {"9":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}},
+                {"10":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}},
+                {"11":{"billNo": '%s'%random.randint(1,1000000000),"agentLogin": "xosouat","member": {"amount":amount,"username": username}}},
+                {"12":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}},
+                {"13":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}},
+                {"14":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}},
+                {"15":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}},
+                {"16":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}},
+                {"17":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": username,}}},
+                {"18":{"agentLogin": "vb_xoso","billNo": '%s'%random.randint(1,1000000000),"member": {"amount": amount,"username": username}}},
+                {"19":{"billNo": '%s'%random.randint(1,1000000000),"member": {"amount":amount ,"username": "XVN"+username}}}]
                 ],
-            "checkTransfer":["客戶/检查存取款操作是否成功",
-                "/api/member/checkTransfer?agent_name=%s"%clientId,
-                [{"billNo": bill_No},{"billNo": bill_No},
-                {"billNo": bill_No},{"billNo": bill_No},
-                {},
-                {"billNo": bill_No,"member": {"username": username}},
-                {},
-                {}]
+                "checkTransfer":["客戶/检查存取款操作是否成功",
+                "/api/member/checkTransfer?agent_name=%s"%clientId,[
+                {"0":{"billNo": bill_No}},{"1":{"billNo": bill_No}},
+                {"2":{"billNo": bill_No}},{"3":{"billNo": bill_No}},
+                {"4":{}},
+                {"5":{"billNo": bill_No,"member": {"username": username}}},
+                {"6":{"billNo": bill_No,"member": {"username": username}}},
+                {"7":{"billNo": bill_No,"member": {"username": username}}},
+                {"8":{"billNo": bill_No,"member": {"username": username}}},
+                {"9":{"billNo": bill_No,"member": {"username": username}}},
+                {"10":{"billNo": bill_No,"member": {"username": username}}},
+                {"11":{"billNo":bill_No,"agentLogin":"xosouat"}},
+                {"12":{"billNo": bill_No}},
+                {"13":{}},
+                {"14":{"billNo": bill_No,"member": {"username": username}}},
+                {"15":{"billNo": bill_No,"member": {"username": username}}},
+                {"16":{"billNo": bill_No,"member": {"username": username}}},
+                {"17":{}},
+                {"18":{"billNo":bill_No,"agentLogin": "vb_xoso"}},
+                {"19":{}}]
                 ],
-            "updateLimit":['客戶/修改会员限红组',
-                "/api/member/updateLimit?agent_name=%s"%clientId,
-                [{"member": {"username": username},"oddType": "A"},{},
-                {"member": {"username": "testsz8"},"oddType": "260301"},{},{},{},{},
-                {}]
+                "updateLimit":['客戶/修改会员限红组',
+                "/api/member/updateLimit?agent_name=%s"%clientId,[
+                {"0":{"member": {"username": username},"oddType": "A"}},
+                {"1":{}},
+                {"2":{"member": {"username": "testsz8"},"oddType": "260301"}},
+                {"3":{}},{"4":{}},{"5":{}},{"6":{}},{"7":{}},{"8":{}},{"9":{}},{"10":{}},{"11":{}},{"12":{}},{"13":{}},{"14":{}},{"15":{}},{"16":{}},{"17":{}},{"18":{}},{"19":{}}]
                 ],
-            "checkOnline":["客戶/查询玩家在线状态",
-                "/api/member/checkOnline?agent_name=%s"%clientId,
-                [{"member": {"username": username.upper()}},{"member": {"username": "%s_test"%username.upper()}},
-                {},{"member": {"username": username}},{},{},{},
-                {}]
+                "checkOnline":["客戶/查询玩家在线状态",
+                "/api/member/checkOnline?agent_name=%s"%clientId,[
+                {"0":{"member": {"username": username.upper()}}},
+                {"1":{"member": {"username": "%s_test"%username.upper()}}},
+                {"2":{}},
+                {"3":{"member": {"username": username}}},
+                {"4":{}},{"5":{}},{"6":{}},{"7":{}},{"8":{}},{"9":{}},{"10":{}},{"11":{}},{"12":{}},{"13":{}},
+                {"14":{"member": {"username": username}}},{"15":{}},{"16":{"member": {"username": username}}},{"17":{}},{"18":{}},{"19":{}}]
                 ],
-            "onlineCount":['客戶/查询在线玩家数量','/api/member/onlineCount?agent_name=%s'%clientId
-                ,[{},{},{},{},{},{},{},
-                {}]
+                "onlineCount":['客戶/查询在线玩家数量','/api/member/onlineCount?agent_name=%s'%clientId,[
+                {"0":{}},{"1":{}},{"2":{}},{"3":{}},{"4":{}},{"5":{}},{"6":{}},{"7":{}},{"8":{}},{"9":{}},{"10":{}},{"11":{}},{"12":{}},{"13":{}},{"14":{}}
+                ,{"15":{}},{"16":{}},{"17":{}},{"18":{}},{"19":{}}]
                 ],
-            "offline":['客戶/踢人','/api/member/offline?agent_name=%s'%clientId,
-                [{"member": {"memberId":member_Id}},{"member": {"username": "%s_test"%username}},
-                {"member": {"username": username}},{"member": {"username": username}},{},{},{},
-                {"agentLogin": "amberdev","member": {"username": username}}]
+                "offline":['客戶/踢人','/api/member/offline?agent_name=%s'%clientId,[
+                {"0":{"member": {"memberId":member_Id}}},
+                {"1":{"member": {"username": "%s_test"%username}}},
+                {"2":{"member": {"username": username}}},
+                {"3":{"member": {"username": username}}},
+                {"4":{}},{"5":{}},{"6":{}},
+                {"7":{"agentLogin": "amberdev","member": {"username": username}}},
+                {"8":{"member": {"username": username}}},
+                {"9":{}},
+                {"10":{"member": {"username": username}}},
+                {"11":{"agentLogin": "xosouat","member": {"username": username}}},
+                {"12":{}},
+                {"13":{}},
+                {"14":{"member": {"username": username}}},
+                {"15":{}},{"16":{"member": {"username": username}}},
+                {"17":{"member": {"username": username}}},
+                {"18":{"agentLogin": "vb_xoso","member": {"username": username}}},
+                {"19":{}}]
                 ],
-            "lockMember":['客戶/封鎖會員','/api/member/lockMember?agent_name=%s'%clientId,
-                [{"member": {"password":password,"username": username}},
-                {"member": {"username": "%s_test"%username}},{},{},{},
-                {"member": {"username": username}},{},
-                {"agentLogin": "amberdev","member": {"username": username}}]
+                "lockMember":['客戶/封鎖會員','/api/member/lockMember?agent_name=%s'%clientId,[
+                {"0":{"member": {"password":password,"username": username}}},
+                {"1":{"member": {"username": "%s_test"%username}}},
+                {"2":{}},{"3":{}},{"4":{}},
+                {"5":{"member": {"username": username}}},
+                {"6":{}},
+                {"7":{"agentLogin": "amberdev","member": {"username": username}}},
+                {"8":{"member": {"username": username}}},
+                {"9":{}},{"10":{}},{"11":{}},{"12":{}},{"13":{}},{"14":{}},{"15":{}},{"16":{}},{"17":{}},{"18":{}},{"19":{}}]
                 ],
-            "unlockMember":['客戶/解封鎖會員','/api/member/unlockMember?agent_name=%s'%clientId,
-                [{"member": {"password":password,"username": username}},{"member": 
-                {"username": "%s_test"%username}},{},{},{},
-                {"member": {"username": username}},{},
-                {"agentLogin": "amberdev","member": {"username": username}}]
+                "unlockMember":['客戶/解封鎖會員','/api/member/unlockMember?agent_name=%s'%clientId,[
+                {"0":{"member": {"password":password,"username": username}}},
+                {"1":{"member": {"username": "%s_test"%username}}},
+                {"2":{}},{"3":{}},{"4":{}},
+                {"5":{"member": {"username": username}}},
+                {"6":{}},
+                {"7":{"agentLogin": "amberdev","member": {"username": username}}},
+                {"8":{"member": {"username": username}}},
+                {"9":{}},{"10":{}},{"11":{}},{"12":{}},{"13":{}},{"14":{}},{"15":{}},{"16":{}},{"17":{}},{"18":{}},{"19":{}}]
                 ],
-            "onlineMember":['客戶/查询在线玩家','/api/member/onlineMember?agent_name=%s&page=1&size=100'%clientId,
-                [{},{},{},{},{},{},{},
-                {}]
+                "onlineMember":['客戶/查询在线玩家','/api/member/onlineMember?agent_name=%s&page=1&size=100'%clientId,
+                [{"0":{}},{"1":{}},{"2":{}},{"3":{}},{"4":{}},{"5":{}},{"6":{}},{"7":{}},{"8":{}},{"9":{}},{"10":{}},{"11":{}},{"12":{}},{"13":{}},
+                    {"14":{}},{"15":{}},{"16":{}},{"17":{}},{"18":{}},{"19":{}}]
                 ],  
-        }
+                }
 
     def GameBox_Con(client_id, env):  # 連線 mysql
-        env_dict = {0: ['43.240.38.15', 21330, 'amberrd', 'Gvmz8DErUcHgMgQh', 'test.t_client'],
+        env_dict = {0:['152.32.185.241',21330,'amberrd','Gvmz8DErUcHgMgQh','test.t_client'],
                     1: ['54.248.18.149', 3306, 'gamebox', 'sgkdjsdf^mdsD1538', 'game_box_api.t_client']}
         db = p.connect(
             host=env_dict[env][0],
@@ -155,7 +251,7 @@ class GameBox():
         table_name = env_dict[env][4]
         cur = db.cursor()
         sql = "SELECT app_id,app_key FROM %s where client_id = '%s'" % (table_name, client_id)  # clien_id 找出 id,key
-        # print(sql)
+        print(sql)
         cur.execute(sql)
         client_detail = {}
         rows = cur.fetchall()
@@ -216,18 +312,19 @@ class GameBox():
                 m.update(str_.encode())
                 str_md = m.hexdigest()
                 test_header['signature'] = str_md.upper()  # '9A0A8659F005D6984697E2CA0A9CF3B7'#str_md.upper()
-                data = data_[2][game_type]
+                data = data_[2][game_type][str(game_type)]
+                print(data)
             url_content = data_[1]
             if game_type == 3:  # cq9
                 url_content = url_content.replace(clientId, cq_9Key)
-
-            # print(test_header)
-            FF_Joy188.FF_().session_post(url, url_content, json.dumps(data), test_header)
-            r_json = FF_Joy188.r.json()
+            response = FF_Joy188.FF_().session_post(url, url_content, json.dumps(data), test_header)
+            if game_type == 19 and type_ == 'login':
+                return response
+            r_json = response.json()
             global status_code
-            status_code = FF_Joy188.r.status_code
+            status_code = response.status_code
             print('連線狀態: %s' % status_code)
-            print(FF_Joy188.r.text)
+            print(response.text)
             if type_ == 'token':
                 access_token = r_json['access_token']
                 token_type = r_json['token_type']
@@ -262,16 +359,16 @@ class GameBox():
                     test_header['Authorization'] = token_type + " %s" % access_token
                 url_content = data_[1]
                 data = data_[2][game_type]
-                FF_Joy188.FF_().session_post(url, url_content, json.dumps(data), test_header)
-                r_json = FF_Joy188.r.json()
-                status_code = FF_Joy188.r.status_code
+                response = FF_Joy188.FF_().session_post(url, url_content, json.dumps(data), test_header)
+                r_json = response.json()
+                status_code = response.status_code
                 print('連線狀態: %s' % status_code)
                 print(r_json)
                 if type_ == 'token':
                     access_token = r_json['access_token']
                     token_type = r_json['token_type']
         except NameError as e:
-            status_code = FF_Joy188.r.status_code
+            status_code = response.status_code
             error_msg = "NameError : %s" % e
             print(error_msg)
             if 'token_type' in error_msg:  # 需要從新獲取令牌
@@ -282,8 +379,8 @@ class GameBox():
                     'User-Agent': FF_Joy188.FF_().user_agent['Pc']
                 }
                 FF_Joy188.FF_().session_post(url, url_content, '', test_header)
-                access_token = FF_Joy188.r.json()['access_token']
-                token_type = FF_Joy188.r.json()['token_type']
+                access_token = response.json()['access_token']
+                token_type = response.json()['token_type']
 
 
 class GameBoxTest_Admin(unittest.TestCase):
