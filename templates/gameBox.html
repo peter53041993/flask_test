@@ -13,6 +13,8 @@
     <script type="text/javascript">
         var game_detail="";
         function check(){
+            var func_name = $('#user_name').val()
+            var client_name = $('#game_type').val()
             var admin_check = $('.admin:checked').length
             var user_check = $('.user:checked').length
             if ($('#user').val()==''&&user_check==1){
@@ -40,6 +42,9 @@
                     if (data=='此環境沒有此訂單號'){
                         alert(data);
                         return false;
+                    }
+                    else if (func_name=='login'&& client_name=='19'){
+                        $(window).attr("location", "/png_game");
                     }
                     else {
                         $(window).attr("location", "/report");
@@ -78,14 +83,9 @@
         </select>
         <label>類型: </label>
         <select name='game_type' id='game_type'>
-            <option value="0">DG</option>
-            <option value="1">沙巴</option>
-            <option value="2">Sexy</option>
-            <option value="3">Cq9</option>
-            <option value="4">Gpi</option>
-            <option value="5">YB</option>
-            <option value="6">PG</option>
-            <option value="7">BG</option>
+            {% for name in client_type %}
+            <option value= {{name}}>{{client_type[name]}}</option>
+            {% endfor %}
         </select>
         <br>
         請輸入用戶名<input type="text" id="user" name="user"
