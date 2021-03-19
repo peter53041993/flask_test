@@ -39,25 +39,27 @@
                         success:function(data){
                             console.log(data)
                             $('#func_name').after("<li class='png_game'><label >png_game </label>")
-                            $('.png_game').append("<select id='game_detail1' name='gameid'></select>")
+                            $('.png_game').append("<select id='game_detail_png' name='gameid'></select>")
                             $.each( data['png_game'], function( key, value ) 
                                 {   
-                                    $('#game_detail1').append("<option value='"+key+"'>"+value+"</option>")
+                                    $('#game_detail_png').append("<option value='"+key+"'>"+value+"</option>")
                                 })
                             $('.png_game').append("</li>")
 
                             $('.png_game').after("<li class='pp_game'><label >pp_game </label>")
-                            $('.pp_game').append("<select id='game_detail2' name='gameid'></select>")
+                            $('.pp_game').append("<select id='game_detail_pp' name='gameid'></select>")
                             $.each( data['pp_game'], function( key, value ) 
                                 {   
-                                    $('#game_detail2').append("<option value='"+key+"'>"+value+"</option>")
+                                    $('#game_detail_pp').append("<option value='"+key+"'>"+value+"</option>")
                                 })
                             $('.pp_game').append("</li>")
                             if ($('#game_type').val()== '19'){
+                                $('#game_detail_pp').removeAttr('name')
                                 $('.png_game').css('display','block');
                                 $('.pp_game').css('display','none');
                             }
                             else if  ($('#game_type').val()== '18'){
+                                $('#game_detail_png').removeAttr('name')
                                 $('.pp_game').css('display','block');
                                 $('.png_game').css('display','none');
                             }
@@ -69,10 +71,14 @@
                     })
             $('#game_type').change(function(){
                 if ($('#game_type').val()== '18'){
+                    $('#game_detail_png').removeAttr('name')
+                    $('#game_detail_pp').attr('name','gameid')
                     $('.pp_game').css('display','block');
                     $('.png_game').css('display','none');
                 }
                 else if ($('#game_type').val()== '19'){
+                    $('#game_detail_pp').removeAttr('name')
+                    $('#game_detail_png').attr('name','gameid')
                     $('.png_game').css('display','block');
                     $('.pp_game').css('display','none');
                 }
