@@ -3,79 +3,91 @@
 {%block head %}
 {{ super() }}
 <style type="text/css">
-    #user,#game_type,#env_type{border-radius: 22px;}
+    #username,#game_type,#env_type{border-radius: 22px;}
     li{list-style: none;}
     p{margin-top: 1%;}
     span{color: red;}
 </style>
 {% endblock %}
 {% block script %}
-    <script type="text/javascript">
-        var game_detail="";
-        function check(){
-            var func_name = $('#user_name').val()
-            var client_name = $('#game_type').val()
-            var admin_check = $('.admin:checked').length
-            var user_check = $('.user:checked').length
-            if ($('#user').val()==''&&user_check==1){
-                alert('用戶名為空')
-                return false;
-            }
-            else if (user_check==0&&admin_check==0){
-                alert('需勾選任一');
-                return false;
-            }
-            else {
-                button_disabled('#submit')
-                myajax  = $.ajax({ 
-                url:"/gameBox",
-                type:"POST",
-                //dataType: "json",
-                headers:{
-                        Accept:"application/json; charset=utf-8"
-                    },
-                data: form_trim("#form1"),
-                success:function(data){
-                    button_RemoveDisabeld('#submit');
-                    game_detail = data;
-                    //console.log(data);
-                    if (data=='此環境沒有此訂單號'){
-                        alert(data);
-                        return false;
-                    }
-                    else if (func_name=='login'&& client_name=='19'){
-                        $(window).attr("location", "/png_game");
-                    }
-                    else {
-                        $(window).attr("location", "/report");
-                    }
-                    },
-                    error: function(data){
-                        alert('有錯誤');
-                        button_RemoveDisabeld('#submit');  
-                    }
-                    })
-                }
-                }
-    </script>
     <script>
         $(document).ready(function(){
-            $('#user').val('')
-            $('.user').prop('checked',true);
+            $('#submit').click(function() {
+                if ($('#username').val()==""){
+                    alert('請輸入用戶名')
+                    return false;
+                }
+                //$('#submit').attr('disabled','true');
+                $('#submit').css({'background':'gray'})
+                });
+            $('#username').val('')
+            $('.username').prop('checked',true);
             $('.admin').prop('checked',false);
-            $('#user_name option[value="signUp"]').attr('selected','selected');
-            $(".user").change(function () {//
+            $('#func_name option[value="signUp"]').attr('selected','selected');
+            $(".username").change(function () {//
                 $('.admin:checkbox').prop('checked', $(this).is(':checked') ? false : true);  
             })
             $(".admin").change(function () {//
-                $('.user:checkbox').prop('checked', $(this).is(':checked') ? false : true);  
+                $('.username:checkbox').prop('checked', $(this).is(':checked') ? false : true);  
+            })
+                    $.ajax({
+                        url:"/gameBox_id",
+                        type:"POST",
+                        //dataType: "json",
+                        headers:{Accept:"application/json; charset=utf-8"},
+                        data: form_trim("#form1"),
+                        success:function(data){
+                            console.log(data)
+                            $('#func_name').after("<li class='png_game'><label >png_game </label>")
+                            $('.png_game').append("<select id='game_detail1' name='gameid'></select>")
+                            $.each( data['png_game'], function( key, value ) 
+                                {   
+                                    $('#game_detail1').append("<option value='"+key+"'>"+value+"</option>")
+                                })
+                            $('.png_game').append("</li>")
+
+                            $('.png_game').after("<li class='pp_game'><label >pp_game </label>")
+                            $('.pp_game').append("<select id='game_detail2' name='gameid'></select>")
+                            $.each( data['pp_game'], function( key, value ) 
+                                {   
+                                    $('#game_detail2').append("<option value='"+key+"'>"+value+"</option>")
+                                })
+                            $('.pp_game').append("</li>")
+                            if ($('#game_type').val()== '19'){
+                                $('.png_game').css('display','block');
+                                $('.pp_game').css('display','none');
+                            }
+                            else if  ($('#game_type').val()== '18'){
+                                $('.pp_game').css('display','block');
+                                $('.png_game').css('display','none');
+                            }
+                            else{
+                                $('.pp_game').css('display','none');
+                                $('.png_game').css('display','none');
+                            }
+                        }   
+                    })
+            $('#game_type').change(function(){
+                if ($('#game_type').val()== '18'){
+                    $('.pp_game').css('display','block');
+                    $('.png_game').css('display','none');
+                }
+                else if ($('#game_type').val()== '19'){
+                    $('.png_game').css('display','block');
+                    $('.pp_game').css('display','none');
+                }
+                else{
+                    $('.pp_game').css('display','none');
+                    $('.png_game').css('display','none');
+                }
             })
         })
     </script>
+
 {% endblock %}
 {% block header %}GAMEBOX測試{% endblock %}
 {% block main %}
-    <form id='form1' method='POST'>
+    <form id='form1' method='POST' action='gameBox'>
         <label>環境: </label>
         <select name='env_type' id='env_type'>
             <option value="0">測試</option>
@@ -84,11 +96,15 @@
         <label>類型: </label>
         <select name='game_type' id='game_type'>
             {% for name in client_type %}
-            <option value= {{name}}>{{client_type[name]}}</option>
+                {% if name == 7 %}
+                    <option value= {{name}}>{{'bg類型'}}</option>
+                {% else %}
+                    <option value= {{name}}>{{client_type[name]}}</option>
+                {% endif %}
             {% endfor %}
         </select>
         <br>
-        請輸入用戶名<input type="text" id="user" name="user"
+        請輸入用戶名<input type="text" id="username" name="username"
             size="20">
         </br>
         <input type='checkbox'  class='admin' name='check_type' value=0 >管理端</label>
@@ -97,15 +113,13 @@
             <option value= {{admin_items[name]}}>{{name}}</option>
             {% endfor %}
         </select>
-        <input type='checkbox' class='user' name='check_type' value=1>客戶端</label>
-        <select name='user_name' id='user_name'>
+        <input type='checkbox' class='username' name='check_type' value=1>客戶端</label>
+        <select name='func_name' id='func_name'>
             <option value='user_all'>全部</option>
             {% for name in user_items %}
             <option value= {{user_items[name]}}>{{name}}</option>
             {% endfor %}
         </select>     
-        <p><input type="button" onclick="check()"id=submit value="查詢" ></p>
+        <p><input type="submit" id=submit value="查詢" ></p>
     </form>
-    <div id='game_detail'>
-    </div> 
 {% endblock %}
