@@ -27,7 +27,8 @@ from utils.Connection import PostgresqlConnection, OracleConnection, RedisConnec
 import FF_Joy188
 from urllib.parse import urlsplit
 from functools import reduce
-import itertools 
+import itertools
+import GameBox
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
@@ -1571,103 +1572,94 @@ def api_test():
         return result
     return render_template('api_test.html')
 
-
+@app.route('/gameBox_id',methods=["POST"])
+def gameBox_id():
+    env_type = request.form.get('env_type')
+    game_type = request.form.get('game_type')
+    client_type = GameBox.GameBox().client_type
+    #supplier_type = client_type["supplier_type"][int(game_type)]
+    Gamebox_con =  GameBox.GameBox(env_id=int(env_type))
+    gameId_dict = {}
+    for game in [18,19]:# png, pp
+        supplier_type = client_type["supplier_type"][game]
+        data = Gamebox_con.GameBox_Gameid(game_type=supplier_type)
+        #print(data)
+        gameId_dict[supplier_type] = data
+    return gameId_dict
+    #print(gameId_dict)
 @app.route('/gameBox', methods=["POST", "GET"])
 def gameBox():
-    client_type = {
-        "api_key":
-            {0: "1566e8efbdb444dfb670cd515ab99fda",1: "XT",2: "9RJ0PYLC5Ko4O4vGsqd",3:"",
-        4:"a93f661cb1fcc76f87cfe9bd96a3623f",5:"BgRWofgSb0CsXgyY",6:"b86fc6b051f63d73de262d4c34e3a0a9",
-        7:"8153503006031672EF300005E5EF6AEF",8:"000268d7cf113cb434e80f2de71188ddc3f45a0c8643c9fadf7d639\
-        2ec4dd42b3f2b82687999588fab2722814c62f650f98a588e8f372cb377b4e62302dc4addfdaa3e95cc48cfa9\
-        e308e3285e0eb54781b0ab29c2a95d544c64847c216c2f2b10a9e083de4506b0a901dac71651be86e680f5\
-        f61c4a2fb1fbccaa56ce9d88715a8c",9:"",10:"DF0FAEB6171BDEF9",11:"fe9b68fca25f2fe2",12:"dbettest",
-        13: "89CA25C2BA65AC9DD12E04BD66B6B467",14: "FB9EFF5983F0683F",15:"2RuIYUKYkWrWBnNG",
-            16: "5dfc2a02f995f9b94defc4ed2c5613e5",17:"07f96e685a9f7252ebb001bca52a14a4",18:"testKey",19:"XVN"},
-        "api_url":
-            {0: "https://api.dg99web.com",1:"http://tsa.l0044.xtu168.com",
-        2:"https://testapi.onlinegames22.com",3:"http://api.cqgame.games",4:"http://gsmd.336699bet.com",
-        5:"https://api.ybzr.online/",6:"http://ab.test.gf-gaming.com",
-        7:'http://am.bgvip55.com/open-cloud/api/',8:"https://spi-test.r4espt.com",
-        9:"http://operatorapi.staging.imaegisapi.com",10:'https://api.cp888.cloud',11:"http://api.jygrq.com",
-        12:"https://linkapi.bbinauth.net/app/WebService/JSON/display.php",13:"https://api.0x666666.com",
-        14: "https://wc-api.hddv1.com/channelHandle",15:"https://marsapi-test.oriental-game.com:8443",
-            16: "http://tapi.aiqp001.com:10018/",17:"https://api.a45.me/api/public/Gateway.php",
-            18:"https://api.prerelease-env.biz/IntegrationService/v3/http/CasinoGameAPI",
-        19:"http://agastage.playngonetwork.com:23219/CasinoGameService"},
-        "supplier_type":
-            {0:"dream_game",1:"sa_ba_sports",2: "ae_sexy",3:"cq_9",4:"gpi",5:"ya_bo_live",6:"pg_game",
-        7:{"game":"bg_game","fish":'bg_fishing','chess':'bg_chess','lottery':'bg_lottery'},
-        8:"tf_gaming",9:"im_sb",10: "ya_bo_lottery",11: "jdb_electronic",
-        12: "bb_in",13:"yx_game",14: "ky_chess",15: "og_live", 16: "ace_poker",17:"wm_live",18:"pp_game",19:"png_game"},
-        "supplier_user":
-        {0: "DGTE01011T",1: "6yayl95mkn",2: "fhlmag",3: "cq9_test",4: "xo8v",5: "ZSCH5",
-        6: "aba4d198602ba6f2a3a604edcebd08f1",7:"am00",8:"711",9:"OPRikJXEbbH36LAphfbD5RXcum6qifl8",
-        10:"fhagen",11:"XT",12: "test",13: "FH",14: "72298",15: "mog251sy",16: "1334",17:"wmtesttwapi",
-        18:"vb_xoso",19:"XVNTESTAPI01"}# DB 裡 client_id
-        }
     admin_items, user_items = {}, {}  # 管理/客戶端
-    import GameBox
-    for key in GameBox.GameBox().data_type.keys():
+    data_type =  GameBox.GameBox().data_type
+    client_type = GameBox.GameBox().client_type
+    for key in data_type.keys():
         # print(key)
         # 中文名稱為key, 英文參數唯value,用意 顯示在頁面上中文
         if key == 'getClientInfo':  # 管理端 用  獲得client信息即可,其它 不需動
-            admin_items[GameBox.GameBox().data_type[key][0]] = key
+            admin_items[data_type[key][0]] = key
         elif key in ['token', 'createApp', 'updateIpWhitelist', 'updateSupplierAccount']:  # 管理端
             pass
         else:
-            user_items[GameBox.GameBox().data_type[key][0]] = key
+            user_items[data_type[key][0]] = key
     if request.method == "POST":
         
         cq_9Key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyaWQiOiI1ZjU5OWU3NTc4MDdhYTAwMDFlYTFjMjYiLCJhY2NvdW50IjoiYW1iZXJ1YXQiLCJvd25lciI6IjVkYzExN2JjM2ViM2IzMDAwMTA4ZTQ4NyIsInBhcmVudCI6IjVkYzExN2JjM2ViM2IzMDAwMTA4ZTQ4NyIsImN1cnJlbmN5IjoiVk5EIiwianRpIjoiNzkyMjU1MDIzIiwiaWF0IjoxNTk5NzA4Nzg5LCJpc3MiOiJDeXByZXNzIiwic3ViIjoiU1NUb2tlbiJ9.cyvPJaWFGwhX4dZV7fwcwgUhGM9d5dVv8sgyctlRijc"
         url_dict = {0: ['http://152.32.185.241:21080', '測試區'], 1: ['http://54.248.18.149:8203', '灰度']}  # 測試 / 灰度
         env_type = request.form.get('env_type')
         game_type = request.form.get('game_type')  # 0 : DG , 1: 沙巴
-        user = request.form.get('user')
-        check_type = request.form.get('check_type')  # 0 為管理端/ 1 : 客戶端
-        print(env_type, game_type, user, check_type)
-        user_name = request.form.get('user_name')
+        username = request.form.get('username')
+        check_type = request.form.get('check_type')  # 0 為管理端/ 1 : 客戶
+        func_name = request.form.get('func_name')
         game_list = []  # 存放前台選擇的 測試項目
         if check_type == '0':
             game_list.append('token')  # 管理端 先獲得 token
             game_list.append(request.form.get('admin_name'))
         else:
-            game_list.append(user_name)
+            game_list.append(func_name)
         print(game_list)
+        if game_type in ['18','19']:
+            game_id = request.form.get('gameid')
+        else:
+            game_id =''
 
         api_key = client_type["api_key"][int(game_type)]
         api_url = client_type["api_url"][int(game_type)]
         supplier_type = client_type["supplier_type"][int(game_type)]
-        supplier_user = client_type["supplier_user"][int(game_type)]
+
         clientId = client_type["supplier_user"][int(game_type)]
-        client_detail = GameBox.GameBox.GameBox_Con(client_id=clientId, env=int(env_type))
+        Gamebox_con =  GameBox.GameBox(env_id=int(env_type),clientId=clientId)
+        
+        client_detail = Gamebox_con.GameBox_clinet()
+        #game_id = Gamebox_con.GameBox_Gameid(game_type=supplier_type)
+        
         url = url_dict[int(env_type)][0]
-        url_type = '%s, ' % url + client_type['supplier_type'][int(game_type)] + url_dict[int(env_type)][1]
-        print(game_type,user_name)
-        if game_type == '19' and user_name == 'login': # 需做另外頁轉導
-            response = GameBox.GameBox.GameBox_test(type_=user_name, clientId=clientId, username=user,
+        url_type = '%s, ' % url + supplier_type+ url_dict[int(env_type)][1]
+        print(game_type,func_name)
+        if game_type == '19' and func_name == 'login': # 需做另外頁轉導
+            response = GameBox.GameBox.GameBox_test(func_name=func_name, clientId=clientId, username=username,
                                     client_detail=client_detail, password='123qwe', url=url,
                                     api_key=api_key,
                                     api_url=api_url, supplier_type=supplier_type,
                                     cq_9Key=cq_9Key,
-                                    game_type=int(game_type))
-            global png_url
+                                    game_type=int(game_type),game_id=game_id )
             png_url = response.json()['data']['pc']
-            res= redirect('png_game')
-            #res = redirect('png_game',png_url=png_url)   
-            return  res          
+            return redirect(url_for('png_game',login_url=png_url))
+
         else:
-            GameBox.suite_test(game_type=int(game_type), url_type=url_type, clientId=clientId, user=user,
+            GameBox.suite_test(game_type=int(game_type), url_type=url_type, clientId=clientId, user=username,
                             client_detail=client_detail,
                             api_key=api_key, api_url=api_url, supplier_type=supplier_type, url=url,
                             game_list=game_list, user_items=user_items, admin_items=admin_items, cq_9Key=cq_9Key)
 
-        return 'ok'
+        return  redirect(url_for('report'))
     print(admin_items, user_items)
     return render_template('gameBox.html', user_items=user_items, admin_items=admin_items,client_type=client_type['supplier_type'])
-@app.route('/png_game',methods=['GET'])
+
+@app.route('/png_game')
 def png_game():
-    return render_template("png_game.html",login_url=png_url)
+    login_url = request.args.get('login_url')
+    #print(login_url)
+    return render_template("png_game.html",login_url=login_url)
 
 @app.route('/fund_fee', methods=["POST", "GET"])  # 充值/提線 手續費查詢
 def fund_fee():
