@@ -6,10 +6,47 @@ from utils import Config
 from selenium import webdriver
 
 
-class GameBox():
+class GameBox:
     def __init__(self, clientId='', username='', app_Id='', member_Id='', password='', amount='10', bill_No='',
                  api_key='', api_url='',
-                 supplier_type='', update_type=1,game_id = '331'):  # update_type 1唯修改, 0唯刪除
+                 supplier_type='', update_type=1,game_id = '',env_id=''):  # update_type 1唯修改, 0唯刪除
+        self.clientId = clientId
+        self._conn = None
+        self.env_id = env_id
+        self.env_dict = {0:['152.32.185.241',21330,'amberrd','Gvmz8DErUcHgMgQh','test'],
+                    1: ['54.248.18.149', 3306, 'gamebox', 'sgkdjsdf^mdsD1538', 'game_box_api']}
+        self.client_type = {
+            "api_key":
+                {0: "1566e8efbdb444dfb670cd515ab99fda",1: "XT",2: "9RJ0PYLC5Ko4O4vGsqd",3:"",
+            4:"a93f661cb1fcc76f87cfe9bd96a3623f",5:"BgRWofgSb0CsXgyY",6:"b86fc6b051f63d73de262d4c34e3a0a9",
+            7:"8153503006031672EF300005E5EF6AEF",8:"000268d7cf113cb434e80f2de71188ddc3f45a0c8643c9fadf7d639\
+            2ec4dd42b3f2b82687999588fab2722814c62f650f98a588e8f372cb377b4e62302dc4addfdaa3e95cc48cfa9\
+            e308e3285e0eb54781b0ab29c2a95d544c64847c216c2f2b10a9e083de4506b0a901dac71651be86e680f5\
+            f61c4a2fb1fbccaa56ce9d88715a8c",9:"",10:"DF0FAEB6171BDEF9",11:"fe9b68fca25f2fe2",12:"dbettest",
+            13: "89CA25C2BA65AC9DD12E04BD66B6B467",14: "FB9EFF5983F0683F",15:"2RuIYUKYkWrWBnNG",
+                16: "5dfc2a02f995f9b94defc4ed2c5613e5",17:"07f96e685a9f7252ebb001bca52a14a4",18:"testKey",19:"XVN"},
+            "api_url":
+                {0: "https://api.dg99web.com",1:"http://tsa.l0044.xtu168.com",
+            2:"https://testapi.onlinegames22.com",3:"http://api.cqgame.games",4:"http://gsmd.336699bet.com",
+            5:"https://api.ybzr.online/",6:"http://ab.test.gf-gaming.com",
+            7:'http://am.bgvip55.com/open-cloud/api/',8:"https://spi-test.r4espt.com",
+            9:"http://operatorapi.staging.imaegisapi.com",10:'https://api.cp888.cloud',11:"http://api.jygrq.com",
+            12:"https://linkapi.bbinauth.net/app/WebService/JSON/display.php",13:"https://api.0x666666.com",
+            14: "https://wc-api.hddv1.com/channelHandle",15:"https://marsapi-test.oriental-game.com:8443",
+                16: "http://tapi.aiqp001.com:10018/",17:"https://api.a45.me/api/public/Gateway.php",
+                18:"https://api.prerelease-env.biz/IntegrationService/v3/http/CasinoGameAPI",
+            19:"http://agastage.playngonetwork.com:23219/CasinoGameService"},
+            "supplier_type":
+                {0:"dream_game",1:"sa_ba_sports",2: "ae_sexy",3:"cq_9",4:"gpi",5:"ya_bo_live",6:"pg_game",
+            7:{"game":"bg_game","fish":'bg_fishing','chess':'bg_chess','lottery':'bg_lottery'},
+            8:"tf_gaming",9:"im_sb",10: "ya_bo_lottery",11: "jdb_electronic",
+            12: "bb_in",13:"yx_game",14: "ky_chess",15: "og_live", 16: "ace_poker",17:"wm_live",18:"pp_game",19:"png_game"},
+            "supplier_user":
+            {0: "DGTE01011T",1: "6yayl95mkn",2: "fhlmag",3: "cq9_test",4: "xo8v",5: "ZSCH5",
+            6: "aba4d198602ba6f2a3a604edcebd08f1",7:"am00",8:"711",9:"OPRikJXEbbH36LAphfbD5RXcum6qifl8",
+            10:"fhagen",11:"XT",12: "test",13: "FH",14: "72298",15: "mog251sy",16: "1334",17:"wmtesttwapi",
+            18:"vb_xoso",19:"XVNTESTAPI01"}# DB 裡 client_id
+            }
         self.data_type = {
             "token": ['管理/獲取令牌',
                       "/oauth/token?client_id=admin&client_secret=gameBox-2020-08-11*admin&username=admin&password=gameBox-2020-08-11*admin&grant_type=password&scope=all"
@@ -239,38 +276,56 @@ class GameBox():
                 ],  
                 }
 
-    def GameBox_Con(client_id, env):  # 連線 mysql
-        env_dict = {0:['152.32.185.241',21330,'amberrd','Gvmz8DErUcHgMgQh','test.t_client'],
-                    1: ['54.248.18.149', 3306, 'gamebox', 'sgkdjsdf^mdsD1538', 'game_box_api.t_client']}
-        db = p.connect(
-            host=env_dict[env][0],
-            port=env_dict[env][1],
-            user=env_dict[env][2],
-            passwd=env_dict[env][3],
+
+    def GameBox_Con(self):  # 連線 mysql
+        self._conn = p.connect(
+            host=self.env_dict[self.env_id][0],
+            port=self.env_dict[self.env_id][1],
+            user=self.env_dict[self.env_id][2],
+            passwd=self.env_dict[self.env_id][3],
         )
-        table_name = env_dict[env][4]
-        cur = db.cursor()
-        sql = "SELECT app_id,app_key FROM %s where client_id = '%s'" % (table_name, client_id)  # clien_id 找出 id,key
+        return self._conn
+    def GameBox_clinet(self):
+        cur = self.GameBox_Con().cursor()
+        table_name = self.env_dict[self.env_id][4]
+        sql = "SELECT app_id,app_key FROM %s.t_client where client_id = '%s'" % (table_name, self.clientId )  # clien_id 找出 id,key
         print(sql)
         cur.execute(sql)
         client_detail = {}
         rows = cur.fetchall()
         for i in rows:
-            client_detail[client_id] = i
+            client_detail[self.clientId ] = i
         print(client_detail)
         cur.close()
         return client_detail
+    def GameBox_Gameid(self,game_type):
+        cur = self.GameBox_Con().cursor()
+        table_name = self.env_dict[self.env_id][4]
+        sql = "select detail from %s.t_supplier_game where supplier_type = '%s'" % (table_name,game_type )  
+        print(sql)
+        cur.execute(sql)
+        rows = cur.fetchall()
+        gameId_dict = {} 
+        for i in rows:
+            for str_a in i :
+                a = eval(str_a)
+                #print(a)
+            for keys in a.keys():
+            #keys = list(a.keys())
+                gameId_dict[ a[keys]['gameCode']] = a[keys]['gameNameCn']
+        return gameId_dict
+        cur.close()
 
-    # type_: 是用function 名, clientId = client帳號
-    def GameBox_test(type_, clientId, username, client_detail, password, url, api_key, api_url, supplier_type,
-                     game_type, cq_9Key):
+
+    # func_name: 是用function 名, clientId = client帳號
+    def GameBox_test(clientId,func_name, username, client_detail, password, url, api_key, api_url, supplier_type,
+                     game_type, cq_9Key,game_id):
         try:
             global access_token, token_type, pc_url, dr, memberId, appId, billNo
-            # client_detail = GameBox.GameBox_Con(clientId)
-            # username = 'kerr%s'%random.randint(1,1000)
+
             data_ = GameBox(clientId=clientId, username=username, password=password, api_key=api_key,
-                            api_url=api_url, supplier_type=supplier_type).data_type[type_]
-            print(type_, data_[0])
+                            api_url=api_url, supplier_type=supplier_type,game_id=game_id).data_type[func_name]
+            print(func_name, data_[0])
             # url_content = data_[1]
             test_header = {
                 "Content-Type": "application/json",
@@ -280,14 +335,14 @@ class GameBox():
             # print(appId,appKey)
             appId = client_detail[clientId][0]
             appKey = client_detail[clientId][1]
-            if type_ in ['createApp', 'updateIpWhitelist', 'updateSupplierAccount', 'getClientInfo', 'token']:
-                data_ = GameBox(clientId, username, app_Id=appId).data_type[type_]
-                if type_ != 'token':
+            if func_name in ['createApp', 'updateIpWhitelist', 'updateSupplierAccount', 'getClientInfo', 'token']:
+                data_ = GameBox(clientId, username, app_Id=appId).data_type[func_name]
+                if func_name != 'token':
                     test_header['Authorization'] = token_type + " %s" % access_token
                 data = data_[2]
-            # elif type_ in ['signUp','login','freeLogin','checkOnline','balance','transfer','updateLimit']:
+            # elif func_name in ['signUp','login','freeLogin','checkOnline','balance','transfer','updateLimit']:
             else:  # 客戶端
-                if type_ == 'checkOnline':
+                if func_name == 'checkOnline':
                     if game_type in [0, 1, 3]:  # 大部分都沒有, 避免每次新增家都要加, 改寫
                         dr = webdriver.Chrome(executable_path=r'C:\python3\Scripts\jupyter_test\chromedriver_84.exe')
                         print('需先瀏覽器登入PC login_url: %s' % pc_url)
@@ -296,9 +351,9 @@ class GameBox():
                     else:
                         memberId = ''
                         print("%s沒有查询玩家在线状态" % game_type)
-                elif type_ == 'offline':  # 踢人 ,在把 global memberid 傳還init
+                elif func_name == 'offline':  # 踢人 ,在把 global memberid 傳還init
                     data_ = GameBox(clientId, username, member_Id=memberId).data_type[type_]
-                elif type_ == 'checkTransfer':  # 檢查 轉帳轉太, 需把 transfer的 bill_no 傳回來
+                elif func_name == 'checkTransfer':  # 檢查 轉帳轉太, 需把 transfer的 bill_no 傳回來
                     data_ = GameBox(clientId, username, bill_No=billNo).data_type[type_]
                 time_ = int(time.time())
                 test_header['appId'] = appId  # appId#"930ea5d5a258f4f"#appId
@@ -318,25 +373,25 @@ class GameBox():
             if game_type == 3:  # cq9
                 url_content = url_content.replace(clientId, cq_9Key)
             response = FF_Joy188.FF_().session_post(url, url_content, json.dumps(data), test_header)
-            if game_type == 19 and type_ == 'login':
+            if game_type == 19 and func_name == 'login':
                 return response
             r_json = response.json()
             global status_code
             status_code = response.status_code
             print('連線狀態: %s' % status_code)
             print(response.text)
-            if type_ == 'token':
+            if func_name == 'token':
                 access_token = r_json['access_token']
                 token_type = r_json['token_type']
-            elif type_ == 'checkOnline':
+            elif func_name == 'checkOnline':
                 if game_type == 0:  # dramegame 才需要memberid
                     memberId = r_json['data']['member']['memberId']
                 else:
                     memberId = ''
                     return 'ok'
-            elif type_ == 'login':
+            elif func_name == 'login':
                 pc_url = r_json['data']['pc']  # 拿來 checkOnline  要先登入,才能  獲得memberId
-            elif type_ == 'transfer':
+            elif func_name == 'transfer':
                 if game_type in [3,4,5,7]:  # cq_9,gpi,YB,bg   response不會回傳  billNo , 需自己帶
                     billNo = data["billNo"]
                 else:
@@ -354,8 +409,8 @@ class GameBox():
                         return memberId
                     except:
                         print('繼續等候登入要memeberId')
-            elif clientId in error_msg:  # 創紀 createAPP 走這段, 因為 client_detail 為空 ,
-                if type_ == 'createApp':
+            elif self.clientId in error_msg:  # 創紀 createAPP 走這段, 因為 client_detail 為空 ,
+                if func_name == 'createApp':
                     test_header['Authorization'] = token_type + " %s" % access_token
                 url_content = data_[1]
                 data = data_[2][game_type]
@@ -364,7 +419,7 @@ class GameBox():
                 status_code = response.status_code
                 print('連線狀態: %s' % status_code)
                 print(r_json)
-                if type_ == 'token':
+                if func_name == 'token':
                     access_token = r_json['access_token']
                     token_type = r_json['token_type']
         except NameError as e:
@@ -390,7 +445,7 @@ class GameBoxTest_Admin(unittest.TestCase):
         return self.assertEqual(200, status_code, msg='請求狀態有誤')
 
     def func():  # 共用 的方法, 差別再type_ ,需宿改 各參數 再這邊加
-        return GameBox.GameBox_test(type_=type_, clientId=arg_dict['clientId'], username=arg_dict['user'],
+        return GameBox.GameBox_test(func_name=func_name, clientId=arg_dict['clientId'], username=arg_dict['user'],
                                     client_detail=arg_dict['client_detail'], password='123qwe', url=arg_dict['url'],
                                     api_key=arg_dict['api_key'],
                                     api_url=arg_dict['api_url'], supplier_type=arg_dict['supplier_type'],
@@ -400,8 +455,8 @@ class GameBoxTest_Admin(unittest.TestCase):
     def func_wrap(func):  # 獲取當前 測試案例的 名稱 ,扣除 test
         @wraps(func)
         def tmp(*args, **kwargs):
-            global type_
-            type_ = (func.__name__).split('_')[1]  # 切割 名稱 , unittest 統一案例,都已 test_ 為開頭
+            global func_name
+            func_name = (func.__name__).split('_')[1]  # 切割 名稱 , unittest 統一案例,都已 test_ 為開頭
             return func(*args, **kwargs)
 
         return tmp
