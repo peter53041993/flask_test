@@ -409,7 +409,7 @@ class GameBox:
                         return memberId
                     except:
                         print('繼續等候登入要memeberId')
-            elif self.clientId in error_msg:  # 創紀 createAPP 走這段, 因為 client_detail 為空 ,
+            elif clientId in error_msg:  # 創紀 createAPP 走這段, 因為 client_detail 為空 ,
                 if func_name == 'createApp':
                     test_header['Authorization'] = token_type + " %s" % access_token
                 url_content = data_[1]
@@ -450,7 +450,9 @@ class GameBoxTest_Admin(unittest.TestCase):
                                     api_key=arg_dict['api_key'],
                                     api_url=arg_dict['api_url'], supplier_type=arg_dict['supplier_type'],
                                     cq_9Key=arg_dict['cq_9Key'],
-                                    game_type=int(arg_dict['game_type'])), GameBoxTest_Admin().assert_()
+                                    game_type=int(arg_dict['game_type']), game_id= arg_dict['game_id']
+                                    ), GameBoxTest_Admin().assert_()
+                                   
 
     def func_wrap(func):  # 獲取當前 測試案例的 名稱 ,扣除 test
         @wraps(func)
@@ -562,7 +564,7 @@ class GameBoxTest_User(GameBoxTest_Admin):
 
 
 def suite_test(game_type, url_type, clientId, user, client_detail, api_key, api_url, supplier_type, url, game_list,
-               user_items, admin_items, cq_9Key):
+               user_items, admin_items, cq_9Key,game_id):
     suite = unittest.TestSuite()
     global arg_dict
     arg_dict = {}
@@ -575,6 +577,7 @@ def suite_test(game_type, url_type, clientId, user, client_detail, api_key, api_
     arg_dict['url'] = url
     arg_dict['game_type'] = game_type
     arg_dict['cq_9Key'] = cq_9Key
+    arg_dict['game_id'] = game_id
 
     TestCase = []  # 存放測試案例
     for test_case in game_list:
