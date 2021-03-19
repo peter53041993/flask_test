@@ -1649,7 +1649,8 @@ def gameBox():
             GameBox.suite_test(game_type=int(game_type), url_type=url_type, clientId=clientId, user=username,
                             client_detail=client_detail,
                             api_key=api_key, api_url=api_url, supplier_type=supplier_type, url=url,
-                            game_list=game_list, user_items=user_items, admin_items=admin_items, cq_9Key=cq_9Key)
+                            game_list=game_list, user_items=user_items, admin_items=admin_items, cq_9Key=cq_9Key,
+                            game_id=game_id)
 
         return  redirect(url_for('report'))
     print(admin_items, user_items)
