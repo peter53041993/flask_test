@@ -45,27 +45,48 @@
                                     $('#game_detail_png').append("<option value='"+key+"'>"+value+"</option>")
                                 })
                             $('.png_game').append("</li>")
-
                             $('.png_game').after("<li class='pp_game'><label >pp_game </label>")
+                            
+
                             $('.pp_game').append("<select id='game_detail_pp' name='gameid'></select>")
                             $.each( data['pp_game'], function( key, value ) 
                                 {   
                                     $('#game_detail_pp').append("<option value='"+key+"'>"+value+"</option>")
                                 })
                             $('.pp_game').append("</li>")
-                            if ($('#game_type').val()== '19'){
-                                $('#game_detail_pp').removeAttr('name')
+                            $('.pp_game').after("<li class='haba_game'><label >haba_game </label>")
+
+                            $('.haba_game').append("<select id='game_detail_haba' name='gameid'></select>")
+                            $.each( data['haba_game'], function( key, value ) 
+                                {   
+                                    $('#game_detail_haba').append("<option value='"+key+"'>"+value+"</option>")
+                                })
+                            $('.haba_game').append("</li>")
+
+
+                            if ($('#game_type').val()== '20'){
+                                $('#game_detail_haba').removeAttr('name')
+                                $('.haba_game').css('display','block');
+                                $('.pp_game').css('display','none');
+                                $('.png_game').css('display','none');
+                            }
+
+                            else if ($('#game_type').val()== '19'){
+                                $('#game_detail_png').removeAttr('name')
                                 $('.png_game').css('display','block');
                                 $('.pp_game').css('display','none');
+                                $('.haba_game').css('display','none');
                             }
                             else if  ($('#game_type').val()== '18'){
-                                $('#game_detail_png').removeAttr('name')
+                                $('#game_detail_pp').removeAttr('name')
                                 $('.pp_game').css('display','block');
                                 $('.png_game').css('display','none');
+                                $('.haba_game').css('display','none');
                             }
                             else{
                                 $('.pp_game').css('display','none');
                                 $('.png_game').css('display','none');
+                                $('.haba_game').css('display','none');
                             }
                         }   
                     })
@@ -73,18 +94,31 @@
                 if ($('#game_type').val()== '18'){
                     $('#game_detail_png').removeAttr('name')
                     $('#game_detail_pp').attr('name','gameid')
+                    $('#game_detail_haba').removeAttr('name')
                     $('.pp_game').css('display','block');
+                    $('.haba_game').css('display','none');
                     $('.png_game').css('display','none');
                 }
                 else if ($('#game_type').val()== '19'){
                     $('#game_detail_pp').removeAttr('name')
                     $('#game_detail_png').attr('name','gameid')
+                    $('#game_detail_haba').removeAttr('name')
                     $('.png_game').css('display','block');
+                    $('.pp_game').css('display','none');
+                    $('.haba_game').css('display','none');
+                }
+                else if ($('#game_type').val()== '20'){
+                    $('#game_detail_haba').attr('name','gameid')
+                    $('#game_detail_png').removeAttr('name')
+                    $('#game_detail_pp').removeAttr('name')
+                    $('.haba_game').css('display','block');
+                    $('.png_game').css('display','none');
                     $('.pp_game').css('display','none');
                 }
                 else{
                     $('.pp_game').css('display','none');
                     $('.png_game').css('display','none');
+                    $('.haba_game').css('display','none');
                 }
             })
         })

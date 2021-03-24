@@ -1580,7 +1580,7 @@ def gameBox_id():
     #supplier_type = client_type["supplier_type"][int(game_type)]
     Gamebox_con =  GameBox.GameBox(env_id=int(env_type))
     gameId_dict = {}
-    for game in [18,19]:# png, pp
+    for game in [18,19,20]:# png, pp, haba
         supplier_type = client_type["supplier_type"][game]
         data = Gamebox_con.GameBox_Gameid(game_type=supplier_type)
         #print(data)
@@ -1617,7 +1617,7 @@ def gameBox():
         else:
             game_list.append(func_name)
         print(game_list)
-        if game_type in ['18','19']:
+        if game_type in ['18','19','20']:
             game_id = request.form.get('gameid')
         else:
             game_id =''
@@ -2672,6 +2672,6 @@ if __name__ == "__main__":
     '''
     app.config['TESTING'] = True
     app.config['PROPAGATE_EXCEPTIONS'] = True
-    app.run(host="0.0.0.0", debug=True, port=4444, threaded=True)
+    app.run(debug=True, port=5000, threaded=True)
 
     # app.config.from_object(DevConfig)
