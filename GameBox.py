@@ -364,9 +364,9 @@ class GameBox:
                         memberId = ''
                         print("%s沒有查询玩家在线状态" % game_type)
                 elif func_name == 'offline':  # 踢人 ,在把 global memberid 傳還init
-                    data_ = GameBox(clientId, username, member_Id=memberId).data_type[type_]
+                    data_ = GameBox(clientId, username,password=password ,member_Id='').data_type[func_name]
                 elif func_name == 'checkTransfer':  # 檢查 轉帳轉太, 需把 transfer的 bill_no 傳回來
-                    data_ = GameBox(clientId, username, bill_No=billNo, password=password).data_type[type_] # haba_game, CheckTranfer需要password參數
+                    data_ = GameBox(clientId, username, bill_No=billNo, password=password).data_type[func_name] # haba_game, CheckTranfer需要password參數
                 time_ = int(time.time())
                 test_header['appId'] = appId  # appId#"930ea5d5a258f4f"#appId
                 test_header['nonce-str'] = "ibuaiVcKdpRxkhJA"
