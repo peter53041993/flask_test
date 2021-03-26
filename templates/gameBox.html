@@ -31,12 +31,12 @@
                 $('.username:checkbox').prop('checked', $(this).is(':checked') ? false : true);  
             })
                     $.ajax({
-                        url:"/gameBox_id",
+                        url:"/gameBox_id",//獲取 pp /png gameid 接口
                         type:"POST",
                         //dataType: "json",
                         headers:{Accept:"application/json; charset=utf-8"},
                         data: form_trim("#form1"),
-                        success:function(data){
+                        success:function(data){ // 在初始頁面近來, 先要取
                             console.log(data)
                             $('#func_name').after("<li class='png_game'><label >png_game </label>")
                             $('.png_game').append("<select id='game_detail_png' name='gameid'></select>")
@@ -53,23 +53,24 @@
                                     $('#game_detail_pp').append("<option value='"+key+"'>"+value+"</option>")
                                 })
                             $('.pp_game').append("</li>")
-                            if ($('#game_type').val()== '19'){
+                            
+                            if ($('#game_type').val()== '19'){ //19 png_game
                                 $('#game_detail_pp').removeAttr('name')
                                 $('.png_game').css('display','block');
                                 $('.pp_game').css('display','none');
                             }
-                            else if  ($('#game_type').val()== '18'){
+                            else if  ($('#game_type').val()== '18'){// 18 pp_game
                                 $('#game_detail_png').removeAttr('name')
                                 $('.pp_game').css('display','block');
                                 $('.png_game').css('display','none');
                             }
-                            else{
+                            else{ //其它遊戲 ,都不顯示 ,初始化近來頁面 會在這邊
                                 $('.pp_game').css('display','none');
                                 $('.png_game').css('display','none');
                             }
                         }   
                     })
-            $('#game_type').change(function(){
+            $('#game_type').change(function(){ //下拉選擇的交互
                 if ($('#game_type').val()== '18'){
                     $('#game_detail_png').removeAttr('name')
                     $('#game_detail_pp').attr('name','gameid')
