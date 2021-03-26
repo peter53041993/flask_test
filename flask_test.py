@@ -1575,17 +1575,10 @@ def api_test():
 @app.route('/gameBox_id',methods=["POST"])
 def gameBox_id():
     env_type = request.form.get('env_type')
-    game_type = request.form.get('game_type')
-    client_type = GameBox.GameBox().client_type
-    #supplier_type = client_type["supplier_type"][int(game_type)]
     Gamebox_con =  GameBox.GameBox(env_id=int(env_type))
-    gameId_dict = {}
-    for game in [18,19]:# png, pp
-        supplier_type = client_type["supplier_type"][game]
-        data = Gamebox_con.GameBox_Gameid(game_type=supplier_type)
+    data = Gamebox_con.GameBox_Gameid()
         #print(data)
-        gameId_dict[supplier_type] = data
-    return gameId_dict
+    return data
     #print(gameId_dict)
 @app.route('/gameBox', methods=["POST", "GET"])
 def gameBox():
@@ -1617,7 +1610,7 @@ def gameBox():
         else:
             game_list.append(func_name)
         print(game_list)
-        if game_type in ['18','19']:
+        if game_type in ['18','19','20','21']:
             game_id = request.form.get('gameid')
         else:
             game_id =''
