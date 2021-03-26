@@ -62,13 +62,32 @@
                                     $('#game_detail_haba').append("<option value='"+key+"'>"+value+"</option>")
                                 })
                             $('.haba_game').append("</li>")
+                            $('.haba_game').after("<li class='yl_game'><label >yl_game </label>")
 
 
-                            if ($('#game_type').val()== '20'){
+                            $('.yl_game').append("<select id='game_detail_yl' name='gameid'></select>")
+                            $.each( data['yl_game'], function( key, value ) 
+                                {   
+                                    $('#game_detail_yl').append("<option value='"+key+"'>"+value+"</option>")
+                                })
+
+                            $('.yl_game').append("</li>")
+
+
+                            if ($('#game_type').val()== '21'){
+                                $('#game_detail_yl').removeAttr('name')
+                                $('.yl_game').css('display','block');
+                                $('.haba_game').css('display','none');
+                                $('.pp_game').css('display','none');
+                                $('.png_game').css('display','none');
+                            }
+
+                            else if ($('#game_type').val()== '20'){
                                 $('#game_detail_haba').removeAttr('name')
                                 $('.haba_game').css('display','block');
                                 $('.pp_game').css('display','none');
                                 $('.png_game').css('display','none');
+                                $('.yl_game').css('display','none');
                             }
 
                             else if ($('#game_type').val()== '19'){
@@ -76,17 +95,20 @@
                                 $('.png_game').css('display','block');
                                 $('.pp_game').css('display','none');
                                 $('.haba_game').css('display','none');
+                                $('.yl_game').css('display','none');
                             }
                             else if  ($('#game_type').val()== '18'){
                                 $('#game_detail_pp').removeAttr('name')
                                 $('.pp_game').css('display','block');
                                 $('.png_game').css('display','none');
                                 $('.haba_game').css('display','none');
+                                $('.yl_game').css('display','none');
                             }
                             else{
                                 $('.pp_game').css('display','none');
                                 $('.png_game').css('display','none');
                                 $('.haba_game').css('display','none');
+                                $('.yl_game').css('display','none');
                             }
                         }   
                     })
@@ -95,30 +117,47 @@
                     $('#game_detail_png').removeAttr('name')
                     $('#game_detail_pp').attr('name','gameid')
                     $('#game_detail_haba').removeAttr('name')
+                    $('#game_detail_yl').removeAttr('name')
                     $('.pp_game').css('display','block');
                     $('.haba_game').css('display','none');
                     $('.png_game').css('display','none');
+                    $('.yl_game').css('display','none');
                 }
                 else if ($('#game_type').val()== '19'){
                     $('#game_detail_pp').removeAttr('name')
                     $('#game_detail_png').attr('name','gameid')
                     $('#game_detail_haba').removeAttr('name')
+                    $('#game_detail_yl').removeAttr('name')
                     $('.png_game').css('display','block');
                     $('.pp_game').css('display','none');
                     $('.haba_game').css('display','none');
+                    $('.yl_game').css('display','none');
                 }
                 else if ($('#game_type').val()== '20'){
                     $('#game_detail_haba').attr('name','gameid')
                     $('#game_detail_png').removeAttr('name')
                     $('#game_detail_pp').removeAttr('name')
+                    $('#game_detail_yl').removeAttr('name')
                     $('.haba_game').css('display','block');
                     $('.png_game').css('display','none');
                     $('.pp_game').css('display','none');
+                    $('.yl_game').css('display','none');
+                }
+                else if ($('#game_type').val()== '21'){
+                    $('#game_detail_yl').attr('name','gameid')
+                    $('#game_detail_pp').removeAttr('name')
+                    $('#game_detail_png').removeAttr('name')
+                    $('#game_detail_haba').removeAttr('name')
+                    $('.yl_game').css('display','block');
+                    $('.png_game').css('display','none');
+                    $('.pp_game').css('display','none');
+                    $('.haba_game').css('display','none');
                 }
                 else{
                     $('.pp_game').css('display','none');
                     $('.png_game').css('display','none');
                     $('.haba_game').css('display','none');
+                    $('.yl_game').css('display','none');
                 }
             })
         })
