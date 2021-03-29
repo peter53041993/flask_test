@@ -45,6 +45,7 @@ class FF_:  # 4.0專案
         response = self.session.post(request_url + request_func, data=postData, headers=header, verify=False)
         logger.info(f'session_post : response = {response.text}')
         q.put(response)
+        return response
 
     def session_get(self, request_url, request_func, getData, header,q):
         """
