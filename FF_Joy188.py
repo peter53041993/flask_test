@@ -30,7 +30,7 @@ class FF_:  # 4.0專案
         # self.session.proxies = {"http": "http://127.0.0.1:8888"}
         self.lottery_dict = LotteryData.lottery_dict  # 吃config ,後續只需增加一邊
 
-    def session_post(self, request_url, request_func, postData, header,q):
+    def session_post(self, request_url, request_func, postData, header,q=''):
         """
         共用 request.post方式 ,url 為動態 請求url ,source預設走PC
         :param request_url:
@@ -44,9 +44,11 @@ class FF_:  # 4.0專案
         urllib3.disable_warnings()
         response = self.session.post(request_url + request_func, data=postData, headers=header, verify=False)
         logger.info(f'session_post : response = {response.text}')
+        if q == '':# gamebox 不待queue
+            return response
         q.put(response)
 
-    def session_get(self, request_url, request_func, getData, header,q):
+    def session_get(self, request_url, request_func, getData, header,q=''):
         """
         共用 request.get方法 ,url 為動態 請求url ,source預設走PC
         :param request_url:
@@ -60,6 +62,8 @@ class FF_:  # 4.0專案
         urllib3.disable_warnings()
         response = self.session.get(request_url + request_func, data=getData, headers=header, verify=False)
         # logger.info(f'session_get : response = {response.text}')
+        if q == '':# gamebox 不待queue
+            return response
         q.put(response)
 
     def get_conn(self, env):  # 連結數據庫 env 0: dev02 , 1:188 ,2: 生產
