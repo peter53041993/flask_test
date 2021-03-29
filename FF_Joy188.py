@@ -47,7 +47,6 @@ class FF_:  # 4.0專案
         if q == '':# gamebox 不待queue
             return response
         q.put(response)
-        return response
 
     def session_get(self, request_url, request_func, getData, header,q=''):
         """
