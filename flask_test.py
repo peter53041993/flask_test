@@ -29,6 +29,7 @@ from urllib.parse import urlsplit
 from functools import reduce
 import itertools
 import GameBox
+from queue import Queue
 
 app = Flask(__name__)  # name 為模塊名稱
 logger = logging.getLogger('flask_test')
@@ -1543,7 +1544,8 @@ def api_test():
             header['Cookie'] = login_cookie
         print(header)
         print(request_type, content_type, url_domain, url_path, url_query, data)
-        threads, status, content, req_time = [], [], [], []
+        threads = []
+        q = Queue()
         if request_type == 'post':
             thread_func = FF_Joy188.FF_().session_post
         else:
@@ -1553,22 +1555,21 @@ def api_test():
         else:
             num = 1
         for i in range(num):
-            t = threading.Thread(target=thread_func, args=(url_domain, url_path + url_query, data, header))
+            t = threading.Thread(target=thread_func, args=(url_domain, url_path + url_query, data, header,q))
             threads.append(t)
         # print(len(threads))
         for i in threads:
             i.start()
         for i in threads:
             i.join()
-            print(FF_Joy188.content)
-            status.append(FF_Joy188.status)
-            content.append(FF_Joy188.content)
-            req_time.append(FF_Joy188.req_time)
-        # print(FF_Joy188.content)
+        que_result = []# 取得queue裡的值
+        for _ in range(len(threads)):
+            que_result.append(q.get())
         result = {}
-        result['status'] = '連線狀態: %s' % status[-1]
-        result['data'] = content[-1]
-        result['time'] = req_time[-1]
+        for response in que_result:
+            result['status'] = '連線狀態: %s' % response.status_code
+            result['data'] = response.text
+            result['time'] = response.elapsed.total_seconds()
         return result
     return render_template('api_test.html')
 
@@ -2274,9 +2275,11 @@ def Single_OrderBEt():
 @app.route('/login_cookie', methods=["POST"])  # 傳回登入cookie, 在api_test頁面.  取得登入cookie的方式
 def login_cookie():
     import FF_Joy188
-    env_url = request.form.get('env_type')
-    envConfig = Config.EnvConfig(env_url)
-    joint = envConfig.get_joint_venture(envConfig.get_env_id())
+    env_url = request.form.get('env_type')#環境 用env_url 的url  來判斷 是 dev 188 和 一班/合營
+    envConfig = Config.EnvConfig(env_url)# 0, 1
+    domain_url = envConfig.get_post_url().split('://')[1] 
+    print(domain_url)
+    joint = envConfig.get_joint_venture(domain_url)
     user = request.form.get('username')
     conn = OracleConnection(env_id=int(envConfig.get_env_id()))
     userid = conn.select_user_id(user, joint)
@@ -2294,8 +2297,10 @@ def login_cookie():
         'User-Agent': FF_Joy188.FF_().user_agent['Pc']  # 從FF_joy188.py 取
     }
     print(user, envConfig.get_post_url())
-    FF_Joy188.FF_().session_post(envConfig.get_post_url(), '/login/login', postData, header)
-    cookies = FF_Joy188.r.cookies.get_dict()['ANVOID']
+    q = Queue() 
+    FF_Joy188.FF_().session_post(envConfig.get_post_url(), '/login/login', postData, header,q)
+    #q.get()
+    cookies = q.get().cookies.get_dict()['ANVOID']
     print(cookies)
     return cookies
 
