@@ -4,7 +4,6 @@ import random, time, hashlib, json, unittest, HTMLTestRunner
 from functools import wraps
 from utils import Config
 from selenium import webdriver
-from queue import Queue
 
 
 class GameBox:
@@ -397,7 +396,7 @@ class GameBox:
                 data = data_[2][game_type][str(game_type)]
                 print(data)
             url_content = data_[1]
-            response = FF_Joy188.FF_().session_post(url, url_content, json.dumps(data), test_header,Queue())
+            response = FF_Joy188.FF_().session_post(url, url_content, json.dumps(data), test_header)
             r_json = response.json()
             global status_code
             status_code = response.status_code
@@ -432,7 +431,7 @@ class GameBox:
                 for i in range(5):
                     try:
                         time.sleep(10)
-                        FF_Joy188.FF_().session_post(url, url_content, json.dumps(data), test_header,Queue())
+                        FF_Joy188.FF_().session_post(url, url_content, json.dumps(data), test_header)
                         memberId = (FF_Joy188.r.json()['data']['member']['memberId'])
                         print(memberId)
                         return memberId
@@ -443,7 +442,7 @@ class GameBox:
                     test_header['Authorization'] = token_type + " %s" % access_token
                 url_content = data_[1]
                 data = data_[2][game_type]
-                response = FF_Joy188.FF_().session_post(url, url_content, json.dumps(data), test_header,Queue())
+                response = FF_Joy188.FF_().session_post(url, url_content, json.dumps(data), test_header)
                 r_json = response.json()
                 status_code = response.status_code
                 print('連線狀態: %s' % status_code)
@@ -462,7 +461,7 @@ class GameBox:
                     "Content-Type": "application/json",
                     'User-Agent': FF_Joy188.FF_().user_agent['Pc']
                 }
-                FF_Joy188.FF_().session_post(url, url_content, '', test_header,Queue())
+                FF_Joy188.FF_().session_post(url, url_content, '', test_header)
                 access_token = response.json()['access_token']
                 token_type = response.json()['token_type']
 
