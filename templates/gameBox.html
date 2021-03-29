@@ -75,7 +75,9 @@
 
 
                             if ($('#game_type').val()== '21'){
-                                $('#game_detail_yl').removeAttr('name')
+                                $('#game_detail_png').removeAttr('name')
+                                $('#game_detail_pp').removeAttr('name')
+                                $('#game_detail_haba').removeAttr('name')
                                 $('.yl_game').css('display','block');
                                 $('.haba_game').css('display','none');
                                 $('.pp_game').css('display','none');
@@ -83,7 +85,9 @@
                             }
 
                             else if ($('#game_type').val()== '20'){
-                                $('#game_detail_haba').removeAttr('name')
+                                $('#game_detail_pp').removeAttr('name')
+                                $('#game_detail_png').removeAttr('name')
+                                $('#game_detail_yl').removeAttr('name')
                                 $('.haba_game').css('display','block');
                                 $('.pp_game').css('display','none');
                                 $('.png_game').css('display','none');
@@ -91,14 +95,18 @@
                             }
 
                             else if ($('#game_type').val()== '19'){
-                                $('#game_detail_png').removeAttr('name')
+                                $('#game_detail_pp').removeAttr('name')
+                                $('#game_detail_haba').removeAttr('name')
+                                $('#game_detail_yl').removeAttr('name')
                                 $('.png_game').css('display','block');
                                 $('.pp_game').css('display','none');
                                 $('.haba_game').css('display','none');
                                 $('.yl_game').css('display','none');
                             }
                             else if  ($('#game_type').val()== '18'){
-                                $('#game_detail_pp').removeAttr('name')
+                                $('#game_detail_png').removeAttr('name')
+                                $('#game_detail_haba').removeAttr('name')
+                                $('#game_detail_yl').removeAttr('name')
                                 $('.pp_game').css('display','block');
                                 $('.png_game').css('display','none');
                                 $('.haba_game').css('display','none');
