@@ -1911,6 +1911,18 @@ def new_Agent():  # 新代理中心
         return data
     return render_template('newAgent.html', items=reson_dict)
 
+@app.route('/Single_ave',methods=["POST"])
+def Single_ave(): # 單挑統計 排行
+    env_type = request.form.get('env_type')  
+    day = request.form.get('day_day')
+    month = request.form.get('day_month')
+    year = request.form.get('day_year')
+    date = "%s/%s/%s" % (year, month, day)
+    conn = OracleConnection(env_id=int(env_type))
+    single_ave = conn.select_SingleAve(date)
+    if len(single_ave) == 0:
+        return '無資料'
+    return single_ave
 
 @app.route('/Single', methods=["GET", "POST"])
 def Single():  # 單挑
@@ -2265,7 +2277,7 @@ def return_Deduplica(BetDetailList,bet_type_code):# bet_type_code 傳  ex: 33_10
             new_list += return_FuziP(bet_detail,len_detail)
     return new_list
 
-@app.route('/Single/bet',methods=["POST"])
+@app.route('/Single/bet',methods=["POST"])# 去重號碼街口, 會像REDIS去要 . /SINGLE 街口會先做
 def Single_OrderBEt():
     order_code = request.form.get('order_code')
     a = RedisConnection.get_key(2, "Deduplica: %s"%order_code)
@@ -2299,7 +2311,6 @@ def login_cookie():
     print(user, envConfig.get_post_url())
     q = Queue() 
     FF_Joy188.FF_().session_post(envConfig.get_post_url(), '/login/login', postData, header,q)
-    #q.get()
     cookies = q.get().cookies.get_dict()['ANVOID']
     print(cookies)
     return cookies
