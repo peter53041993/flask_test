@@ -121,8 +121,6 @@ h1 {
     font-weight: bold;
     box-sizing: border-box;
     }
-    .switch_demo-inner:before {content: "統計";padding-left: 10px;background-color: rgb(249 193 26);color: #FFFFFF;}
-    .switch_demo-inner:after {content: "一般查詢";padding-right: 10px;background-color: rgb(234 123 253);color: rgb(255 255 255);text-align: right;}
     .switch_demo-switch {
     display: block;
     width: 18px;
