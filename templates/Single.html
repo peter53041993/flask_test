@@ -12,11 +12,34 @@ p{margin-top: 1%;}
 .alert{color: #ad3fbf}
 .alert:hover{text-decoration: underline;
     font-weight:bold}
+.switch_demo-inner:before {content: "範圍統計";padding-left: 10px;background-color: rgb(249 193 26);color: #FFFFFF;}
+.switch_demo-inner:after {content: "單號查詢";padding-right: 10px;background-color: rgb(234 123 253);color: rgb(255 255 255);text-align: right;}
 </style>
 {% endblock %}  
 {% block script %}
 <script>
     $(document).ready(function(){
+        check_type = 'ave'
+    
+        $('.normal_type').css('display','none')
+        $('#switch_demo').change(function(){
+            $('#game_detail').empty();//總計算 清空
+
+            
+            if ($('#switch_demo').prop('checked')== false){// 切道一般 單號查詢
+                $('.dataTables_wrapper.no-footer').css('display','none')//隱藏
+                check_type = 'normal' 
+                $('.normal_type').css('display','block')
+                $('#submit').attr('onclick',"check()")
+            }
+            else{ //切道 統計
+                $('.dataTables_wrapper.no-footer').removeAttr('style')
+                check_type = 'ave'
+                $('.normal_type').css('display','none')
+                $('#submit').attr('onclick',"check2()")
+            }
+        })
+        
         var last_month = new Date().getMonth()//上個月 分紅用
             var today_month =  new Date().getMonth()+1//當前月份
             var today_day =  new Date().getDate()// -1 用意 ,統計日期 最新 為昨日
@@ -54,14 +77,14 @@ p{margin-top: 1%;}
     })
 </script>
 <script type="text/javascript">
-    function check(check_type){
+    function check(){ //一般單號查詢單挑
         $("#msg").remove();
         $('#user_detail').empty();//總計算 清空
         if ($('.dataframe').length>0){
                 $('.dataTables_wrapper.no-footer').remove();//已經有了先清空
         }
         if($("#order_code").val() ==""){//判斷用戶名為空
-            alert("請輸入用戶名");
+            alert("請輸入單號");
             //location.reload()
         }
         else {
@@ -73,7 +96,7 @@ p{margin-top: 1%;}
             headers:{
                     Accept:"application/json; charset=utf-8"
                 },
-            data: form_trim("#form1")+'&check_type='+check_type.id,
+            data: form_trim("#form1"),
             success:function(data){
                 console.log(data)
                 game_detail = data;
@@ -169,6 +192,59 @@ p{margin-top: 1%;}
         //後續再去要 去重的玩法,顯示再 小談窗
         }
         }
+        function check2(){ // 單挑範圍統計
+            $("#msg").remove();
+            $('#user_detail').empty();//總計算 清空
+            if ($('.dataframe').length>0){
+                $('.dataTables_wrapper.no-footer').remove();//已經有了先清空
+            }
+            button_disabled('.submit')
+            myajax  = $.ajax({ 
+                url:"/Single_ave",
+                type:"POST",
+                //dataType: "json",
+                headers:{
+                        Accept:"application/json; charset=utf-8"
+                    },
+                data: form_trim("#form1"),
+                success:function(data){
+                    if (data == '無資料'){
+                        button_RemoveDisabeld('.submit') 
+                        $('#user_detail').append("<span style ='color: #9C27B0 '>"+'無資料' )
+                            button_RemoveDisabeld('.submit')  
+                            return false
+                    }
+                    console.log(data)
+                    var type_data = []
+                    var key_name = Object.keys(data)
+                    var len_data = data[key_name[0]].length//動態取得 data 第一個key 名稱的長度
+                    var tabel_text = "<table border='1' class='dataframe'><thead><tr style='text-align: right;'>"
+                    for (i=0;i<len_data;i++){// 動態把 key取出後, loop增加 th 方式
+                        a = [],b ={}// a存放key 名稱, b存放 有直的key,後面check_type.id=='GP' 使用
+                        $.each( key_name, function( key, value ) { // jey 為索引, value 為 data的key名稱
+                            if (i==0){ 
+                                var newTh = "<th>"+ value +"</th>";
+                                //newTh.innerHTML = value
+                                tabel_text = tabel_text + newTh
+                                //$('.dataframe').append(newTh)
+                            }
+                            data_ = (value.indexOf('輸贏')> 0 ) ?  parseFloat(data[value][i]).toFixed(2) : data_ = data[value][i]// 不需要每個欄位都做  parseFloat ,否則會有 NAN發生
+                            a.push(data_)
+                        });
+                        type_data.push(a)// 陣列包陣列 ex: [[123],[456]]
+
+                    }
+                    tabel_text = tabel_text + "</tr></thead><tbody><tr><th></th></tr></tbody></table>"
+                    $('#user_detail').after(tabel_text)
+                    $('.dataframe').DataTable( {
+                    data:  type_data ,
+                    "iDisplayLength": 100 
+                    });   
+
+                    button_RemoveDisabeld('.submit')  
+                }
+            })
+        }
 </script>
 <script>
     function bet_detail(check_type){//點選 bet_type_code 跳出 去重投注號碼
@@ -201,7 +277,7 @@ p{margin-top: 1%;}
     <select name='env_type' id='env_type'>
         <option value="0">dev02</option>
         <option value="1">joy188</option>
-        <!--option value="2">ph158</option-->
+        <option value="2">ph158</option>
         
     </select>
     <li id='day'>
@@ -216,18 +292,28 @@ p{margin-top: 1%;}
         <select name='day_day' id='day_day'>
         </select>
     </li>
-    <label>彩種</label>
-    <select name='lottery'>
-        {% for lottery in lottery_dict %}
-        <option value={{lottery_dict[lottery][1]}}>{{lottery_dict[lottery][0]}}</option>
-        {% endfor %}
-    </select>
-    <li>
-    <label>請輸入單號</label>
-    <input type="text" id="order_code" name="order_code"
-    size="25"  maxlength="25"></li>
-        <p><input type="button" onclick="check(this)" id="Single_order" class="submit" value="查詢">
-            <!--input type="button" onclick="check(this)" id="Single_game" class="submit" value="玩法查詢"-->
+    <div class="center">
+        <div class="switch_demo">
+        <input type="checkbox" name="switch_demo" class="switch_demo-checkbox" id="switch_demo" checked>
+        <label class="switch_demo-label" for="switch_demo">
+        <span class="switch_demo-inner"></span>
+        <span class="switch_demo-switch"></span>
+        </label>
+        </div>
+        </div>
+    <div class='normal_type'>
+        <label>彩種</label>
+        <select name='lottery'>
+            {% for lottery in lottery_dict %}
+            <option value={{lottery_dict[lottery][1]}}>{{lottery_dict[lottery][0]}}</option>
+            {% endfor %}
+        </select>
+        <li>
+        <label>請輸入單號</label>
+        <input type="text" id="order_code" name="order_code"
+        size="25"  maxlength="25"></li>
+    </div>
+        <p><input type="button" onclick="check2()" id="submit" class="submit" value="查詢">
 <form>
 <div id='user_detail'></div>
 
