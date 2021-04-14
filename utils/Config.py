@@ -34,7 +34,8 @@ class LotteryData:
         'jlffc': [u'吉利分彩', '99111'], 'slmmc': [u'順利秒彩', '99112'], 'txffc': [u'騰訊分彩', '99114'],
         'btcffc': [u'比特幣分彩', '99115'], 'fhjlssc': [u'吉利時彩', '99116'], 'fhxjc': [u'鳳凰新疆全球彩', '99118'],
         'fhcqc': [u'鳳凰重慶全球彩', '99117'], '360ffc': [u'360分分彩', '99121'], '3605fc': [u'360五分彩', '99122'],
-        'ptxffc': [u'奇趣腾讯分分彩', '99125'], 'v3d': [u'吉利3D', '99801'],
+        'ptxffc': [u'奇趣腾讯分分彩', '99125'], 'v3d': [u'吉利3D', '99801'], 'tmffc':['天貓分分彩','99127'],
+        'tm3fc': ['天貓三分彩','99128'], 'tm5fc': ['天貓五分彩','99129'],'超級2000App': ['超級2000App','99113'],
         # 115
         'sd115': [u'山東11選5', '99301'], 'jx115': [u"江西11選5", '99302'],
         'gd115': [u'廣東11選5', '99303'], 'sl115': [u'順利11選5', '99306'],
@@ -54,7 +55,8 @@ class LotteryData:
         'btcctp': [u'比特币冲天炮', '99901'], 'fhkl8': [u'快乐8全球彩', '99207']
     }
     lottery_sh = ['cqssc', 'xjssc', 'tjssc', 'hljssc', 'llssc', 'shssl', 'jlffc', 'slmmc', 'txffc',
-                  'fhjlssc', 'btcffc', 'fhcqc', 'fhxjc', '3605fc', '360ffc', 'ptxffc' ,'hnffc', 'hn5fc']
+                  'fhjlssc', 'btcffc', 'fhcqc', 'fhxjc', '3605fc', '360ffc', 'ptxffc' ,'hnffc', 'hn5fc',
+                  'tmffc','tm3fc','tm5fc']
     lottery_3d = ['v3d']
     lottery_115 = ['sd115', 'jx115', 'gd115', 'sl115']
     lottery_k3 = ['ahk3', 'jsk3', 'jsdice', 'jldice1', 'jldice2', 'ahsb', 'slsb']
@@ -66,7 +68,8 @@ class LotteryData:
     lottery_force_bonus = ['xyft', 'btcctp', 'btcffc', 'xyft168']  # 強制高獎金
     lottery_dollar = ['ssq', 'lhc', 'btcctp', 'pcdd', 'jsdice', "jldice1", 'jldice2']  # 最低僅元模式彩種
     lottery_dime = ['jlffc', 'txffc', '360ffc', 'v3d', 'slmmc', 'btcffc', 'ptxffc', 'jsk3', 'ahk3', 'hnffc', 'np3',
-                    'n3d', 'hn60', 'fc3d', 'p5', 'fckl8', 'pk10', 'xyft', 'xyft168', 'fhkl8', 'bjkl8']  # 最低僅角模式彩種
+                    'n3d', 'hn60', 'fc3d', 'p5', 'fckl8', 'pk10', 'xyft', 'xyft168', 'fhkl8', 'bjkl8','tmffc','tm3fc','tm5fc']  
+                    # 最低僅角模式彩種
 
 
 class UserAgent(Enum):
