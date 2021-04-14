@@ -68,6 +68,7 @@ class OracleConnection:
               "inner join user_url UU on GDL.register_url_id = UU.id " \
               f"where GDL.domain like '%{domain}%'"
         logger.info(f'get_domain_default_url sql = {sql}')
+        
         cursor.execute(sql)
         rows = cursor.fetchall()
         domain_urls = []
@@ -788,6 +789,30 @@ class OracleConnection:
             solo[solo_nun[2]].append(solo_nun[1])
         cursor.close()
         return solo
+
+    def select_SingleAve(self,date): # 查詢單挑紀錄 排行
+        cursor = self._get_oracle_conn().cursor()
+        sql = "select c.account,b.order_code,e.lottery_name, d.totamount,a.realaward,a.award_proportion  from game_solo_log  \
+        a inner join game_order b on a.order_id = b.id and a.lotteryid = b.lotteryid inner join user_customer c \
+        on a.userid = c.id inner join game_slip d  on b.id = d.orderid inner join game_series e on a.lotteryid = e.lotteryid  \
+        where a.gmt_created  between to_date('%s 00:00:00','YYYY/MM/DD HH24:MI:SS' ) \
+        and to_date('%s 23:59:59','YYYY/MM/DD HH24:MI:SS' )  and a.award_proportion > 1  order by a.realaward desc "%(date,date)
+        print(sql)
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        single_ave = defaultdict(list)
+        for i in rows:
+            single_ave['用戶名'].append(i[0])
+            single_ave['訂單號'].append(i[1])
+            single_ave['彩種Id'].append(i[2])
+            single_ave['投注金額'].append( float(i[3]/10000) )
+            single_ave['實際派發金額'].append( float(i[4]/10000) )
+            single_ave['投中比'].append(i[5])
+        cursor.close()
+        return single_ave
+
+
+
 
     def select_Single(self,user,date,lotteryid,check_type="Single_order"):#查詢 用戶 目前各彩種 投注注數
         cursor = self._get_oracle_conn().cursor()
