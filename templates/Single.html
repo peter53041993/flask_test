@@ -1,6 +1,6 @@
 
 {% extends "base.html" %}
-{% block title %}單挑查詢{% endblock %}
+{% block title %}單挑{% endblock %}
 {%block head %}
 {{ super() }}
 <style type="text/css">
@@ -45,7 +45,7 @@ p{margin-top: 1%;}
             var today_day =  new Date().getDate()// -1 用意 ,統計日期 最新 為昨日
             var cur_year = new Date().getFullYear()//今年
             //var ben_today = document.getElementById('day_day').getElementsByTagName('option')[today_day].selected= true//日工資 日期預設
-            for (i=today_month; i>=today_month;i--){//設置月份
+            for (i=today_month; i>=1;i--){//設置月份
                 addOption(day_month,i,i)
                 //addOption(month_month,i,i)
             }
@@ -163,7 +163,7 @@ p{margin-top: 1%;}
                     $('.sorting_1').attr('onclick',"bet_detail(this)")
                 }
 
-                var order_code = $('#order_code').val()
+                var order_code = $.trim($('#order_code').val())
                 console.log(check_type)
                 $.ajax({
                     url:"/Single/bet",
