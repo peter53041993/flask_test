@@ -56,6 +56,7 @@
         function check(){
             var check_value = $('input:checkbox:checked[name="check_type"]').val()// 把勾選的 checkbox一起加進去
             button_disabled('#submit')
+            $('#user_detail').empty();//總計算 清空
             if ($('.dataframe').length>0){
                 $('.dataTables_wrapper.no-footer').remove();//已經有了先清空
         }
@@ -120,7 +121,7 @@
         <option value="1">joy188</option>
         <option value="2">ph158</option>
     </select>
-    <li id='day'>
+    <li id='day' style='display:none'>
         <label for="check_day">當日</label>
         <input type="checkbox" id=check_day name="check_type" value=0>
         <label>年</label>
