@@ -38,6 +38,8 @@ p{margin-top: 1%;}
                     alert(data);
                     //location.reload()  
                 }
+                else if(data.indexOf('沒有該用戶')>=0){
+                    alert(data);}
                 else{
                 console.log(data);
                 $("#user_detail").after(data)}
