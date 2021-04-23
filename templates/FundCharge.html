@@ -38,16 +38,11 @@
                     } 
                 } 
             })
-            $('#check_day:checkbox').prop('checked',true)//預設一個勾
-            $("#check_day").change(function () {//
-                //$('#check_day:checkbox').prop('checked',true)
-                //$('#check_month:checkbox').prop('checked',false)
-                $('#check_month:checkbox').prop('checked', $(this).is(':checked') ? false : true);
-            })
+            $('#check_month:checkbox').prop('checked',true)//預設一個勾
             $("#check_month").change(function () {//
                 //$('#check_day:checkbox').prop('checked',false)
                 //$('#check_month:checkbox').prop('checked',true)
-                $('#check_day:checkbox').prop('checked', $(this).is(':checked') ? false : true);
+                $('#check_month:checkbox').prop('checked',true)
                 
             })
         })
