@@ -855,7 +855,7 @@ def game_result():
                 return "此環境沒有此訂單號"
             else:
                 index_list, game_code_list, game_time_list, game_status_list, game_play_list, game_awardname_list = [], [], [], [], [], []
-                lottery_id_list, game_submit_list, theory_bonus_list, ff_bonus_list, game_point_list, bonus_list = [], [], [], [], [], []
+                bet_code_list, game_submit_list, theory_bonus_list, ff_bonus_list, game_point_list, bonus_list = [], [], [], [], [], []
                 game_amount_list, game_retaward_list, game_moneymode_list, game_mul_list, game_award_list = [], [], [], [], []
                 game_awardmode_list = []
                 issue_code = game_detail[0][19]  # 旗號
@@ -884,7 +884,7 @@ def game_result():
                     game_awardname_list.append(game_detail[key][8])
                     bet_type_code = game_detail[key][15]  # 玩法
                     theory_bonus = float(game_detail[key][16])  # 理論獎金
-
+                    bet_code_list.append(bet_type_code)
                     game_submit = game_detail[key][7]  # 投注內容
                     game_submit_list.append(game_submit)
                     if lottery_name == 'PC蛋蛋':
@@ -967,7 +967,8 @@ def game_result():
                         '理論獎金': theory_bonus_list, "平台獎金": ff_bonus_list, "投注金額": game_amount_list,
                         "投注倍數": game_mul_list, "元角分模式": game_moneymode_list,
                         "投注內容": game_submit_list, '用戶反點': game_point_list, "獎金模式": bonus_list,
-                        "反點獎金": game_retaward_list, "中獎獎金": game_award_list, "開獎號": number_record
+                        "反點獎金": game_retaward_list, "中獎獎金": game_award_list, "開獎號": number_record,
+                        '玩法代碼': bet_code_list
                         }
                 game_map()  # 呼叫玩法說明,更新data 
                 frame = pd.DataFrame(data, index=index_list)
@@ -1665,6 +1666,9 @@ def fund_fee():
         print(select_type, user)
         # 總代: 因為parent_id  為 -1.需用 user_iD查
         conn = OracleConnection(env_id=int(env_type))
+        user_id = conn.select_user_id(user)
+        if len(user_id) == 0:
+            return '沒有該用戶'
         fund_fee = conn.select_fee(select_type, user)
         # fund_fee = AutoTest.fund_fee
         print(fund_fee)
@@ -1918,10 +1922,21 @@ def Single_ave(): # 單挑統計 排行
     month = request.form.get('day_month')
     year = request.form.get('day_year')
     date = "%s/%s/%s" % (year, month, day)
+    print(date.split('/')[-1])
+    now_day = datetime.datetime.now().day
+    print(now_day)
+    key_name = 'Single_ave:%s/%s'%(env_type,date)
+    result = RedisConnection.get_key(2, key_name)
+    if result != 'not exist':  # result是 not exist, 代表 redis 沒值 ,不等於 就是 redis有值
+        return result
     conn = OracleConnection(env_id=int(env_type))
     single_ave = conn.select_SingleAve(date)
     if len(single_ave) == 0:
         return '無資料'
+    if date.split('/')[-1] == now_day:
+        print('查詢日期 是今天日期,先不存redis')
+    else:
+        RedisConnection.set_key(key_name, single_ave)
     return single_ave
 
 @app.route('/Single', methods=["GET", "POST"])
@@ -2036,34 +2051,6 @@ def Single():  # 單挑
     return render_template('Single.html', lottery_dict=lottery_dict)
 def return_NewCount(list_):# list_ 為所有的組合list  ,該方法 產生新的去重組和
     from collections import Counter
-    '''
-    if bet_type in ['43','44','45','46','47','48']: # 組選系列 用另外種方式 判斷
-        rep_dict = {}
-        fir_elen = list_[0]# 先用sort 長度 最長為第一原素 ,後面 元素判斷是否友包含在裡面
-        print(fir_elen)
-        og_len = ["".join(tuple_) for tuple_ in [i for i in 
-        itertools.combinations(fir_elen,len_play)] ]# 組選 120 的列表組合
-        if len(list_) > 1: # 超過長度 2的列表 ,需再將原本list 長度 減1, 減1 因為先從 fir_elen 取出一個
-            og_list = len(og_len) +(len(list_)-1)
-            print('原總注數: %s'%og_list)
-        else:# 長度如果只有 1,代表 這期 沒有去重
-            new_len = len(og_len)
-            rep_dict = {'':0}
-            return new_len,rep_dict
-        exist_list = []
-        for index,ele in enumerate(list_):
-            if index == 0:
-                pass
-            else:
-                if ele in fir_elen:
-                    print('%s 元素已經存在'%ele)
-                    exist_list.append(ele)
-        print('重複號碼: %s'%exist_list)
-        for i in exist_list:
-            rep_dict[i] = exist_list.count(i)
-        need_cal =  len(exist_list)
-        new_len = og_list - need_cal
-    '''
     if bet_type == '11':#單式
         return 0,{'':0}
     else:
@@ -2280,7 +2267,9 @@ def return_Deduplica(BetDetailList,bet_type_code):# bet_type_code 傳  ex: 33_10
 @app.route('/Single/bet',methods=["POST"])# 去重號碼街口, 會像REDIS去要 . /SINGLE 街口會先做
 def Single_OrderBEt():
     order_code = request.form.get('order_code')
-    a = RedisConnection.get_key(2, "Deduplica: %s"%order_code)
+    key_name = "Deduplica: %s"%order_code
+    print(key_name)
+    a = RedisConnection.get_key(2, key_name)
     print(a)
     return a
 
@@ -2405,6 +2394,30 @@ def get_prize_cal_result():
     for data in result:
         print(data)
     return jsonify({'success': 200, "msg": "ok", "content": result})
+
+@app.route('/Appdecrypt',methods=["GET","POST"])
+def Appdecrypt():
+    descript_key = {
+        '0': {'ios': 'a98f6977bb7637d3111cbb1d31bca279','android': 'e3ad9b1ec40d036a01f4fc609c9c55b5' },
+        '1': {'ios': 'fveuxskup4rgbz67c8foigv5d1hbwhot','android': '6vc13z3dovzn4og54qjf3jyaa8lj4e3g' }
+    }# 解析 的 dict , 0 一般 , 1 合營
+    if request.method == "POST":
+        joint_ = request.form.get('check_value')
+        device = request.form.get('device')
+        request_data = request.form.get('request_data')
+        postData = "action=ajax_decrypt&key={key_}&text={request_data}&algo=rijndael-128&mode=cbc&decode=checked&decode_method=2".format(key_=descript_key[joint_][device],request_data=request_data )
+        header = {
+        'User-Agent': FF_Joy188.FF_().user_agent['Pc'],  # 從FF_joy188.py 取
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        }
+
+        resutl = FF_Joy188.FF_().session_post(request_url='https://www.tools4noobs.com', request_func='/', postData=postData, header=header)
+        soup = BeautifulSoup(resutl.text, 'lxml')
+        text = soup.find_all(id='resultx')
+        for i in text:
+            result = i.text
+        return result
+    return render_template('Appdecrypt.html')
 
 
 @app.route('/qrcode_checker', methods=["GET"])
