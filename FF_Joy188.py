@@ -160,7 +160,7 @@ class FF_:  # 4.0專案
         user_point = lottery_point[0][2] / 10000  # 取得用戶返點，供蛋蛋與雙面盤玩法計算高獎金模式
         game_dict_extra = get_game_dict_smp(lottery=lottery, _award_mode=award_mode, bonus_list=bonus_methods,
                                             user_point=user_point)  # 取得當前彩種的雙面盤/整合(蛋蛋)玩法
-        logger.info(f'game_dict_extra = {game_dict_extra}')
+        #logger.info(f'game_dict_extra = {game_dict_extra}')
         if trace_issue_num > 1:  # 追號
             order_plan = []
             logger.info(f'開始追號投注: trace_issue_num={trace_issue_num}')
