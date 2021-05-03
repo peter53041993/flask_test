@@ -1,9 +1,8 @@
 version: '3'
 services:
-  flask_test:
+  web:
+    image: kerr820725/flask_test
     build: .
     ports: 
       - "4000:4444"
-    volumes: 
-      - .:/jupyter_test
     container_name: flask_test
