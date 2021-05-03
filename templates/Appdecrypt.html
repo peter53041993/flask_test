@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+    {% block title %}福利中心{% endblock %}
+    {%block head %}
+    {{ super() }}
+    <style type="text/css">
+        li{list-style: none;}
+        #day_username,#month_username{border-radius: 22px;}
+        .switch_demo-inner:before {content: "一般版";padding-left: 10px;background-color: rgb(249 193 26);color: #FFFFFF;}
+        .switch_demo-inner:after {content: "合營版";padding-right: 10px;background-color: rgb(234 123 253);color: rgb(255 255 255);text-align: right;}
+        #response {
+        color: #bf22da;
+        width: 70px;
+        padding: 3px;
+        }
+    </style>
+    {% endblock %}
+    {% block script %}
+        <script>
+            $(document).ready(function(){
+                check_value = '0'
+                $('#switch_demo').change(function(){
+                    if ($('#switch_demo').prop('checked')==true){ // 一般版
+                        check_value = '0'
+                    }
+                    else{
+                        check_value = '1'
+                    }
+                })
+            })
+        </script>
+        <script>
+            function check(){
+                button_disabled('#submit')
+                if ($('#request_data').val() == ''){//內容為空
+                    alert('內容為空');
+                    button_RemoveDisabeld('#submit');
+                    return false;
+                }
+                else{
+                    $.ajax({
+                        url: '/Appdecrypt',
+                        type:"POST",
+                        headers:{
+                        Accept:"application/json; charset=utf-8"},
+                        data: form_trim("#form1")+'&check_value='+check_value,
+                        success:function(data){
+                            $('#response_data').val(data);
+                            button_RemoveDisabeld('#submit');
+                        }
+
+                    })
+                
+                }
+
+            }
+        </script>
+    {% endblock %}
+{% block main %}
+    <form id="form1" method="POST">
+        <div class="center">
+            <div class="switch_demo">
+            <input type="checkbox"  class="switch_demo-checkbox" id="switch_demo" checked>
+            <label class="switch_demo-label" for="switch_demo">
+            <span class="switch_demo-inner"></span>
+            <span class="switch_demo-switch"></span>
+            </label>
+            </div>
+        </div>
+        <li>
+            <label>裝置: </label>
+            <select  name='device'>
+                <option value='ios'>IOS</option>
+                <option value='android' selected>安卓</option>
+            </select>
+        </li>
+        <li id='request'>
+            <label class="ui-label" for="request_data"></label>
+            <textarea id="request_data"  name="request_data" cols="60" rows="10"></textarea>
+        </li>
+        <input type="button" onclick="check()" id="submit" value="解析">
+    </form>
+
+    <li id='response'>
+        <label class="ui-label" for="response">Result</label>
+        <textarea id="response_data"  name="response" cols="60" rows="10"></textarea>
+    </li>
+{% endblock %}
